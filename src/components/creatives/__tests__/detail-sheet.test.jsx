@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { ConfirmHost } from "@/components/ds"
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
 
 const push = vi.fn()
@@ -54,7 +55,10 @@ const setup = (test = make()) => {
   refreshCreativeTest.mockClear()
   const onOpenChange = vi.fn()
   render(
-    <CreativeDetailSheet testId="t1" open onOpenChange={onOpenChange} />
+    <>
+      <CreativeDetailSheet testId="t1" open onOpenChange={onOpenChange} />
+      <ConfirmHost />
+    </>
   )
   return { onOpenChange }
 }

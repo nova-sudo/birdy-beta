@@ -18,7 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
   Skeleton,
-  ConfirmHost,
   confirm,
   toast,
 } from "@/components/ds"
@@ -167,7 +166,7 @@ const WIZARD = "/campaigns/creatives/new"
  */
 export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts, onEditTargets }) {
   const router = useRouter()
-  const { test, isLoading } = useCreativeTest(open ? testId : null)
+  const { test, isLoading } = useCreativeTest(testId)
   const [metric, setMetric] = React.useState("cpl")
   const [busy, setBusy] = React.useState(null)
 
@@ -197,11 +196,16 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
   }
 
   const archive = async () => {
-    const ok = await confirm({
-      title: "Archive this test?",
-      description: "It leaves the active list and tracking stops. Its ads stay in Meta.",
-      confirmLabel: "Archive test",
-    })
+    let ok = false
+    try {
+      ok = await confirm({
+        title: "Archive this test?",
+        description: "It leaves the active list and tracking stops. Its ads stay in Meta.",
+        confirmLabel: "Archive test",
+      })
+    } catch {
+      ok = false
+    }
     if (!ok) return
     setBusy("archive")
     try {
@@ -216,8 +220,6 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
 
   return (
     <>
-      {/* No ConfirmHost is mounted app-wide yet, so the archive question brings its own. */}
-      <ConfirmHost />
       <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent size="lg">
         <SheetHeader

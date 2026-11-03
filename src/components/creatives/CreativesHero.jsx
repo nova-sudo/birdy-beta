@@ -7,6 +7,7 @@ import { currencySymbol } from "@/lib/chat-viz"
 import { dailyTotals } from "@/lib/creative-days"
 import { useCreativeTests } from "@/lib/creatives-api"
 import { fetcher } from "@/lib/fetcher"
+import { queryKeys } from "@/lib/query-keys"
 
 const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
 const sum = (tests, key) => tests.reduce((a, t) => a + (num(t.summary?.[key]) ?? 0), 0)
@@ -39,7 +40,9 @@ function useLiveSeries(tests, currency) {
     .slice(0, SERIES_TESTS)
     .map((t) => t.id)
   const { data } = useSWR(ids.length ? ["creative-hero-days", ...ids] : null, ([, ...list]) =>
-    Promise.all(list.map((id) => fetcher(`/api/creatives/${id}`)))
+    Promise.allSettled(list.map((id) => fetcher(queryKeys.creative(id)))).then((rs) =>
+      rs.filter((r) => r.status === "fulfilled").map((r) => r.value)
+    )
   )
   return React.useMemo(() => {
     const lists = []

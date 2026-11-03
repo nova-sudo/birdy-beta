@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
 
 const push = vi.fn()
+const replace = vi.fn()
 let search = ""
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams(search),
 }))
 
@@ -13,10 +14,19 @@ let archivedList = []
 vi.mock("@/lib/creatives-api", () => ({
   useCreativeTests: (f) => ({ tests: f?.status === "archived" ? archivedList : list, isLoading: false }),
 }))
+vi.mock("@/lib/view-catalogues", () => ({ useRememberViewCatalogue: () => {} }))
 vi.mock("@/lib/usePageViews", () => ({ usePageViews: () => ({ views: [] }) }))
 vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Columns</button> }))
 vi.mock("../CreativeDetailSheet", () => ({
-  CreativeDetailSheet: ({ testId, open }) => (open ? <div data-testid="sheet">sheet for {testId}</div> : null),
+  CreativeDetailSheet: ({ testId, open, onOpenChange }) =>
+    open ? (
+      <div data-testid="sheet">
+        sheet for {testId}
+        <button type="button" onClick={() => onOpenChange(false)}>
+          close sheet
+        </button>
+      </div>
+    ) : null,
 }))
 
 import { CreativesTab } from "../CreativesTab"
@@ -34,6 +44,7 @@ const mk = (id, code, name, status) => ({
 
 beforeEach(() => {
   push.mockClear()
+  replace.mockClear()
   search = ""
   list = [
     mk("a", "CT-0041", "Alpha ad", "testing"),
@@ -72,6 +83,14 @@ describe("CreativesTab", () => {
     search = "creative=CT-0042"
     render(<CreativesTab />)
     expect(screen.getByTestId("sheet")).toHaveTextContent("sheet for b")
+  })
+
+  it("a non-code ?creative= value opens by id, and closing strips it from the URL", () => {
+    search = "tab=creatives&creative=zzz"
+    render(<CreativesTab />)
+    expect(screen.getByTestId("sheet")).toHaveTextContent("sheet for zzz")
+    fireEvent.click(screen.getByRole("button", { name: "close sheet" }))
+    expect(replace).toHaveBeenCalledWith("/campaigns?tab=creatives")
   })
 
   it("clicking a row opens its sheet", () => {

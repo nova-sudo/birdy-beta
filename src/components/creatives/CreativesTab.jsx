@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, SearchInput, SegmentedTabs } from "@/compone
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { useCreativeTests } from "@/lib/creatives-api"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import { CreativeDetailSheet } from "./CreativeDetailSheet"
 import { CREATIVE_COLUMNS, CreativesTable } from "./CreativesTable"
 
@@ -42,16 +43,37 @@ export function CreativesTab({ clientGroupId }) {
     onApply: (s) => Array.isArray(s?.visibleColumns) && setVisible(s.visibleColumns),
   })
 
-  // ?creative=<code or id> opens that test once, when the list has it.
+  // Lets Birdy save column views for this table from chat.
+  useRememberViewCatalogue("mktg_creatives", {
+    label: "Marketing Hub · Creatives",
+    path: "/campaigns",
+    columns: COLUMN_CATALOGUE,
+  })
+
+  // ?creative=<code or id> opens that test once. A CT- code waits for the list; anything else is an id.
   const deepLink = params?.get("creative")
   const opened = React.useRef(null)
   React.useEffect(() => {
     if (!deepLink || opened.current === deepLink) return
     const hit = [...active.tests, ...archived.tests].find((t) => t.code === deepLink || t.id === deepLink)
-    if (!hit) return
-    opened.current = deepLink
-    setOpenId(hit.id)
+    if (hit) {
+      opened.current = deepLink
+      setOpenId(hit.id)
+    } else if (!/^CT-/i.test(deepLink)) {
+      opened.current = deepLink
+      setOpenId(deepLink)
+    }
   }, [deepLink, active.tests, archived.tests])
+
+  const closeSheet = () => {
+    setOpenId(null)
+    if (params?.get("creative")) {
+      const next = new URLSearchParams(params.toString())
+      next.delete("creative")
+      next.set("tab", "creatives")
+      router.replace(`/campaigns?${next.toString()}`)
+    }
+  }
 
   const counts = {
     all: active.tests.length,
@@ -134,7 +156,7 @@ export function CreativesTab({ clientGroupId }) {
         testId={openId}
         open={openId != null}
         onOpenChange={(o) => {
-          if (!o) setOpenId(null)
+          if (!o) closeSheet()
         }}
       />
     </div>

@@ -9,7 +9,7 @@ import { AccountDotStrip } from "./AccountDotStrip"
 import { VerdictBadge } from "./VerdictBadge"
 
 const num = (v) => (Number.isFinite(Number(v)) && v != null ? Number(v) : null)
-const pct = (v) => (num(v) == null ? "—" : `${(Number(v) * 100).toFixed(1).replace(/\.0$/, "")}%`)
+const pct = (v) => (num(v) == null ? "—" : `${Number(v).toFixed(1).replace(/\.0$/, "")}%`)
 const money = (v, cur) => `${currencySymbol(cur)}${Math.round(num(v) ?? 0).toLocaleString("en-US")}`
 const fmtDate = (iso) => {
   const d = iso ? new Date(iso) : null

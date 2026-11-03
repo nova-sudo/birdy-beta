@@ -34,6 +34,7 @@ import BirdyDefs from "@/components/birdy/BirdyDefs";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmHost } from "@/components/ds";
 import { AgentRunBanner } from "@/components/agents/AgentRunBanner";
 import { CreditsProvider } from "@/hooks/useCredits";
 import {
@@ -267,6 +268,7 @@ export default function RootLayout({ children }) {
         </SWRProvider>
         </MotionConfig>
         <Toaster />
+        <ConfirmHost />
       </body>
     </html>
   );

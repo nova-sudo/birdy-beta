@@ -105,6 +105,8 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   // GoHighLevel's own attribution rather than a Meta form, where it came from
   // matters more than whether it was Facebook or Instagram. platform is still
   // one click away in the Columns menu.
+  // The Creatives tab has its own table (CreativesTab); this keeps the shared lookups total.
+  creatives: [],
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "lead_source", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
 
@@ -583,10 +585,14 @@ export function MarketingContent({
     [datePreset]
   )
 
+  // A single-group page (/clients/[id]) has no picker, so its one group scopes the tests.
+  const creativesGroup = selectedClientGroup ?? (clientGroups.length === 1 ? clientGroups[0].id : undefined)
+
   // ── Saved column views ─────────────────────────────────────────────────
   // Scoped per tab: each of the four tables has its own column catalogue, so
   // its own set of views. Switching tabs reloads the hook against that key.
-  const tabViewKey = `mktg_${activeTab}`
+  // The Creatives tab keeps its own views and catalogue (CreativesTab), so none here.
+  const tabViewKey = activeTab === "creatives" ? null : `mktg_${activeTab}`
   const tabViewsLoaded = {
     campaigns: loadedCampaigns,
     adsets: loadedAdsets,
@@ -1307,7 +1313,7 @@ export function MarketingContent({
             rather than with a zero: an unknown delta is not a flat one. */}
         <StaggerItem className={`${pdFontClass} min-w-0 ${activeTab === "creatives" ? "" : "grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
           {activeTab === "creatives" ? (
-            <CreativesHero clientGroupId={selectedClientGroup} />
+            <CreativesHero clientGroupId={creativesGroup} />
           ) : (<>
           <MetricTabsChart
             tabs={heroTabs}
@@ -1345,6 +1351,7 @@ export function MarketingContent({
             produced. What happened on the page in between has never been on
             this screen, and for a client running their own landing page it is
             usually where the money goes. */}
+        {activeTab !== "creatives" && (
         <StaggerItem>
           <LandingFunnel
             funnel={landingFunnel}
@@ -1353,6 +1360,7 @@ export function MarketingContent({
             groupId={funnelGroupId}
           />
         </StaggerItem>
+        )}
 
         {/* Tabs */}
         <StaggerItem className="flex w-full flex-col">
@@ -1477,7 +1485,7 @@ export function MarketingContent({
 
             {/* Table */}
             {activeTab === "creatives" ? (
-              <CreativesTab clientGroupId={selectedClientGroup} />
+              <CreativesTab clientGroupId={creativesGroup} />
             ) : error ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface p-16">
                 <div className="rounded-full bg-pd-danger-bg p-3 mb-4">

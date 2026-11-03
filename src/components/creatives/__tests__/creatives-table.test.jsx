@@ -11,7 +11,7 @@ const ad = (id, name, state, extra = {}) => ({
   account_name: name,
   adset_name: "Birdy tests",
   post_state: "active",
-  score: { state, spend: 200, leads: 10, cpl: 20, ctr: 0.02, hook_rate: 0.4, days_live: 8 },
+  score: { state, spend: 200, leads: 10, cpl: 20, ctr: 2, hook_rate: 40, days_live: 8 },
   ...extra,
 })
 const tests = [
@@ -22,7 +22,7 @@ const tests = [
     status: "winner",
     targets,
     created_at: "2026-10-09T00:00:00Z",
-    summary: { currency: "GBP", spend: 1412, leads: 58, cpl: 24.34, ctr: 0.019, hook_rate: 0.38, accounts_pass: 1, accounts_total: 3 },
+    summary: { currency: "GBP", spend: 1412, leads: 58, cpl: 24.34, ctr: 1.9, hook_rate: 38, accounts_pass: 1, accounts_total: 3 },
     creative: { format: "video", media: {} },
     ads: [
       ad("1", "Harbour Finance", "pass"),

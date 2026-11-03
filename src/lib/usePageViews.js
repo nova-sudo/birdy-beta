@@ -91,6 +91,11 @@ export function usePageViews(page, { state, onApply, ready = true } = {}) {
   useEffect(() => {
     let cancelled = false
 
+    // No page (a tab with its own views): nothing to load.
+    if (!page) {
+      setLoaded(true)
+      return
+    }
     setLoaded(false)
     setViews([])
     setDefaultViewId(null)
