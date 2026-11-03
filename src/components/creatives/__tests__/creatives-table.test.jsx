@@ -108,10 +108,27 @@ describe("CreativesTable", () => {
   })
 })
 
+describe("CreativesTable mobile card list", () => {
+  it("keeps a child's metrics and action in the card list", () => {
+    setup()
+    fireEvent.click(T().getByRole("button", { name: "Expand Mortgage myth" }))
+    const cards = [...document.querySelectorAll('[data-slot="data-table-card"][data-depth="1"]')]
+    const oak = cards.find((c) => c.textContent.includes("Oakline Wealth"))
+    expect(oak).toBeTruthy()
+    expect(within(oak).getByText("£198")).toBeInTheDocument()
+    expect(within(oak).getByText("— · 0 leads")).toBeInTheDocument()
+    expect(within(oak).getByRole("button", { name: "Pause here" })).toBeInTheDocument()
+  })
+})
+
 describe("AccountDotStrip", () => {
   it("shows pass count", () => {
     render(<AccountDotStrip ads={[{ score: { state: "pass" } }, { score: { state: "fail" } }, { score: { state: "pass" } }]} />)
     expect(screen.getByText("2/3 pass")).toBeInTheDocument()
+  })
+  it("excludes removed ads from the pass denominator", () => {
+    render(<AccountDotStrip status="testing" ads={[{ post_state: "active", score: { state: "pass" } }, { post_state: "removed", score: { state: "removed" } }]} />)
+    expect(screen.getByText("1/1 pass")).toBeInTheDocument()
   })
   it("shows posted/failed while posting", () => {
     const ads = [
@@ -120,7 +137,7 @@ describe("AccountDotStrip", () => {
       { post_state: "failed", score: {} },
       { post_state: "pending", score: {} },
     ]
-    render(<AccountDotStrip ads={ads} />)
+    render(<AccountDotStrip ads={ads} status="posting" />)
     expect(screen.getByText("2 posted · 1 failed")).toBeInTheDocument()
   })
 })

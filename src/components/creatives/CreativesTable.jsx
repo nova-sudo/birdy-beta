@@ -27,6 +27,13 @@ function childBadge(ad) {
   return { label: SCORE_LABEL[state] ?? "Scoring", tone: scoreTone(state ?? "scoring") }
 }
 
+// Which row action a child offers (null hides the cell in the mobile card list).
+function childAction(ad) {
+  if (ad.post_state === "failed") return "retry"
+  if (ad.score?.state === "fail" && ad.post_state !== "removed") return "pause"
+  return null
+}
+
 const rowCurrency = (r) => r.currency ?? r.__test?.summary?.currency
 
 function Progress({ value, label, tone }) {
@@ -54,6 +61,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
     () => [
       {
         id: "creative",
+        accessorFn: (r) => r.name ?? r.account_name ?? r.ad_account_id,
         header: "Creative",
         meta: { label: "Creative", minWidth: 280 },
         cell: ({ row }) => {
@@ -99,11 +107,12 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "accounts",
+        accessorFn: (r) => (r.__child ? childBadge(r).label : r.status),
         header: "Accounts",
         meta: { label: "Accounts" },
         cell: ({ row }) => {
           const r = row.original
-          if (!r.__child) return <AccountDotStrip ads={r.ads ?? []} />
+          if (!r.__child) return <AccountDotStrip ads={r.ads ?? []} status={r.status} />
           const b = childBadge(r)
           return (
             <Badge tone={b.tone} size="sm">
@@ -114,6 +123,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "spend",
+        accessorFn: (r) => (r.__child ? (r.score?.spend ?? 0) : (r.summary?.spend ?? 0)),
         header: "Spend",
         meta: { label: "Spend" },
         cell: ({ row }) => {
@@ -124,6 +134,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "leads",
+        accessorFn: (r) => (r.__child ? (r.score?.leads ?? 0) : (r.summary?.leads ?? 0)),
         header: "Leads",
         meta: { label: "Leads" },
         cell: ({ row }) => {
@@ -133,6 +144,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "cpl",
+        accessorFn: (r) => (r.__child ? (r.score?.cpl ?? "none") : (r.summary?.cpl ?? "none")),
         header: "CPL vs target",
         meta: { label: "CPL" },
         cell: ({ row }) => {
@@ -155,6 +167,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "ctr",
+        accessorFn: (r) => (r.__child ? (r.score?.ctr ?? "none") : (r.summary?.ctr ?? "none")),
         header: "CTR",
         meta: { label: "CTR" },
         cell: ({ row }) => {
@@ -164,6 +177,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "hook",
+        accessorFn: (r) => (r.__child ? (r.score?.hook_rate ?? "none") : (r.summary?.hook_rate ?? "none")),
         header: "Hook",
         meta: { label: "Hook rate" },
         cell: ({ row }) => {
@@ -174,6 +188,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "progress",
+        accessorFn: (r) => (r.__child ? (r.score?.state ?? "scoring") : r.status),
         header: "Progress to verdict",
         meta: { label: "Progress" },
         cell: ({ row }) => {
@@ -182,7 +197,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
             const fp = floorProgress(r.score, r.__test.targets, rowCurrency(r))
             return <Progress value={fp.pct * 100} label={fp.label} tone={BAR_TONE[scoreTone(r.score?.state)]} />
           }
-          const ads = r.ads ?? []
+          const ads = (r.ads ?? []).filter((a) => a.post_state !== "removed")
           const done = ads.filter((a) => a.score?.state === "pass" || a.score?.state === "fail").length
           const total = ads.length
           const cur = r.summary?.currency
@@ -198,6 +213,7 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       },
       {
         id: "verdict",
+        accessorFn: (r) => (r.__child ? childAction(r) : r.status),
         header: "Verdict",
         meta: { label: "Verdict" },
         cell: ({ row }) => {
