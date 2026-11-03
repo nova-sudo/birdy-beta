@@ -356,6 +356,7 @@ export default function ChatConversation({
                   message={m}
                   messageIndex={i}
                   onUISubmit={handleUISubmit}
+                  onSend={sendMessage}
                   submittedUIs={submittedUIs}
                   widthClass={bubbleWidthClass}
                   onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}

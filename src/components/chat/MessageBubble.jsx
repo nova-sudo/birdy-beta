@@ -17,11 +17,13 @@ import MetricCard from "@/components/chat/blocks/MetricCard"
 import InlineChart from "@/components/chat/blocks/InlineChart"
 import StatusBadge from "@/components/chat/blocks/StatusBadge"
 import StatsGrid from "@/components/chat/blocks/StatsGrid"
+import CreativeTestCard from "@/components/chat/blocks/CreativeTestCard"
 
 export default function MessageBubble({
   message,
   messageIndex,
   onUISubmit,
+  onSend,
   submittedUIs,
   widthClass = "max-w-[80%]",
   onUndoDashboardOps = null,
@@ -107,6 +109,8 @@ export default function MessageBubble({
                   return <StatusBadge key={key} payload={seg.payload} />
                 case "stats":
                   return <StatsGrid key={key} payload={seg.payload} />
+                case "creative":
+                  return <CreativeTestCard key={key} data={seg.payload} onSend={onSend} />
                 default:
                   return null
               }
