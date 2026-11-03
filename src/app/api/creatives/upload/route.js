@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 
 import { verifyGrant } from "@/lib/creative-upload-grant"
 
+class GrantError extends Error {}
+
 // Issues Vercel Blob client tokens, but only for uploads carrying a fresh grant
 // signed by the backend (the auth cookie lives on the backend domain).
 export async function POST(request) {
@@ -18,20 +20,21 @@ export async function POST(request) {
       request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const grant = verifyGrant(clientPayload, process.env.CREATIVE_UPLOAD_SECRET, new Date())
-        if (!grant) throw new Error("Invalid or expired upload grant")
+        if (!grant) throw new GrantError("Invalid or expired upload grant")
         if (typeof pathname !== "string" || !pathname.startsWith("creatives/") || pathname.includes("..")) {
-          throw new Error("Invalid upload path")
+          throw new GrantError("Invalid upload path")
         }
         return {
           allowedContentTypes: [grant.m],
           maximumSizeInBytes: grant.s,
+          validUntil: grant.exp * 1000,
           tokenPayload: grant.u,
         }
       },
-      onUploadCompleted: async () => {},
     })
     return NextResponse.json(json)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error instanceof GrantError) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 })
   }
 }

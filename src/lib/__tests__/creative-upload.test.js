@@ -6,7 +6,7 @@ vi.mock("@vercel/blob/client", () => ({ upload: vi.fn() }))
 
 import { apiRequest } from "@/lib/api"
 import { upload } from "@vercel/blob/client"
-import { uploadCreativeMedia } from "@/lib/creative-upload"
+import { measureMedia, uploadCreativeMedia } from "@/lib/creative-upload"
 import { verifyGrant } from "@/lib/creative-upload-grant"
 
 const SECRET = "s3cret"
@@ -78,7 +78,37 @@ describe("uploadCreativeMedia", () => {
   })
   it("surfaces a grant error", async () => {
     apiRequest.mockResolvedValue({ ok: false, json: async () => ({ detail: "nope" }) })
-    await expect(uploadCreativeMedia(file("image/png", 1000))).rejects.toThrow("nope")
+    await expect(uploadCreativeMedia(file("image/png", 1000), { measure: async () => ({}) })).rejects.toThrow("nope")
     expect(upload).not.toHaveBeenCalled()
+  })
+
+  it("measures before requesting a grant, and a measure failure is non-fatal", async () => {
+    const order = []
+    apiRequest.mockImplementation(async () => {
+      order.push("grant")
+      return { ok: true, json: async () => ({ grant: "G" }) }
+    })
+    upload.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/a.png" })
+    const measure = vi.fn(async () => {
+      order.push("measure")
+      throw new Error("decode")
+    })
+    const out = await uploadCreativeMedia(file("image/png", 1000), { measure })
+    expect(order).toEqual(["measure", "grant"])
+    expect(out).toMatchObject({ width: null, height: null, duration_s: null })
+  })
+})
+
+describe("measureMedia timeout", () => {
+  it("rejects after 10 s when no load event fires and revokes the object URL", async () => {
+    vi.useFakeTimers()
+    URL.createObjectURL = vi.fn(() => "blob:x")
+    URL.revokeObjectURL = vi.fn()
+    const p = measureMedia(new File(["x"], "a.png", { type: "image/png" }))
+    const assertion = expect(p).rejects.toThrow(/timed out/i)
+    await vi.advanceTimersByTimeAsync(10_001)
+    await assertion
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:x")
+    vi.useRealTimers()
   })
 })

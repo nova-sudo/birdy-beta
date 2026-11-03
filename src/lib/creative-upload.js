@@ -7,6 +7,7 @@ const IMAGE_TYPES = ["image/jpeg", "image/png"]
 const VIDEO_TYPES = ["video/mp4", "video/quicktime"]
 const MAX_IMAGE = 30 * MB
 const MAX_VIDEO = 1024 * MB
+const MEASURE_TIMEOUT_MS = 10_000
 
 /** Throws a user-readable Error for a file we will not upload. */
 export function validateCreativeFile(file) {
@@ -22,11 +23,17 @@ export function validateCreativeFile(file) {
 /** Reads width/height (and duration for video) from the local file. */
 export function measureMedia(file) {
   const url = URL.createObjectURL(file)
-  const done = (fn, v) => {
+  let done = (fn, v) => {
     URL.revokeObjectURL(url)
     fn(v)
   }
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => done(reject, new Error("Timed out reading the file.")), MEASURE_TIMEOUT_MS)
+    const finish = done
+    done = (fn, v) => {
+      clearTimeout(timer)
+      finish(fn, v)
+    }
     if (file.type.startsWith("video/")) {
       const el = document.createElement("video")
       el.preload = "metadata"
@@ -54,6 +61,14 @@ export function measureMedia(file) {
 export async function uploadCreativeMedia(file, { onProgress, measure = measureMedia } = {}) {
   validateCreativeFile(file)
 
+  // Measure first: a decode problem must not orphan an uploaded blob. Non-fatal.
+  let dims = { width: null, height: null, duration_s: null }
+  try {
+    dims = { ...dims, ...(await measure(file)) }
+  } catch {
+    // keep nulls
+  }
+
   const res = await apiRequest("/api/creatives/upload-grant", {
     method: "POST",
     body: JSON.stringify({ mime: file.type, bytes: file.size }),
@@ -80,7 +95,6 @@ export async function uploadCreativeMedia(file, { onProgress, measure = measureM
       : undefined,
   })
 
-  const dims = await measure(file)
   return {
     blob_url: blob.url,
     mime: file.type,
