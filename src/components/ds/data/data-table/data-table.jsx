@@ -218,7 +218,7 @@ function DataTable({
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     ...(paginate ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-    ...(getSubRows ? { getExpandedRowModel: getExpandedRowModel(), paginateExpandedRows: false } : {}),
+    ...(getSubRows ? { getExpandedRowModel: getExpandedRowModel(), paginateExpandedRows: !paginate } : {}),
     manualPagination,
     rowCount: manualPagination ? rowCount : undefined,
     autoResetPageIndex: false,

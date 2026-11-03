@@ -489,6 +489,12 @@ describe("DataTable row expansion", () => {
     expect(within(table()).getByText("Rule one").closest("tr")).toHaveAttribute("data-depth", "0")
   })
 
+  it("expands child rows when paginate is false", () => {
+    render(<DataTable columns={cols} data={tree} paginate={false} {...expandable} />)
+    fireEvent.click(within(table()).getByRole("button", { name: "Expand Rule one" }))
+    expect(within(table()).getByText("Aura")).toBeInTheDocument()
+  })
+
   it("gives child rows a muted background and an indented first cell", () => {
     render(<DataTable columns={cols} data={tree} {...expandable} state={{ expanded: { r1: true } }} />)
     const child = within(table()).getByText("Aura").closest("tr")
