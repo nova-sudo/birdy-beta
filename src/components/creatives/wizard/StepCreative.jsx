@@ -78,7 +78,7 @@ export function reviveChanges(ad, draft) {
   }
 }
 
-function PathCard({ icon: Icon, title, text, selected, disabled, onClick }) {
+function PathCard({ icon: Icon, title, text, hint, selected, disabled, onClick }) {
   return (
     <button
       type="button"
@@ -95,6 +95,7 @@ function PathCard({ icon: Icon, title, text, selected, disabled, onClick }) {
         {title}
       </span>
       <span className="text-sm text-muted-foreground">{text}</span>
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </button>
   )
 }
@@ -133,6 +134,7 @@ export function StepCreative({ draft, setField, setFields }) {
           text="Upload media, write the copy and test it."
           selected={!revive}
           disabled={!!draft.source}
+          hint={draft.source ? "Use Change ad to pick a different ad" : undefined}
           onClick={() => setFields({ origin: "new" }, { silent: !draft.id })}
         />
         <PathCard

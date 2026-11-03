@@ -127,6 +127,7 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
       setError(null)
       return { ok: true, data: updated }
     } catch (e) {
+      dirty.current = true // the next save() must try again
       if (!idRef.current) createFailed.current = true
       setError(e)
       return { ok: false, error: e }

@@ -226,7 +226,7 @@ describe("CreativeWizard step 1", () => {
   it("lets you change the source ad after picking one", async () => {
     render(<CreativeWizard testId={null} />)
     await pickRevive()
-    fireEvent.click(screen.getByRole("button", { name: /change ad/i }))
+    fireEvent.click(screen.getByRole("button", { name: /^change ad$/i }))
     await settle()
     fireEvent.click(await screen.findByRole("button", { name: /Video ad/ }))
     await settle()
@@ -281,5 +281,29 @@ describe("CreativeWizard step 1", () => {
     window.history.replaceState(null, "", "/campaigns")
     await act(async () => resolve({ id: "t1", code: "CT-0048", slug: "x" }))
     expect(window.location.pathname).toBe("/campaigns")
+  })
+
+  it("retries on Continue after a failed save and advances once it succeeds", async () => {
+    uploadCreativeMedia.mockResolvedValue({ blob_url: "https://blob/x.png", mime: "image/png", bytes: 1, width: 1, height: 1, duration_s: null })
+    createCreativeTest
+      .mockRejectedValueOnce(new Error("down")) // the first change
+      .mockRejectedValueOnce(new Error("down")) // the first Continue
+      .mockResolvedValue({ id: "t1", code: "CT-0048", slug: "x" })
+    render(<CreativeWizard testId={null} />)
+    type(/primary text/i, "Text")
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^media/i), { target: { files: [new File(["x"], "x.png", { type: "image/png" })] } })
+    })
+    await waitFor(() => expect(cont()).toBeEnabled())
+    await act(async () => {
+      fireEvent.click(cont())
+    })
+    expect(screen.queryByText(/accounts step/i)).not.toBeInTheDocument()
+    const calls = createCreativeTest.mock.calls.length
+    await act(async () => {
+      fireEvent.click(cont())
+    })
+    expect(createCreativeTest.mock.calls.length).toBe(calls + 1)
+    expect(screen.getByText(/accounts step/i)).toBeInTheDocument()
   })
 })
