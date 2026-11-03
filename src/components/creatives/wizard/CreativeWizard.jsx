@@ -102,7 +102,7 @@ export function CreativeWizard({ testId }) {
         : creativeStepValid(draft)
   const prevKey = (k) => (addMode && k === "review" ? "accounts" : STEP_KEYS[STEP_KEYS.indexOf(k) - 1])
   const nextKey = (k) => (addMode && k === "accounts" ? "review" : STEP_KEYS[STEP_KEYS.indexOf(k) + 1])
-  const hideNav = stepKey === "review" && (justPosted || notDraft)
+  const hideNav = stepKey === "review" && (justPosted || (notDraft && !addMode))
 
   async function saveTargets() {
     setMoving(true)

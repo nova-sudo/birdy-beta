@@ -82,15 +82,26 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
   const onVerdict = { ...DEFAULT_ON_VERDICT, ...(draft.on_verdict ?? {}) }
   const prefillCpl = prefill?.metrics?.cpl
 
-  // First visit: write the defaults, with the CPL target the clients already have.
+  // First visit: write the defaults, with the CPL target the clients already have. A resumed draft holds the
+  // server's empty thresholds, so those get the prefill too.
   const seeded = useRef(false)
+  const isDraft = !draft.status || draft.status === "draft"
   useEffect(() => {
-    if (seeded.current || draft.targets || prefillLoading) return
+    if (seeded.current || prefillLoading) return
+    const empty = draft.targets?.mode === "thresholds" && Object.keys(draft.targets.metrics ?? {}).length === 0
+    if (draft.targets && !(empty && isDraft)) return
     seeded.current = true
     const cpl = prefillCpl?.value != null ? { cpl: { op: "lte", value: prefillCpl.value, source: prefillCpl.source } } : {}
-    setField("targets", { ...DEFAULT_TARGETS, metrics: cpl })
-    if (!draft.on_verdict) setField("on_verdict", DEFAULT_ON_VERDICT)
-  }, [draft.targets, draft.on_verdict, prefillLoading, prefillCpl, setField])
+    setField("targets", { ...DEFAULT_TARGETS, ...(draft.targets ?? {}), metrics: cpl })
+  }, [draft.targets, isDraft, prefillLoading, prefillCpl, setField])
+
+  // The verdict actions are stored whether or not they are touched, so the screen matches what is saved.
+  const seededVerdict = useRef(false)
+  useEffect(() => {
+    if (seededVerdict.current || draft.on_verdict) return
+    seededVerdict.current = true
+    setField("on_verdict", DEFAULT_ON_VERDICT)
+  }, [draft.on_verdict, setField])
 
   const write = (patch) => setField("targets", { ...targets, ...patch })
   const writeMetric = (key, spec) => {
@@ -117,6 +128,10 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
   }
 
   const accountById = useMemo(() => Object.fromEntries(accounts.map((a) => [a.ad_account_id, a])), [accounts])
+  // Mixed currencies: a test-level amount has no single symbol, so each account reads it in its own currency.
+  const currencies = new Set(rows.map((r) => accountById[r.ad_account_id]?.currency).filter(Boolean))
+  const mixed = currencies.size > 1
+  const testSymbol = mixed ? "" : currencySymbol([...currencies][0])
   const testCpl = metrics.cpl?.value ?? prefillCpl?.value ?? null
   const resolved = (row) => row.targets_override?.cpl ?? prefill?.per_account?.[row.client_group_id]?.cpl ?? testCpl
   const ownTargets = rows.filter((r) => prefill?.per_account?.[r.client_group_id]?.cpl != null).length
@@ -132,6 +147,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
     )
 
   const ops = (key) => (key === "hook_rate" && isImage ? "video only" : SOURCE_LABELS[metrics[key]?.source] ?? "")
+  const currencyNote = mixed ? "in each account's currency" : null
 
   return (
     <Frame title="Targets" description="How should Birdy judge a winner?" padded>
@@ -154,12 +170,14 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
 
         {targets.mode === "thresholds" && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-muted-foreground">An account passes when every enabled metric is met.</p>
+            <p className="text-xs text-muted-foreground">
+              An account passes when every enabled metric is met.{currencyNote ? ` Amounts are ${currencyNote}.` : ""}
+            </p>
             {METRIC_ROWS.map((m) => {
               const disabled = m.key === "hook_rate" && isImage
               const spec = metrics[m.key]
               const on = !!spec && !disabled
-              const prefix = m.unit === "money" ? currencySymbol(rows[0] && accountById[rows[0].ad_account_id]?.currency) : ""
+              const prefix = m.unit === "money" ? testSymbol : ""
               return (
                 <div key={m.key} data-testid={`metric-${m.key}`} className="flex flex-wrap items-center gap-3">
                   <label className="flex min-w-48 flex-1 items-center gap-2 text-sm">
@@ -223,7 +241,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
         {targets.mode === "cpl_only" && (
           <div className="flex items-center gap-2">
             <Label htmlFor="cpl-only">Cost per lead at most</Label>
-            <span className="text-sm text-muted-foreground">{currencySymbol(rows[0] && accountById[rows[0].ad_account_id]?.currency)}</span>
+            <span className="text-sm text-muted-foreground">{testSymbol}</span>
             <Input
               id="cpl-only"
               size="sm"
@@ -234,6 +252,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
               value={metrics.cpl?.value ?? ""}
               onChange={(e) => writeMetric("cpl", { op: "lte", value: numberOrNull(e.target.value) })}
             />
+            {currencyNote && <span className="text-xs text-muted-foreground">{currencyNote}</span>}
             {SOURCE_LABELS[metrics.cpl?.source] && <span className="text-xs text-muted-foreground">{SOURCE_LABELS[metrics.cpl.source]}</span>}
           </div>
         )}

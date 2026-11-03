@@ -120,13 +120,18 @@ describe("PostProgress", () => {
   })
 
   it("pick_adset fix retries with the chosen ad set", async () => {
-    api.adsets = [{ id: "s9", name: "Fresh set", compatible: true }]
+    api.adsets = [
+      { id: "s9", name: "Fresh set", compatible: true },
+      { id: "s8", name: "Traffic set", compatible: false, reason: "needs an OUTCOME_LEADS campaign" },
+    ]
     api.test = {
       id: "t1", code: "CT-0001", status: "posting", creative: { destination: "lead_form" },
       ads: [ad("a1", "act_1", "failed", { post_error: { message: "Ad set is archived", fix: "pick_adset" } })],
     }
     render(<PostProgress testId="t1" />)
-    await userEvent.selectOptions(screen.getByLabelText("Ad set for act_1"), "s9")
+    await userEvent.click(screen.getByRole("combobox", { name: "Ad set for act_1" }))
+    expect(await screen.findByText("needs an OUTCOME_LEADS campaign")).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole("option", { name: /Fresh set/ }))
     await userEvent.click(screen.getByRole("button", { name: "Retry with this ad set" }))
     expect(api.retryCreativeAd).toHaveBeenCalledWith("t1", "a1", { adset_id: "s9", adset_name: "Fresh set" })
   })
@@ -142,6 +147,18 @@ describe("PostProgress", () => {
     rerender(<PostProgress testId="t1" />)
     await userEvent.click(screen.getByRole("button", { name: "Go live with the 1 that worked" }))
     expect(api.goLiveCreativeTest).toHaveBeenCalledWith("t1", { partialOk: true })
+  })
+
+  it("shows errors returned by go-live and the error left on a created ad", async () => {
+    api.goLiveCreativeTest.mockResolvedValueOnce({ activated: 0, errors: [{ message: "Token expired", step: "go_live" }] })
+    api.test = {
+      id: "t1", code: "CT-0001", status: "posting",
+      ads: [ad("a1", "act_1", "created", { post_error: { message: "Couldn't turn on act_1", step: "go_live" } }), ad("a2", "act_2", "failed", { post_error: { message: "x" } })],
+    }
+    render(<PostProgress testId="t1" />)
+    expect(screen.getByText("Couldn't turn on act_1")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Go live with the 1 that worked" }))
+    expect(await screen.findByText(/Couldn't set 1 ad live: Token expired/)).toBeInTheDocument()
   })
 
   it("opens the test in the creatives tab once it is no longer posting", async () => {

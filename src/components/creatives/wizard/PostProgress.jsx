@@ -3,7 +3,20 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { Badge, Button, Frame, Input, Notice, Skeleton, Surface, fieldVariants } from "@/components/ds"
+import {
+  Badge,
+  Button,
+  Frame,
+  Input,
+  Notice,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+  Surface,
+} from "@/components/ds"
 import { goLiveCreativeTest, retryCreativeAd, useCreativeAdsets, useCreativeTest } from "@/lib/creatives-api"
 
 const STATE = {
@@ -22,14 +35,21 @@ function AdsetFix({ ad, destination, onRetry, busy }) {
   if (isLoading) return <Skeleton className="h-8 w-48" />
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <select aria-label={label} value={picked} onChange={(e) => setPicked(e.target.value)} className={fieldVariants({ size: "sm" })}>
-        <option value="">Choose an ad set</option>
-        {adsets.map((a) => (
-          <option key={a.id} value={a.id} disabled={a.compatible === false}>
-            {a.name}
-          </option>
-        ))}
-      </select>
+      <Select value={picked} onValueChange={setPicked}>
+        <SelectTrigger aria-label={label} size="sm" className="w-56">
+          <SelectValue placeholder="Choose an ad set" />
+        </SelectTrigger>
+        <SelectContent>
+          {adsets.map((a) => (
+            <SelectItem key={a.id} value={a.id} disabled={a.compatible === false}>
+              <span className="flex flex-col">
+                <span>{a.name}</span>
+                {a.compatible === false && a.reason && <span className="text-xs text-muted-foreground">{a.reason}</span>}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         size="sm"
         disabled={!picked || busy}
@@ -66,6 +86,7 @@ function AdRow({ ad, test, retry, busy }) {
         </div>
         <Badge tone={state.tone}>{state.label}</Badge>
       </div>
+      {ad.post_state === "created" && err?.message && <p className="text-sm text-danger-ink">{err.message}</p>}
       {ad.post_state === "failed" && err && (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-danger-ink">{err.message}</p>
@@ -121,6 +142,14 @@ export function PostProgress({ testId }) {
       setBusy(false)
     }
   }
+  const goLive = () =>
+    run(async () => {
+      const res = await goLiveCreativeTest(testId, { partialOk: true })
+      if (res?.errors?.length) {
+        const e = new Error(`Couldn't set ${res.errors.length} ${res.errors.length === 1 ? "ad" : "ads"} live: ${res.errors.map((x) => x.message).filter(Boolean).join("; ")}`)
+        throw e
+      }
+    })
   const retry = (ad, patch) => run(() => retryCreativeAd(testId, ad.id, patch))
 
   return (
@@ -136,7 +165,7 @@ export function PostProgress({ testId }) {
         ))}
         <div className="flex flex-wrap items-center justify-end gap-2">
           {created >= 1 && failed >= 1 && (
-            <Button disabled={busy} onClick={() => run(() => goLiveCreativeTest(testId, { partialOk: true }))}>
+            <Button disabled={busy} onClick={goLive}>
               Go live with the {worked} that worked
             </Button>
           )}

@@ -25,18 +25,21 @@ export function useCreativeTests(filters) {
   return { tests: data ?? [], error, isLoading, mutate }
 }
 
+/** Still working: the test is `posting`, or any ad is waiting (added accounts and retries keep status "testing"). */
+const isPosting = (t) => t?.status === "posting" || (t?.ads ?? []).some((a) => a.post_state === "pending")
+
 /** While a test is `posting`, `useCreativeTest(id, { pollWhilePosting: true })` re-reads it this often (ms). */
 export const POSTING_POLL_MS = 3000
 
 /**
  * One test with its ads and `days` ({meta_ad_id: day rows}).
  * @param {string|null} id
- * @param {{ pollWhilePosting?: boolean }} [opts] Poll every 3 s while `status === "posting"`, then stop
+ * @param {{ pollWhilePosting?: boolean }} [opts] Poll every 3 s while `status === "posting"` or an ad is `pending`, then stop
  * @returns {{ test: object|null, error, isLoading, mutate }}
  */
 export function useCreativeTest(id, { pollWhilePosting = false } = {}) {
   const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.creative(id) : null, fetcher, {
-    refreshInterval: pollWhilePosting ? (d) => (d?.status === "posting" ? POSTING_POLL_MS : 0) : 0,
+    refreshInterval: pollWhilePosting ? (d) => (isPosting(d) ? POSTING_POLL_MS : 0) : 0,
   })
   return { test: data ?? null, error, isLoading, mutate }
 }

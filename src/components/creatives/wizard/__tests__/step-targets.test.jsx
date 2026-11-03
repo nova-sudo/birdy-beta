@@ -106,6 +106,35 @@ describe("StepTargets", () => {
     expect(last.notify_channels).toEqual(expect.arrayContaining(["in_app", "slack"]))
   })
 
+  it("seeds a resumed draft that holds the server's empty thresholds, and stores on_verdict separately", () => {
+    const calls = []
+    const resumed = mk({ top: { status: "draft", targets: { mode: "thresholds", metrics: {}, min_spend: 150, min_days: 7, win_share: 0.6, baseline_pct: 15 } } })
+    render(<Harness initial={resumed} onField={(p, v) => calls.push([p, v])} />)
+    expect(calls.find(([p]) => p === "targets")[1].metrics.cpl).toMatchObject({ value: 35, source: "client" })
+    expect(calls.find(([p]) => p === "on_verdict")[1]).toMatchObject({ suggest_pause_failing: true, auto_pause_losers: false })
+  })
+
+  it("does not reseed targets the user already set, but still stores missing on_verdict", () => {
+    const calls = []
+    const set = mk({ top: { status: "draft", targets: { mode: "thresholds", metrics: { ctr: { op: "gte", value: 1 } }, min_spend: 150, min_days: 7, win_share: 0.6 } } })
+    render(<Harness initial={set} onField={(p, v) => calls.push([p, v])} />)
+    expect(calls.find(([p]) => p === "targets")).toBeUndefined()
+    expect(calls.find(([p]) => p === "on_verdict")).toBeTruthy()
+  })
+
+  it("drops the currency symbol for mixed currencies and says so", () => {
+    render(<Harness initial={mk()} />)
+    expect(screen.getByText(/in each account's currency/)).toBeInTheDocument()
+    expect(within(screen.getByTestId("metric-cpl")).queryByText("£")).toBeNull()
+    expect(within(screen.getByTestId("metric-cpl")).queryByText("$")).toBeNull()
+  })
+
+  it("keeps the symbol when every account shares a currency", () => {
+    render(<Harness initial={mk({ creative: { accounts: [rows[0]] } })} />)
+    expect(within(screen.getByTestId("metric-cpl")).getByText("£")).toBeInTheDocument()
+    expect(screen.queryByText(/in each account's currency/)).toBeNull()
+  })
+
   it("validates by mode", () => {
     const base = { mode: "thresholds", baseline_pct: 15, min_spend: 150, min_days: 7, win_share: 0.6 }
     expect(targetsStepValid({ targets: { ...base, metrics: {} } })).toBe(false)
