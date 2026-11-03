@@ -23,6 +23,7 @@ describe("useCreativeTest polling", () => {
     const f = captured.opts.refreshInterval
     expect(f({ status: "posting", ads: [] })).toBe(POSTING_POLL_MS)
     expect(f({ status: "testing", ads: [{ post_state: "active" }, { post_state: "pending" }] })).toBe(POSTING_POLL_MS)
+    expect(f({ status: "testing", ads: [{ post_state: "active" }, { post_state: "uploading" }] })).toBe(POSTING_POLL_MS)
     expect(f({ status: "testing", ads: [{ post_state: "active" }, { post_state: "failed" }] })).toBe(0)
     expect(f(undefined)).toBe(0)
   })

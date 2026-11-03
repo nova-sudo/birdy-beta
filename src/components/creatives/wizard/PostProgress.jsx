@@ -128,8 +128,11 @@ export function PostProgress({ testId }) {
   const count = (s) => ads.filter((a) => a.post_state === s).length
   const created = count("created")
   const failed = count("failed")
-  const worked = created
+  const waiting = count("pending") + count("uploading")
   const posting = test.status === "posting"
+  // Every ad is done trying and some are created but not live: the automatic go-live did not happen
+  // (or failed), so the test would sit in "posting". Offer it by hand, partially when some failed.
+  const canGoLive = posting && created >= 1 && waiting === 0
 
   async function run(fn) {
     setBusy(true)
@@ -144,7 +147,7 @@ export function PostProgress({ testId }) {
   }
   const goLive = () =>
     run(async () => {
-      const res = await goLiveCreativeTest(testId, { partialOk: true })
+      const res = await goLiveCreativeTest(testId, { partialOk: failed >= 1 })
       if (res?.errors?.length) {
         const e = new Error(`Couldn't set ${res.errors.length} ${res.errors.length === 1 ? "ad" : "ads"} live: ${res.errors.map((x) => x.message).filter(Boolean).join("; ")}`)
         throw e
@@ -164,9 +167,9 @@ export function PostProgress({ testId }) {
           <AdRow key={ad.id} ad={ad} test={test} retry={retry} busy={busy} />
         ))}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {created >= 1 && failed >= 1 && (
+          {canGoLive && (
             <Button disabled={busy} onClick={goLive}>
-              Go live with the {worked} that worked
+              {failed >= 1 ? `Go live with the ${created} that worked` : "Go live"}
             </Button>
           )}
           {(!posting || count("active") > 0) && (

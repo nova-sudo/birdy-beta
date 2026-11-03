@@ -68,6 +68,16 @@ describe("StepReview", () => {
     expect(await screen.findByTestId("post-progress")).toBeInTheDocument()
   })
 
+  it("sends each row's campaign id when it is known", async () => {
+    api.test = { id: "t1", code: "CT-0001", status: "posting", ads: [] }
+    const withCampaign = [{ ...rows[0], campaign_id: "c7" }, rows[1]]
+    render(<StepReview draft={draft({ creative: { format: "video", destination: "lead_form", accounts: withCampaign } })} />)
+    await userEvent.click(screen.getByRole("button", { name: "Post to 2 accounts" }))
+    const [, body] = api.postCreativeTest.mock.calls[0]
+    expect(body[0].campaign_id).toBe("c7")
+    expect("campaign_id" in body[1]).toBe(false)
+  })
+
   it("add-accounts mode lists only the new rows and posts them to /accounts", async () => {
     api.test = { id: "t1", code: "CT-0001", status: "testing", ads: [] }
     render(<StepReview draft={draft({ status: "testing" })} rows={[rows[1]]} addMode />)
@@ -136,8 +146,24 @@ describe("PostProgress", () => {
     expect(api.retryCreativeAd).toHaveBeenCalledWith("t1", "a1", { adset_id: "s9", adset_name: "Fresh set" })
   })
 
-  it("partial go-live shows only with at least one created and one failed", async () => {
+  it("offers Go live when every ad is created but the test is stuck posting (auto go-live failed)", async () => {
     api.test = { id: "t1", code: "CT-0001", status: "posting", ads: [ad("a1", "act_1", "created"), ad("a2", "act_2", "created")] }
+    render(<PostProgress testId="t1" />)
+    await userEvent.click(screen.getByRole("button", { name: "Go live" }))
+    expect(api.goLiveCreativeTest).toHaveBeenCalledWith("t1", { partialOk: false })
+  })
+
+  it("no Go live while any ad is still pending or uploading", () => {
+    api.test = { id: "t1", code: "CT-0001", status: "posting", ads: [ad("a1", "act_1", "created"), ad("a2", "act_2", "uploading")] }
+    const { rerender } = render(<PostProgress testId="t1" />)
+    expect(screen.queryByRole("button", { name: /go live/i })).toBeNull()
+    api.test = { ...api.test, ads: [ad("a1", "act_1", "created"), ad("a2", "act_2", "pending")] }
+    rerender(<PostProgress testId="t1" />)
+    expect(screen.queryByRole("button", { name: /go live/i })).toBeNull()
+  })
+
+  it("partial go-live shows only with at least one created and one failed", async () => {
+    api.test = { id: "t1", code: "CT-0001", status: "posting", ads: [ad("a1", "act_1", "failed", { post_error: { message: "x" } }), ad("a2", "act_2", "failed", { post_error: { message: "x" } })] }
     const { rerender } = render(<PostProgress testId="t1" />)
     expect(screen.queryByRole("button", { name: /go live/i })).toBeNull()
     api.test = { ...api.test, ads: [ad("a1", "act_1", "failed", { post_error: { message: "x" } }), ad("a2", "act_2", "failed", { post_error: { message: "x" } })] }

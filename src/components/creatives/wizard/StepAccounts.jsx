@@ -66,7 +66,7 @@ function AccountPanel({ account, entry, draft, update, onAdsets, onError, hideEr
     const patch = {}
     if (entry.adset_id) {
       const chosen = adsets.find((a) => a.id === entry.adset_id)
-      if (!chosen || !chosen.compatible) Object.assign(patch, { adset_id: null, adset_name: null, client_group_id: null })
+      if (!chosen || !chosen.compatible) Object.assign(patch, { adset_id: null, adset_name: null, client_group_id: null, campaign_id: undefined })
     }
     if (destination !== "lead_form" && entry.lead_form_id) patch.lead_form_id = null
     if (Object.keys(patch).length) update(act, patch)
@@ -118,7 +118,8 @@ function AccountPanel({ account, entry, draft, update, onAdsets, onError, hideEr
                 value={entry.adset_id ?? ""}
                 onValueChange={(v) => {
                   const a = adsets.find((x) => x.id === v)
-                  update(act, { adset_id: v, adset_name: a?.name ?? null, client_group_id: a?.owning_client_group_id ?? null })
+                  // campaign_id lets the backend pick the client group that owns the campaign.
+                  update(act, { adset_id: v, adset_name: a?.name ?? null, client_group_id: a?.owning_client_group_id ?? null, campaign_id: a?.campaign?.id ?? undefined })
                 }}
               >
                 <SelectTrigger id={`adset-${act}`} aria-label={`Ad set for ${name}`} className="min-w-0 flex-1">
@@ -239,7 +240,9 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
         if (r.ad_account_id === fromAct) return r
         const match = (adsetsByAccount[r.ad_account_id]?.adsets ?? []).find((a) => a.name === from.adset_name && a.compatible)
         if (!match) misses += 1
-        return match ? { ...r, adset_id: match.id, adset_name: match.name, client_group_id: match.owning_client_group_id ?? null } : r
+        return match
+          ? { ...r, adset_id: match.id, adset_name: match.name, client_group_id: match.owning_client_group_id ?? null, campaign_id: match.campaign?.id ?? undefined }
+          : r
       })
     )
     setMissed(misses)

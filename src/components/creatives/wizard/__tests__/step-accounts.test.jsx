@@ -96,6 +96,14 @@ describe("StepAccounts", () => {
     ])
   })
 
+  it("keeps the chosen ad set's campaign id for the Post call", async () => {
+    hooks.adsets.act_2 = [adset("s3", "Birdy tests", { owning_client_group_id: "g3", campaign: { id: "c9", name: "Leads" } })]
+    const { user, last } = setup()
+    await user.click(screen.getByRole("checkbox", { name: "Select Keystone, Oakline" }))
+    await pick(user, "Ad set for Keystone, Oakline", "Birdy tests")
+    expect(last()[0]).toMatchObject({ adset_id: "s3", campaign_id: "c9", client_group_id: "g3" })
+  })
+
   it("Apply to all fills only same-named ad sets", async () => {
     const { user, last } = setup()
     for (const n of ["Harbour Finance", "Keystone, Oakline", "Birch"]) await user.click(screen.getByRole("checkbox", { name: `Select ${n}` }))

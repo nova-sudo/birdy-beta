@@ -14,7 +14,7 @@ const OP = { lte: "≤", gte: "≥" }
 function postBody(rows) {
   return rows.map((r) => {
     const out = {}
-    for (const k of ["ad_account_id", "client_group_id", "adset_id", "adset_name", "page_id", "lead_form_id", "targets_override"]) {
+    for (const k of ["ad_account_id", "client_group_id", "adset_id", "adset_name", "campaign_id", "page_id", "lead_form_id", "targets_override"]) {
       if (r[k] != null && r[k] !== "") out[k] = r[k]
     }
     return out
