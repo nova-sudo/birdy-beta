@@ -137,8 +137,8 @@ settings: {
   clients: {<gid>: {batch_id, treatment_ids, zones?, notes, on_hold,
                     prepaid: {topups: [{date, amount}]}?, modes?}},
   creative: {max_ads_live, winner_days, winner_min_leads, revive_after_days,
-             major_downtrend_pct, auto_max_adds},
-  scoring: {min_days, win_min_leads, lose_cpl_multiple, lose_spend_multiple, rule_after},
+             major_downtrend_pct, auto_max_adds, data_window_days},
+  scoring: {min_days, win_min_leads, lose_cpl_multiple, lose_spend_multiple, lose_max_leads, rule_after},
   alerts: {prepaid_days, spend_drop_ratio},
   modes: {remove, add, revive},               // flag | ask | auto, default ask
   slack: {channel_id, channel_name, also_tag_user_id?,
