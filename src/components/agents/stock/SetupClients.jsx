@@ -294,7 +294,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                 const message = on ? serverRowErrors[c.id] || problems[c.id] : null
                 const sym = currencySymbol(c.currency)
                 return (
-                  <tr key={c.id} className="border-t align-top">
+                  <tr key={c.id} className="border-t align-middle">
                     <td className="px-3 py-2">
                       <Checkbox
                         aria-label={`Watch ${c.name}`}

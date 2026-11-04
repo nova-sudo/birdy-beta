@@ -45,7 +45,7 @@ function ReportPicker({ agentId, current, batches, onPick }) {
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       {options.length > 0 && (
         <Select value={current?.id ?? ""} onValueChange={onPick}>
-          <SelectTrigger aria-label="Report date" className="w-56 max-w-full">
+          <SelectTrigger aria-label="Report date" className="w-64 max-w-full">
             <SelectValue placeholder="Pick a date">{current ? runLabel(current, batches) : undefined}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -136,7 +136,8 @@ function StockAgentPage() {
   const { clientGroups, loading: clientsLoading, error: clientsError, refresh: refreshClients } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const batches = (full ?? listed)?.settings?.batches ?? []
 
-  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle="Morning report" /> }), [])
+  const section = tab === "report" ? "Morning report" : TABS.find((t) => t.value === tab).label
+  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle={section} /> }), [section])
   usePageHeader(topBar)
 
   // Only a list that really came back empty means no agent: a misrouted API must not send a live agent to setup.

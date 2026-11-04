@@ -299,6 +299,9 @@ describe("Slack templates", () => {
     const alert = await screen.findByRole("alert", {}, { timeout: 3000 })
     expect(within(alert).getByText(/unknown placeholder/)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Save template" })).toBeDisabled()
+    // Agent templates have no report figures, so the editor doesn't offer them.
+    expect(screen.getByText(/Values go in/)).toBeInTheDocument()
+    expect(screen.queryByText(/ask Birdy to do it/i)).not.toBeInTheDocument()
   })
 
   it("Save sends the blocks and closes the editor", async () => {

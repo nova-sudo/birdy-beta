@@ -523,6 +523,17 @@ describe("DataTable row expansion", () => {
     expect(within(table()).queryByText("Rule two")).toBeNull()
   })
 
+  it("cardHidden can leave a field out of the card for one row only", () => {
+    const cols = [
+      { accessorKey: "name", header: "Name" },
+      { id: "action", header: "Actions", meta: { cardHidden: (row) => row.name === "Bravo" }, cell: () => <button>Go</button> },
+    ]
+    const { container } = render(<DataTable columns={cols} data={data} />)
+    const cards = container.querySelectorAll("[data-slot='data-table-card']")
+    expect(within(cards[0]).getByText("Actions")).toBeInTheDocument()
+    expect(within(cards[1]).queryByText("Actions")).not.toBeInTheDocument()
+  })
+
   it("renders child rows as nested cards on narrow screens", () => {
     const { container } = render(
       <DataTable columns={cols} data={tree} {...expandable} state={{ expanded: { r1: true } }} />

@@ -115,7 +115,8 @@ const headerLabel = (column) =>
  *
  * Columns are TanStack `ColumnDef`s. `meta` opts a column into the toolbar:
  * `{ label, variant: "text" | "select" | "multiSelect", options: [{ value, label }], placeholder, cardHidden, align: "right" }`
- * (`align: "right"` right-aligns the head, for a number column).
+ * (`align: "right"` right-aligns the head, for a number column; `cardHidden` is a boolean, or a function of the row
+ * for a field only some rows have).
  * Keep `columns` and `data` referentially stable (memoise them): a new array each render re-runs the table.
  * Table and list both exist in the DOM, so tests should scope to `role=table` or `data-slot=data-table-card`.
  *
@@ -439,7 +440,10 @@ function DataTable({
                   )}
                   <dl className="flex flex-col gap-1">
                     {rest
-                      .filter((cell) => !cell.column.columnDef.meta?.cardHidden)
+                      .filter((cell) => {
+                        const hidden = cell.column.columnDef.meta?.cardHidden
+                        return !(typeof hidden === "function" ? hidden(row.original) : hidden)
+                      })
                       // A child row leaves out the columns it has no value for.
                       .filter((cell) => row.depth === 0 || cell.getValue() != null)
                       .map((cell) => (

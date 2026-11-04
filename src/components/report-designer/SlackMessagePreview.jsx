@@ -22,6 +22,7 @@ function Seg({ s }) {
   if (s.italic) return <em>{s.text}</em>
   if (s.strike) return <s>{s.text}</s>
   if (s.code) return <code className="rounded bg-white/10 px-1 py-px font-mono text-[12px] text-[#E8912D]">{s.text}</code>
+  if (s.mention) return <span className="rounded bg-[#1D9BD1]/20 px-0.5 text-[#1D9BD1]">{s.text}</span>
   if (s.href) return <a href={s.href} target="_blank" rel="noreferrer" className="text-[#1D9BD1] hover:underline">{s.text}</a>
   return s.text
 }

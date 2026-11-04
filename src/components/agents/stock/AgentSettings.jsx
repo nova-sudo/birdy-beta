@@ -174,9 +174,7 @@ export function AgentSettings({ agent, clients, actions }) {
         {(onSaved) => (
           <div className="flex flex-col gap-6">
             <SetupSlack agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} inPlace />
-            <div className="max-w-3xl">
-              <SlackTemplates agentId={agent.id} actions={actions} />
-            </div>
+            <SlackTemplates agentId={agent.id} actions={actions} />
           </div>
         )}
       </Section>

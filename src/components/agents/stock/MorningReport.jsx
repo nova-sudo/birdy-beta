@@ -15,6 +15,7 @@ import { WeeklyMessage } from "./WeeklyMessage"
 
 const UNFINISHED = ["pending", "healthy", "waiting", "alerted", "needs_writing"]
 const DAY_MS = 24 * 60 * 60 * 1000
+const CARD_ORDER = ["changes", "no_changes", "green"]
 
 const listed = (names) => new Intl.ListFormat("en-GB", { type: "conjunction" }).format(names)
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -83,10 +84,12 @@ function Progress({ run }) {
   const waitingOnly = states.some((s) => s === "waiting") && states.filter((s) => UNFINISHED.includes(s)).every((s) => s === "waiting")
   return (
     <AnswerBox title="Birdy is still working on this report">
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner aria-hidden />
-        <span>{`${done} of ${plural(states.length, "client")} checked.`}</span>
-        {waitingOnly && <span>Waiting for ad data from Meta. It carries on by itself once the data arrives.</span>}
+      <p role="status" className="flex items-start gap-2 text-sm text-muted-foreground">
+        <Spinner aria-hidden className="mt-0.5 shrink-0" />
+        <span>
+          {`${done} of ${plural(states.length, "client")} checked.`}
+          {waitingOnly && " Waiting for ad data from Meta. It carries on by itself once the data arrives."}
+        </span>
       </p>
       <ProgressBar value={states.length ? (done / states.length) * 100 : 0} tone="primary" label="Report progress" />
     </AnswerBox>
@@ -144,7 +147,8 @@ export function MorningReport({ report, clients = [], batches = [], actions, sla
   const [result, setResult] = useState(null)
 
   const { run } = report
-  const cards = report.cards ?? []
+  // Decisions first, as the mock has it. Within a tag the server's order stands, so currencies are never compared.
+  const cards = [...(report.cards ?? [])].sort((a, b) => CARD_ORDER.indexOf(a.tag) - CARD_ORDER.indexOf(b.tag))
   const alerts = (run.alerts ?? []).filter((a) => a && typeof a === "object")
   const learned = report.learned ?? []
   const proposals = report.proposals ?? []

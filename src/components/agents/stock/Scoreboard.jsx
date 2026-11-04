@@ -59,7 +59,7 @@ export function ScoreboardFrame({ scoreboard, proposals = [], actions, onSeeAll 
   const title = top && top.won >= KEEPS_WORKING_AFTER && top.won === top.moves ? `${top.name} keeps working wherever we move it` : "Scoreboard"
   return (
     <Frame
-      title={title}
+      title={<span className="whitespace-normal">{title}</span>}
       action={rows.length > 0 ? <FrameAction onClick={onSeeAll}>See every result</FrameAction> : undefined}
       padded
       contentClassName="flex flex-col gap-2.5 text-xs"
@@ -132,7 +132,7 @@ export function ScoreboardTab({ agentId, actions, nameOf }) {
         id: "actions",
         header: () => <span className="sr-only">Actions</span>,
         enableSorting: false,
-        meta: { label: "Actions", align: "right", cardHidden: false },
+        meta: { label: "Actions", align: "right", cardHidden: (r) => !CLEARABLE.includes(r.result) },
         cell: ({ row }) => <ClearResult row={row.original} actions={latest.current.actions} onError={setClearError} />,
       },
     ],

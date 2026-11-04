@@ -33,3 +33,12 @@ describe("parseMrkdwn", () => {
     expect(parseMrkdwn("5 * 3")).toEqual([{ quote: false, segs: [{ text: "5 * 3" }] }])
   })
 })
+
+describe("parseMrkdwn: mentions", () => {
+  it("shows a user mention as Slack would, not as raw markup", () => {
+    expect(parseMrkdwn("Waiting for you: 1 <@U0SAMPLE>")[0].segs).toEqual([{ text: "Waiting for you: 1 " }, { text: "@user", mention: true }])
+  })
+  it("shows channel pings too", () => {
+    expect(parseMrkdwn("<!channel> look")[0].segs).toEqual([{ text: "@channel", mention: true }, { text: " look" }])
+  })
+})

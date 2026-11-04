@@ -131,7 +131,7 @@ export function ModesTable({ settings, clients, onChange, errors = {} }) {
 
       {clients.length > 0 && (
         <Frame title="Different for one client" description="Leave a client on Default to follow the choices above." className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-sm">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="px-3 py-2 font-medium">Client</th>
@@ -143,7 +143,7 @@ export function ModesTable({ settings, clients, onChange, errors = {} }) {
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id} className="border-t">
-                  <td className="px-3 py-2 align-top font-medium text-foreground">
+                  <td className="px-3 py-2 font-medium text-foreground">
                     {c.name}
                     {errors[c.id] && (
                       <p role="alert" className="mt-1 text-xs font-normal text-danger-ink">
@@ -156,8 +156,8 @@ export function ModesTable({ settings, clients, onChange, errors = {} }) {
                     const own = clientModes[c.id]?.[kind]
                     return (
                       <td key={kind} className="px-3 py-2">
-                        <Select value={own ?? DEFAULT} onValueChange={(m) => setClient(c.id, kind, m)}>
-                          <SelectTrigger size="sm" aria-label={`${label} for ${c.name}`} className="w-36">
+                        <Select value={locked && own ? "flag" : (own ?? DEFAULT)} onValueChange={(m) => setClient(c.id, kind, m)}>
+                          <SelectTrigger size="sm" aria-label={`${label} for ${c.name}`} className="w-44">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

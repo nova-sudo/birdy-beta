@@ -106,6 +106,17 @@ function TabsList({
     if (hasThumb) measure()
   }, [hasThumb, measure, tabs?.value, children, size])
 
+  // Short of room the rail scrolls sideways, so the open tab has to be brought into view: a phone
+  // landing on the last tab would otherwise see it cut off.
+  React.useLayoutEffect(() => {
+    const box = listRef.current?.parentElement
+    const active = listRef.current?.querySelector("[role=tab][data-state=active]")
+    if (!active || box?.dataset.slot !== "tabs-scroller" || box.scrollWidth <= box.clientWidth) return
+    const right = active.offsetLeft + active.offsetWidth
+    if (right > box.scrollLeft + box.clientWidth) box.scrollLeft = right - box.clientWidth
+    else if (active.offsetLeft < box.scrollLeft) box.scrollLeft = active.offsetLeft
+  }, [tabs?.value])
+
   React.useEffect(() => {
     const el = listRef.current
     if (!hasThumb || !el || typeof ResizeObserver === "undefined") return

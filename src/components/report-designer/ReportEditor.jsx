@@ -415,8 +415,13 @@ export default function ReportEditor({
           className="pd-scrolly min-h-[300px] w-full flex-1 resize-none rounded-2xl border border-pd-border bg-pd-surface px-4 py-3 font-mono text-[12px] leading-relaxed text-pd-ink outline-none transition-[border-color,box-shadow] focus:border-pd-primary focus:ring-4 focus:ring-pd-primary/15"
         />
         <p className="mt-2 text-[11.5px] leading-relaxed text-pd-faint">
-          Slack Block Kit, as Slack receives it. Live numbers go in <code className="text-pd-body">{"{{ }}"}</code> placeholders,
-          or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you.
+          Slack Block Kit, as Slack receives it. {extraMetricsDisabled ? "Values" : "Live numbers"} go in <code className="text-pd-body">{"{{ }}"}</code> placeholders
+          {!extraMetricsDisabled && (
+            <>
+              , or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you
+            </>
+          )}
+          .
         </p>
       </div>
 

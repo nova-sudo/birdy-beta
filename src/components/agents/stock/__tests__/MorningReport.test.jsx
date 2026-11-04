@@ -14,6 +14,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/birdy/Birdy", () => ({ default: () => <svg data-testid="birdy" /> }))
 
 import { ConfirmHost } from "@/components/ds"
+import { PageHeaderProvider, PageHeaderTitle } from "@/components/page-header"
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import ReportPage from "@/app/hub/agents/media-buying/page"
@@ -156,7 +157,35 @@ describe("Agent page: lessons and settings tabs", () => {
   })
 })
 
+describe("Agent page: the top bar", () => {
+  const withBar = () => render(<PageHeaderProvider><header data-testid="bar"><PageHeaderTitle /></header>{page()}</PageHeaderProvider>)
+
+  it("names the section that is open", async () => {
+    search = "tab=settings"
+    withBar()
+    await screen.findByRole("region", { name: "Schedule settings" })
+    expect(screen.getByTestId("bar")).toHaveTextContent("Birdy Media Buying AgentSettings")
+    expect(screen.getByTestId("bar")).not.toHaveTextContent("Morning report")
+  })
+
+  it("says Morning report on the report", async () => {
+    withBar()
+    await heading("Morning report")
+    expect(screen.getByTestId("bar")).toHaveTextContent("Morning report")
+  })
+})
+
 describe("Morning report: the page", () => {
+  it("lists cards with a decision first, then no changes, then green", async () => {
+    const rep = FULL()
+    rep.cards = [rep.cards[3], rep.cards[2], rep.cards[0], rep.cards[1]]
+    use(rep)
+    renderPage()
+    await heading("Morning report")
+    const names = (await screen.findAllByRole("article")).map((a) => a.getAttribute("aria-label"))
+    expect(names).toEqual(["Harbour Body Co", "Velvet Laser", "Coastline Med Spa", "Lumen Skin Clinic"])
+  })
+
   it("renders the sections in the spec's order", async () => {
     use(FULL())
     renderPage()
