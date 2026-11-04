@@ -169,6 +169,14 @@ describe("Stock agent guided setup: steps", () => {
   })
 })
 
+// Radix Select asks jsdom for these.
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.scrollIntoView ??= () => {}
+
+const openTargets = (row) => userEvent.click(within(row).getByRole("button", { name: "Set targets" }))
+
 describe("Stock agent guided setup: clients and targets", () => {
   beforeEach(() => {
     search = "step=2"
@@ -181,8 +189,10 @@ describe("Stock agent guided setup: clients and targets", () => {
   it("asks a client in another currency for its own zones on its row and blocks Continue", async () => {
     renderPage()
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
-    expect(within(row).getByRole("alert")).toHaveTextContent(/account is in EUR, which the default zones \(GBP\) don't cover/)
+    expect(within(row).getByText("Needs its own, in EUR")).toBeInTheDocument()
+    expect(screen.getByText(/Berlin Body Co bills in a different currency from your zones/)).toBeInTheDocument()
     expect(cont()).toBeDisabled()
+    await openTargets(row)
     await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "9")
     await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "12")
     expect(within(row).queryByRole("alert")).not.toBeInTheDocument()
@@ -199,18 +209,135 @@ describe("Stock agent guided setup: clients and targets", () => {
     expect(cont()).toBeDisabled()
   })
 
-  it("shows the needs-a-red-limit error on a row whose green limit came from its CPL target", async () => {
+  it("starts every client on Your zones, and a CPL target does not fill in a limit", async () => {
     groups = [{ ...GROUPS[0], targets: { cpl: 7 } }, GROUPS[1], GROUPS[2]]
     renderPage()
     const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
-    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("7")
+    expect(within(row).getByText("Your zones")).toBeInTheDocument()
+    expect(within(row).queryByLabelText("Green under for Lumen Skin Clinic")).not.toBeInTheDocument()
+    expect(within(row).queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("Use your zones sends a client back to the default, and clears its limits on save", async () => {
+    agent = mkAgent({ scope: { client_group_ids: ["g1"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, clients: { g1: { batch_id: "a", zones: { green_under: 6, red_over: 9 } } } } })
+    renderPage()
+    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
+    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("6")
+    await userEvent.click(within(row).getByRole("button", { name: "Use your zones" }))
+    expect(within(row).getByText("Your zones")).toBeInTheDocument()
+    await userEvent.click(cont())
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(bodies("/api/agents/ag1/settings", "PATCH")[0].settings.clients.g1.zones).toEqual({ green_under: null, red_over: null })
+  })
+
+  it("a saved partial limit still shows, with its error, until it is fixed", async () => {
+    agent = mkAgent({ scope: { client_group_ids: ["g1"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, clients: { g1: { batch_id: "a", zones: { green_under: 7 } } } } })
+    renderPage()
+    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
     expect(within(row).getByRole("alert")).toHaveTextContent(/only one zone limit set; it needs a red limit too/)
     expect(cont()).toBeDisabled()
+    await userEvent.click(within(row).getByRole("button", { name: "Use your zones" }))
+    expect(cont()).toBeEnabled()
+  })
+
+  describe("the bulk bar", () => {
+    const SKIN = { id: "skin", name: "Skin" }
+    const GBP_GROUPS = [GROUPS[0], { id: "g4", name: "Velvet Laser", meta_ad_account_id: "act_4", facebook: { currency: "GBP" } }, GROUPS[1], GROUPS[2]]
+    const bar = () => within(screen.getByRole("toolbar", { name: "Change the ticked clients" }))
+    const tick = (name) => userEvent.click(screen.getByRole("checkbox", { name: `Select ${name}` }))
+    const choose = async (menu, option) => {
+      await userEvent.click(bar().getByRole("combobox", { name: menu }))
+      await userEvent.click(await screen.findByRole("option", { name: option }))
+    }
+
+    beforeEach(() => {
+      groups = GBP_GROUPS
+      agent = mkAgent({ scope: { client_group_ids: ["g1", "g4"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, treatments: [SKIN] } })
+    })
+
+    it("only appears while clients are ticked", async () => {
+      renderPage()
+      await screen.findByText("Lumen Skin Clinic")
+      expect(screen.queryByRole("toolbar")).not.toBeInTheDocument()
+      await tick("Lumen Skin Clinic")
+      expect(bar().getByText("1 selected")).toBeInTheDocument()
+      await userEvent.click(bar().getByRole("button", { name: "Clear" }))
+      expect(screen.queryByRole("toolbar")).not.toBeInTheDocument()
+    })
+
+    it("sets treatment, prepaid and targets on every ticked client, and leaves the rest alone", async () => {
+      groups = [...GBP_GROUPS, { id: "g5", name: "Peak Sculpt", meta_ad_account_id: "act_5", facebook: { currency: "GBP" } }]
+      agent = mkAgent({ scope: { client_group_ids: ["g1", "g4", "g5"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, treatments: [SKIN] } })
+      renderPage()
+      await screen.findByText("Lumen Skin Clinic")
+      await tick("Lumen Skin Clinic")
+      await tick("Velvet Laser")
+      await choose("Treatment", "Skin")
+      await choose("Prepaid", "Prepaid")
+      await userEvent.type(bar().getByLabelText("Green under for selected clients"), "6")
+      await userEvent.type(bar().getByLabelText("Red over for selected clients"), "9")
+      await userEvent.click(bar().getByRole("button", { name: "Set targets" }))
+      expect(screen.getByLabelText("Green under for Velvet Laser")).toHaveValue("6")
+      await userEvent.click(cont())
+      await waitFor(() => expect(push).toHaveBeenCalled())
+      const { clients } = bodies("/api/agents/ag1/settings", "PATCH")[0].settings
+      for (const gid of ["g1", "g4"]) {
+        expect(clients[gid].treatment_ids).toEqual(["skin"])
+        expect(clients[gid].prepaid).toEqual({ topups: [] })
+        expect(clients[gid].zones).toEqual({ green_under: 6, red_over: 9 })
+      }
+      expect(clients.g5.treatment_ids).toEqual([])
+      expect(clients.g5.prepaid).toBeNull()
+      expect(clients.g5.zones).toEqual({ green_under: null, red_over: null })
+    })
+
+    it("won't set one set of targets across currencies", async () => {
+      agent = mkAgent({ scope: { client_group_ids: ["g1", "g2"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, treatments: [SKIN] } })
+      renderPage()
+      await screen.findByText("Lumen Skin Clinic")
+      await tick("Lumen Skin Clinic")
+      await tick("Berlin Body Co")
+      expect(bar().queryByLabelText("Green under for selected clients")).not.toBeInTheDocument()
+      expect(bar().getByText(/different currencies/)).toBeInTheDocument()
+    })
+
+    it("needs both limits, with red not below green, before setting targets", async () => {
+      renderPage()
+      await screen.findByText("Lumen Skin Clinic")
+      await tick("Lumen Skin Clinic")
+      const set = bar().getByRole("button", { name: "Set targets" })
+      expect(set).toBeDisabled()
+      await userEvent.type(bar().getByLabelText("Green under for selected clients"), "9")
+      await userEvent.type(bar().getByLabelText("Red over for selected clients"), "6")
+      expect(set).toBeDisabled()
+      expect(bar().getByRole("alert")).toHaveTextContent(/Red must be at least the green limit/)
+    })
+
+    it("sends ticked clients back to Your zones, and stops watching them", async () => {
+      agent = mkAgent({ scope: { client_group_ids: ["g1", "g4"], schedule: { time: "07:00", tz: "Europe/London" } }, settings: { ...BASE_SETTINGS, clients: { g1: { batch_id: "a", zones: { green_under: 6, red_over: 9 } } } } })
+      renderPage()
+      const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
+      await tick("Lumen Skin Clinic")
+      await userEvent.click(bar().getByRole("button", { name: "Use your zones" }))
+      expect(within(row).getByText("Your zones")).toBeInTheDocument()
+      await userEvent.click(bar().getByRole("button", { name: "Stop watching" }))
+      expect(row).toHaveTextContent("Not watched")
+      expect(bar().getByRole("button", { name: "Watch" })).toBeInTheDocument()
+    })
+
+    it("Select all skips a client with no Meta account", async () => {
+      renderPage()
+      await screen.findByText("Lumen Skin Clinic")
+      await userEvent.click(screen.getByRole("checkbox", { name: "Select all clients" }))
+      expect(bar().getByText("3 selected")).toBeInTheDocument()
+      expect(screen.getByRole("checkbox", { name: "Select No Meta Ltd" })).not.toBeChecked()
+    })
   })
 
   it("blocks Continue when one client's red is below its green, on that row", async () => {
     renderPage()
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await openTargets(row)
     await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "12")
     await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "9")
     expect(within(row).getByRole("alert")).toHaveTextContent(/red must be at least the green limit/)
@@ -220,30 +347,12 @@ describe("Stock agent guided setup: clients and targets", () => {
   it("blocks Continue on a typed green limit with no red, and clears when red is typed", async () => {
     renderPage()
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await openTargets(row)
     await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "9")
     expect(within(row).getByRole("alert")).toHaveTextContent(/only one zone limit set; it needs a red limit too/)
     expect(cont()).toBeDisabled()
     await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "12")
     expect(cont()).toBeEnabled()
-  })
-
-  it("a cleared green limit stays cleared, even after unticking and ticking the client", async () => {
-    groups = [{ ...GROUPS[0], targets: { cpl: 7 } }, GROUPS[1], GROUPS[2]]
-    renderPage()
-    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
-    await userEvent.clear(within(row).getByLabelText("Green under for Lumen Skin Clinic"))
-    expect(within(row).queryByRole("alert")).not.toBeInTheDocument()
-    await userEvent.click(within(row).getByRole("checkbox"))
-    await userEvent.click(within(row).getByRole("checkbox"))
-    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("")
-  })
-
-  it("does not refill a green limit that was saved as empty", async () => {
-    groups = [{ ...GROUPS[0], targets: { cpl: 7 } }, GROUPS[1], GROUPS[2]]
-    agent = mkAgent({ settings: { ...BASE_SETTINGS, clients: { g1: { batch_id: "a", zones: { green_under: null, red_over: null } } } } })
-    renderPage()
-    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
-    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("")
   })
 
   it("gives a client that arrives later a row, and ticking it does not throw", async () => {
@@ -258,7 +367,8 @@ describe("Stock agent guided setup: clients and targets", () => {
     creating = false
     await act(async () => { await refetchAll() })
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
-    await userEvent.click(within(row).getByRole("checkbox"))
+    await userEvent.click(within(row).getByRole("switch", { name: "Watch Berlin Body Co" }))
+    await openTargets(row)
     expect(within(row).getByLabelText("Green under for Berlin Body Co")).toBeInTheDocument()
   })
 
@@ -274,6 +384,7 @@ describe("Stock agent guided setup: clients and targets", () => {
   it("a background refetch while someone is typing does not overwrite their input", async () => {
     renderPage()
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await openTargets(row)
     const green = within(row).getByLabelText("Green under for Berlin Body Co")
     await userEvent.type(green, "9")
     const defaultGreen = screen.getByLabelText("Green under", { selector: "#stock-zone-green" })
@@ -291,12 +402,14 @@ describe("Stock agent guided setup: clients and targets", () => {
     renderPage()
     const row = (await screen.findByText("No Meta Ltd")).closest("tr")
     expect(within(row).getByRole("checkbox")).toBeDisabled()
+    expect(within(row).getByRole("switch", { name: "Watch No Meta Ltd" })).toBeDisabled()
     expect(row).toHaveTextContent("No Meta ad account is connected")
   })
 
   it("saves zones, clients, only_flag and the client list together", async () => {
     renderPage()
     const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await openTargets(row)
     await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "9")
     await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "12")
     await userEvent.click(cont())
@@ -316,6 +429,7 @@ describe("Stock agent guided setup: clients and targets", () => {
     }
     const fillG2 = async () => {
       const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+      await openTargets(row)
       await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "9")
       await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "12")
     }
