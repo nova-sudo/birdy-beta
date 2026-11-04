@@ -12,26 +12,34 @@ export const AGENTS_KEY = queryKeys.agents()
 /**
  * The agents this agency has set up. Only a 404 (the route not deployed yet)
  * reads as "none yet"; any other failure surfaces as `error`, so a page never
- * mistakes a broken list for an empty one.
+ * mistakes a broken list for an empty one. `LIST_UNAVAILABLE` marks that "none", so a page
+ * about to act on "this agency has no agent" can tell it apart from a real empty list.
  */
+const LIST_UNAVAILABLE = Object.freeze([])
+
+// SWR's own compare calls the marker equal to a real empty list and would keep whichever came first.
+const sameList = (a, b) => (a === LIST_UNAVAILABLE || b === LIST_UNAVAILABLE ? a === b : JSON.stringify(a) === JSON.stringify(b))
+
 async function agentsFetcher(endpoint) {
   try {
     const data = await fetcher(endpoint)
     if (Array.isArray(data)) return data
-    return Array.isArray(data?.items) ? data.items : []
+    return Array.isArray(data?.items) ? data.items : LIST_UNAVAILABLE
   } catch (err) {
-    if (err?.status === 404) return []
+    if (err?.status === 404) return LIST_UNAVAILABLE
     throw err
   }
 }
 
-/** @returns {{ agents: object[], error: Error|undefined, isLoading: boolean, mutate: Function }} */
+/** @returns {{ agents: object[], listUnavailable: boolean, error: Error|undefined, isLoading: boolean, mutate: Function }} */
 export function useAgents() {
-  const { data, error, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher)
-  return { agents: data ?? [], error, isLoading, mutate }
+  const { data, error, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher, { compare: sameList })
+  return { agents: data ?? [], listUnavailable: data === LIST_UNAVAILABLE, error, isLoading, mutate }
 }
 
 const WORK_COUNT_KEY = "agent-work-count"
+/** `agents.type` of the Birdy Media Buying Agent. */
+export const STOCK_AGENT_TYPE = "stock_media_buying"
 
 /** Whether an SWR key holds agent work: one agent's `/work`, or the badge's multi-agent key. */
 export function isAgentWorkKey(key) {
@@ -52,21 +60,30 @@ const openCount = (work) => (Array.isArray(work?.open) ? work.open.length : 0)
 /**
  * Open work items across this user's live agents, for the nav badge; `null`
  * with no live agent (or before anything loaded), so the badge stays hidden.
- * Phase 1 has one agent per user, so this reads the same SWR entry as
- * `useAgentWork` and costs no extra request on the agent page.
+ * A custom agent's open work items and the Birdy Media Buying Agent's open
+ * cards add together. One custom agent shares the SWR entry `useAgentWork`
+ * reads, so it costs no extra request on the agent page.
  */
 export function useAgentWorkCount() {
   const { agents } = useAgents()
-  const ids = agents.filter((a) => a.status === "active").map((a) => a.id)
+  const live = agents.filter((a) => a.status === "active")
+  const ids = live.filter((a) => a.type !== STOCK_AGENT_TYPE).map((a) => a.id)
+  const stockId = live.find((a) => a.type === STOCK_AGENT_TYPE)?.id ?? null
   const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher, FRESH_WORK)
   const many = useSWR(
     ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null,
     ([, ...list]) => Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id)))),
     FRESH_WORK
   )
-  if (ids.length === 0) return null
-  if (ids.length === 1) return one.data ? openCount(one.data) : null
-  return many.data ? many.data.reduce((n, w) => n + openCount(w), 0) : null
+  // The newest report's own key, so the report page shares it. One cheap request: `open_cards` is counted server-side.
+  const stock = useSWR(stockId ? queryKeys.stockLatestRun(stockId) : null, fetcher, FRESH_WORK)
+  if (live.length === 0) return null
+  let total = 0
+  if (ids.length === 1 && one.data) total += openCount(one.data)
+  if (ids.length > 1 && many.data) total += many.data.reduce((n, w) => n + openCount(w), 0)
+  if (stockId && typeof stock.data?.open_cards === "number") total += stock.data.open_cards
+  const loaded = (ids.length === 0 || (ids.length === 1 ? one.data : many.data)) && (!stockId || stock.data !== undefined || stock.error)
+  return loaded ? total : null
 }
 
 // ─── One agent ───────────────────────────────────────────────────────────────
@@ -94,6 +111,12 @@ const FRESH_WORK = { revalidateOnFocus: true, dedupingInterval: 30 * 1000 }
 export function useAgentWork(id) {
   const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentWork(id) : null, fetcher, FRESH_WORK)
   return { work: data ?? { open: [], auto_applied: [] }, error, isLoading, mutate }
+}
+
+/** Who acts on each client the agent watches: `acting` is this_agent, other_agent or no_agent. */
+export function useAgentClaims(id) {
+  const { data, mutate } = useSWR(id ? queryKeys.agentClaims(id) : null, optionalFetcher)
+  return { clients: data?.clients ?? [], mutate }
 }
 
 /** Confidence score; `null` while the route is not deployed yet. */
@@ -167,7 +190,7 @@ export function revalidateAgentLearning(mutate, id) {
  * Sends a request and returns its JSON. A failure throws an Error carrying
  * `status` and the server's `detail` (which may be an object, e.g. `{missing}`).
  */
-async function send(endpoint, method, body) {
+export async function send(endpoint, method, body) {
   const res = await apiRequest(endpoint, {
     method,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -189,14 +212,23 @@ async function send(endpoint, method, body) {
     if (data?.decided_by) err.decidedBy = data.decided_by
     // Activation's 409 carries `missing` beside `detail`, not inside it.
     if (Array.isArray(data?.missing)) err.missing = data.missing
+    // A claimed client (409): who holds it, so the caller can offer to move it.
+    if (Array.isArray(data?.conflicts)) err.conflicts = data.conflicts
+    // A refused settings patch (400) lists each bad field; a preview that can't start (409) lists the clients not ready.
+    if (Array.isArray(data?.errors)) err.errors = data.errors
+    if (Array.isArray(data?.not_ready)) err.not_ready = data.not_ready
     throw err
   }
   return data
 }
 
-/** Creates this user's media buying agent. 409 when one already exists. */
-export function createAgent() {
-  return send(queryKeys.agents(), "POST")
+/** Where one custom agent lives, and its setup wizard. */
+export const customAgentPath = (id) => `/hub/agents/custom/${encodeURIComponent(id)}`
+export const customSetupPath = (id) => `${customAgentPath(id)}/setup`
+
+/** Creates an agent. `type` is "custom"; a blank or over-60-character `name` is a 400. */
+export function createAgent({ type, name }) {
+  return send(queryKeys.agents(), "POST", { type, name })
 }
 
 /** Deletes a draft agent and everything it learned, so setup starts over. 409 once it is switched on. */
@@ -204,7 +236,11 @@ export function deleteAgent(id) {
   return send(queryKeys.agent(id), "DELETE")
 }
 
-/** `{scope?, permissions?, guardrails?, client_caps?}`; scope and schedule are merged server-side. */
+/**
+ * `{scope?, permissions?, guardrails?, client_caps?, move_claims?, only_flag?}`; scope and schedule
+ * are merged server-side. A scope that takes a client another agent holds is a 409 with
+ * `err.conflicts`; resend with `move_claims: true`, or `only_flag: [gids]` (honoured with `scope`).
+ */
 export function patchAgent(id, patch) {
   return send(queryKeys.agent(id), "PATCH", patch)
 }
@@ -250,9 +286,13 @@ export function resolvePractice(id, caseId, resolution) {
   return send(`${queryKeys.agentPractice(id)}/${encodeURIComponent(caseId)}/resolve`, "POST", { resolution })
 }
 
-/** Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not ready yet. */
-export function activateAgent(id) {
-  return send(`${queryKeys.agent(id)}/activate`, "POST")
+/**
+ * Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not
+ * ready yet, or `{detail, conflicts}` (`err.conflicts`) when a client is held by another agent;
+ * `opts` is `{move_claims?, only_flag?}` for the resend.
+ */
+export function activateAgent(id, opts) {
+  return send(`${queryKeys.agent(id)}/activate`, "POST", opts)
 }
 
 // ─── Work list decisions ─────────────────────────────────────────────────────

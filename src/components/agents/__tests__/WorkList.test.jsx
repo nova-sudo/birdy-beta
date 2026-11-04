@@ -44,7 +44,7 @@ const AUTO = [
   { ...base, id: "a2", status: "applied", rule_kind: "pause_over_target", rule_mode: "auto", title: "Paused 2 ads", client: "The Contour Co", undone_at: "2026-10-26T08:00:00Z" },
 ]
 
-const AGENTS = [{ id: "ag1", type: "media_buying", status: "active" }]
+const AGENTS = [{ id: "ag1", type: "custom", status: "active" }]
 
 let work
 beforeEach(() => {

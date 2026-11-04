@@ -110,3 +110,22 @@ export const BLOCK_TEMPLATES = [
     { id: "image", label: "Image", hint: "Any https image", block: () => ({ type: "image", image_url: "https://birdy-beta.vercel.app/icon.png", alt_text: "Birdy" }) },
   ] },
 ]
+
+/**
+ * "Add block" for a message that has its own values rather than the user's report figures: the blocks that
+ * need no live data. The values themselves come from "Insert value".
+ */
+export const PLAIN_BLOCK_TEMPLATES = [
+  { group: "Text", items: [
+    { id: "header", label: "Header", hint: "Big bold title", block: () => ({ type: "header", text: { type: "plain_text", text: "Title" } }) },
+    { id: "section", label: "Text", hint: "A paragraph", block: () => ({ type: "section", text: md("Write your text here.") }) },
+    { id: "context", label: "Small print", hint: "Grey footnote line", block: () => ({ type: "context", elements: [md("A note in small print.")] }) },
+    { id: "divider", label: "Divider", hint: "A line between parts", block: () => ({ type: "divider" }) },
+  ] },
+  { group: "Links and media", items: [
+    { id: "actions", label: "Link buttons", hint: "Open a page", block: () => ({ type: "actions", elements: [
+      { type: "button", text: { type: "plain_text", text: "Open Birdy" }, url: "https://birdy-beta.vercel.app/hub" },
+    ] }) },
+    { id: "image", label: "Image", hint: "Any https image", block: () => ({ type: "image", image_url: "https://birdy-beta.vercel.app/icon.png", alt_text: "Birdy" }) },
+  ] },
+]

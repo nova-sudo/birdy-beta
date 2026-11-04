@@ -60,7 +60,7 @@ describe("uploadCreativeMedia", () => {
     expect(apiRequest).not.toHaveBeenCalled()
   })
   it("gets a grant, uploads public, and returns the media record", async () => {
-    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ grant: "G" }) })
+    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ grant: "G", path_prefix: "creatives/u-abc/" }) })
     upload.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/a.png" })
     const onProgress = vi.fn()
     const out = await uploadCreativeMedia(file("image/png", 1000), { onProgress, measure: async () => ({ width: 10, height: 20, duration_s: null }) })
@@ -69,12 +69,23 @@ describe("uploadCreativeMedia", () => {
       expect.objectContaining({ method: "POST", body: JSON.stringify({ mime: "image/png", bytes: 1000 }) }),
     )
     const [path, , opts] = upload.mock.calls[0]
-    expect(path).toMatch(/^creatives\/[0-9a-f-]+-a\.png$/)
+    expect(path).toMatch(/^creatives\/u-abc\/[0-9a-f-]+-a\.png$/)
     expect(opts).toMatchObject({ access: "public", handleUploadUrl: "/api/creatives/upload", clientPayload: "G" })
     expect(out).toEqual({
       blob_url: "https://x.public.blob.vercel-storage.com/creatives/a.png",
       mime: "image/png", bytes: 1000, width: 10, height: 20, duration_s: null,
     })
+  })
+  it("uploads under the grant's path_prefix, or the file route rejects it", async () => {
+    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ grant: "G", path_prefix: "creatives/u-abc/" }) })
+    upload.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/a.png" })
+    await uploadCreativeMedia(file("image/png", 1000), { measure: async () => ({}) })
+    expect(upload.mock.calls[0][0]).toMatch(/^creatives\/u-abc\/[0-9a-f-]+-a\.png$/)
+  })
+  it("fails at the start when the grant has no path_prefix, rather than after uploading a file nothing can use", async () => {
+    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ grant: "G" }) })
+    await expect(uploadCreativeMedia(file("image/png", 1000), { measure: async () => ({}) })).rejects.toThrow(/Could not start the upload/)
+    expect(upload).not.toHaveBeenCalled()
   })
   it("surfaces a grant error", async () => {
     apiRequest.mockResolvedValue({ ok: false, json: async () => ({ detail: "nope" }) })
@@ -86,7 +97,7 @@ describe("uploadCreativeMedia", () => {
     const order = []
     apiRequest.mockImplementation(async () => {
       order.push("grant")
-      return { ok: true, json: async () => ({ grant: "G" }) }
+      return { ok: true, json: async () => ({ grant: "G", path_prefix: "creatives/u-abc/" }) }
     })
     upload.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/a.png" })
     const measure = vi.fn(async () => {

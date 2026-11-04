@@ -25,7 +25,7 @@ import { reportApi, scheduleLabel } from "@/lib/report-designer"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BLOCK_TEMPLATES, buildPlaceholder, insertAt, parseBlocks, toJson } from "@/lib/report-editor"
+import { BLOCK_TEMPLATES, PLAIN_BLOCK_TEMPLATES, buildPlaceholder, insertAt, parseBlocks, toJson } from "@/lib/report-editor"
 import SlackMessagePreview from "./SlackMessagePreview"
 
 const ALL = "__all__"
@@ -223,7 +223,42 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
   )
 }
 
-export default function ReportEditor({ brief, onSave, onCancel, saving = false }) {
+/** "Insert value": the placeholders a message has of its own, like {{client}}. */
+function InsertValue({ names, onInsert }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="gap-1.5">
+          <Braces className="size-3.5" /> Insert value
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="pd-scrolly max-h-[320px] w-[220px] overflow-y-auto">
+        {names.map((name) => (
+          <DropdownMenuItem key={name} onSelect={() => onInsert(`{{${name}}}`)} className="font-mono text-[12.5px]">
+            {`{{${name}}}`}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/**
+ * @param {object} props
+ * @param {object} [props.brief] `{blocks, frequency?, time?, day?}`; keep it referentially stable (memoize it)
+ * @param {(template: object) => Promise<{blocks: object[], sample?: boolean}>} [props.previewFn]
+ *   Renders the draft for another feature (the stock agent's Slack templates). It rejects with an Error whose
+ *   `errors` lists what Slack won't accept. Without it, the Slack report's own preview is used.
+ * @param {string[]} [props.placeholders] Values to offer as `{{name}}` under "Insert value".
+ * @param {boolean} [props.extraMetricsDisabled] Turns off everything that reads the user's report figures:
+ *   the live-number picker, and the chart, table and card blocks. For messages that have their own values.
+ * @param {{id: string, label: string, hint: string, block: () => object}[]} [props.extraBlocks]
+ *   More "Add block" items for a message with its own data, shown with `extraMetricsDisabled`.
+ * @param {string} [props.saveLabel] The Save button's words.
+ */
+export default function ReportEditor({
+  brief, onSave, onCancel, saving = false, previewFn, placeholders, extraMetricsDisabled = false, extraBlocks, saveLabel = "Save report",
+}) {
   const [catalog, setCatalog] = useState([])
   const [clients, setClients] = useState([])
   const [periods, setPeriods] = useState([])
@@ -234,13 +269,17 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
   const ticket = useRef(0)
   const area = useRef(null)
   const [focus, setFocus] = useState(null)
+  // Read through a ref so a parent passing a new function each render doesn't redo the preview.
+  const previewRef = useRef(previewFn)
+  previewRef.current = previewFn
   const pendingFocus = useRef(null) // set by "Add block", applied once the preview includes it
 
   useEffect(() => {
+    if (extraMetricsDisabled) return
     reportApi.state()
       .then((s) => { setCatalog(s.catalog || []); setClients(s.clients || []); setPeriods(s.periods || []) })
       .catch(() => {})
-  }, [])
+  }, [extraMetricsDisabled])
 
   const parsed = useMemo(() => parseBlocks(json), [json])
   const template = useMemo(() => ({
@@ -265,6 +304,17 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
     setPreviewLoading(true)
     const t = setTimeout(async () => {
       try {
+        if (previewRef.current) {
+          const data = await previewRef.current(template)
+          if (mine !== ticket.current) return
+          setPreview(data)
+          setErrors([])
+          if (pendingFocus.current != null) {
+            setFocus({ index: pendingFocus.current, key: Date.now() })
+            pendingFocus.current = null
+          }
+          return
+        }
         const res = await reportApi.previewRaw(template)
         if (mine !== ticket.current) return
         if (res.status === 400) {
@@ -278,7 +328,10 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
             pendingFocus.current = null
           }
         }
-      } catch { /* keep the last good preview */ } finally {
+      } catch (err) {
+        // A refused template says what is wrong; any other failure keeps the last good preview.
+        if (previewRef.current && mine === ticket.current && err?.errors?.length) setErrors(err.errors.map(String))
+      } finally {
         if (mine === ticket.current) setPreviewLoading(false)
       }
     }, 500)
@@ -324,7 +377,10 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="pd-scrolly max-h-[420px] w-[290px] overflow-y-auto">
-              {BLOCK_TEMPLATES.map((group) => (
+              {(extraMetricsDisabled
+                ? [...PLAIN_BLOCK_TEMPLATES, ...(extraBlocks?.length ? [{ group: "Birdy data", items: extraBlocks }] : [])]
+                : BLOCK_TEMPLATES
+              ).map((group) => (
                 <div key={group.group}>
                   <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-pd-faint">{group.group}</DropdownMenuLabel>
                   {group.items.map((tpl) => {
@@ -346,7 +402,8 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
               onClick={() => setJson(toJson(parsed.blocks))}>
               <Braces className="size-3.5" /> Tidy
             </Button>
-            <InsertNumber catalog={catalog} clients={clients} periods={periods} onInsert={insertNumber} />
+            {placeholders?.length > 0 && <InsertValue names={placeholders} onInsert={insertNumber} />}
+            {!extraMetricsDisabled && <InsertNumber catalog={catalog} clients={clients} periods={periods} onInsert={insertNumber} />}
           </div>
         </div>
         <textarea
@@ -358,8 +415,13 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
           className="pd-scrolly min-h-[300px] w-full flex-1 resize-none rounded-2xl border border-pd-border bg-pd-surface px-4 py-3 font-mono text-[12px] leading-relaxed text-pd-ink outline-none transition-[border-color,box-shadow] focus:border-pd-primary focus:ring-4 focus:ring-pd-primary/15"
         />
         <p className="mt-2 text-[11.5px] leading-relaxed text-pd-faint">
-          Slack Block Kit, as Slack receives it. Live numbers go in <code className="text-pd-body">{"{{ }}"}</code> placeholders,
-          or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you.
+          Slack Block Kit, as Slack receives it. {extraMetricsDisabled ? "Values" : "Live numbers"} go in <code className="text-pd-body">{"{{ }}"}</code> placeholders
+          {!extraMetricsDisabled && (
+            <>
+              , or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you
+            </>
+          )}
+          .
         </p>
       </div>
 
@@ -367,10 +429,10 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
       <div className="flex min-h-0 flex-col">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-[11px] font-bold tracking-[0.05em] text-pd-faint">LIVE PREVIEW</span>
-          <span className="text-[11.5px] text-pd-subtle">{scheduleLabel(template)}</span>
+          <span className="text-[11.5px] text-pd-subtle">{previewFn ? "" : scheduleLabel(template)}</span>
         </div>
         <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
-          <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} focus={focus} />
+          <SlackMessagePreview blocks={preview?.blocks} time={previewFn ? undefined : template.time} loading={previewLoading && !!preview} focus={focus} />
           {preview?.sample && (
             <p className="mt-2 text-[11.5px] text-pd-faint">Sample numbers until your clients have synced.</p>
           )}
@@ -382,7 +444,7 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
         </div>
         <div className="mt-4 flex flex-col gap-2">
           <Button type="button" onClick={() => onSave?.(template)} disabled={!canSave} className="h-auto py-[13px] text-[14.5px] disabled:opacity-40">
-            {saving ? "Saving…" : "Save report"}
+            {saving ? "Saving…" : saveLabel}
           </Button>
           {onCancel && (
             <button type="button" onClick={onCancel} className="cursor-pointer p-1 text-center text-[12.5px] font-medium text-pd-subtle hover:text-pd-ink">

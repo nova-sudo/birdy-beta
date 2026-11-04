@@ -1,257 +1,214 @@
 "use client"
 
-import { Suspense, useCallback, useMemo } from "react"
+import { Suspense, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useSWRConfig } from "swr"
-import { ArrowRight, Settings2 } from "lucide-react"
 
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/hub/HubShell"
-import { Badge, Button, EmptyState, ErrorState, Frame, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
-import { ActivityTable } from "@/components/agents/ActivityTable"
-import { StartOverButton } from "@/components/agents/StartOverButton"
-import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/AgentTraining"
-import { LearningOffers } from "@/components/agents/GraduationOffer"
-import { ImpactTabs } from "@/components/agents/ImpactTabs"
-import { LearnedList } from "@/components/agents/LearnedList"
-import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
-import { ProposalList } from "@/components/agents/ProposalDiff"
-import { TrustTable } from "@/components/agents/TrustTable"
-import { WorkList } from "@/components/agents/WorkList"
 import {
-  isAgentImpactKey,
-  revalidateAgentLearning,
-  useAgent,
-  useAgentActivity,
-  useAgentConfidence,
-  useAgents,
-  useAgentWork,
-} from "@/lib/agents-api"
+  Button,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  SegmentedTabs,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+} from "@/components/ds"
+import { MorningReport } from "@/components/agents/stock/MorningReport"
+import { ScoreboardTab } from "@/components/agents/stock/Scoreboard"
+import { AgentSettings } from "@/components/agents/stock/AgentSettings"
+import { LessonsList } from "@/components/agents/stock/LessonsList"
+import { toClient } from "@/components/agents/AgentTraining"
+import { TurnOn } from "@/components/agents/stock/TurnOn"
+import { useAgent } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, runLabel, useLatestRun, useRun, useRuns, useStockActions, useStockAgent } from "@/lib/stock-agent-api"
 import { useClientGroups } from "@/lib/useClientGroups"
 
-const AGENT_PATH = "/hub/agents/media-buying"
-const SETUP_PATH = "/hub/agents/media-buying/setup"
-const PANEL_ID = "agent-tab-panel"
+const TABS = [
+  { value: "report", label: "Report" },
+  { value: "scoreboard", label: "Scoreboard" },
+  { value: "lessons", label: "Lessons" },
+  { value: "settings", label: "Settings" },
+]
 
-const TABS = ["work", "playbook", "train", "activity"]
-const tabOf = (raw) => (TABS.includes(raw) ? raw : "work")
-
-const pickAgent = (list) => (list ?? []).find((a) => a.type === "media_buying") ?? list?.[0] ?? null
-
-/** "7:00 AM" from "07:00". */
-function clockTime(hhmm) {
-  const [h, m] = String(hhmm ?? "").split(":").map(Number)
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
-  const d = new Date(2000, 0, 1, h, m)
-  return d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase()
-}
-
-/**
- * "confidence 91%, up from 82% at launch"; the score alone when there is no launch figure or it
- * has not moved.
- */
-function confidenceLine(score, atActivation) {
-  if (!Number.isFinite(score)) return null
-  const now = Math.round(score)
-  if (!Number.isFinite(atActivation)) return `confidence ${now}%`
-  const then = Math.round(atActivation)
-  if (now === then) return `confidence ${now}%`
-  return `confidence ${now}%, ${now > then ? "up" : "down"} from ${then}% at launch`
-}
-
-/** The line under the title: what it watches, when it runs and how confident it is. */
-function summary(agent, score) {
-  const n = agent.scope?.client_group_ids?.length ?? 0
-  const at = clockTime(agent.scope?.schedule?.time ?? "07:00")
-  return [
-    `Watching ${n} ${n === 1 ? "client" : "clients"}`,
-    at && `daily at ${at}`,
-    confidenceLine(score, agent.confidence?.at_activation),
-  ]
-    .filter(Boolean)
-    .join(" · ")
-}
-
-/** Impact for a month over every decision, newest first, 50 at a time. */
-function ActivityTab({ agentId }) {
-  const { mutate } = useSWRConfig()
-  const { items, error, moreError, isLoading, hasMore, loadingMore, loadMore, mutate: mutateActivity } =
-    useAgentActivity(agentId)
-
-  // An undo changes the log, the month's figures and (through the brake) the rules and work list.
-  const onChanged = useCallback(() => {
-    mutateActivity()
-    mutate(isAgentImpactKey(agentId))
-    revalidateAgentLearning(mutate, agentId)
-  }, [mutate, mutateActivity, agentId])
-
+/** Past reports by date. The open report is always listed, so a Slack link to an old one still reads right. */
+function ReportPicker({ agentId, current, batches, onPick }) {
+  const { runs, hasOlder, loadOlder, error, mutate } = useRuns(agentId)
+  const options = current && !runs.some((r) => r.id === current.id) ? [current, ...runs] : runs
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <ImpactTabs agentId={agentId} />
-      <Frame
-        title="Activity"
-        description="Every action, who decided, and what happened next"
-        footer={
-          moreError ? (
-            <div role="alert" className="flex flex-wrap items-center justify-center gap-3 text-sm text-danger-ink">
-              Couldn&apos;t load more activity.
-              <Button size="sm" variant="outline" onClick={() => mutateActivity()}>
-                Retry
-              </Button>
-            </div>
-          ) : hasMore ? (
-            <Button size="sm" variant="outline" loading={loadingMore} onClick={loadMore}>
-              Load more
-            </Button>
-          ) : undefined
-        }
-      >
-        {error && items.length === 0 ? (
-          <ErrorState title="Couldn't load the activity" description={error.message} onRetry={() => mutateActivity()} />
-        ) : (
-          <ActivityTable agentId={agentId} items={items} loading={isLoading} onChanged={onChanged} />
-        )}
-      </Frame>
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {options.length > 0 && (
+        <Select value={current?.id ?? ""} onValueChange={onPick}>
+          <SelectTrigger aria-label="Report date" className="w-64 max-w-full">
+            <SelectValue placeholder="Pick a date">{current ? runLabel(current, batches) : undefined}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{runLabel(r, batches)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {hasOlder && <Button size="sm" variant="ghost" onClick={loadOlder}>Older reports</Button>}
+      {error && (
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          Couldn&apos;t load past reports.
+          <Button size="sm" variant="ghost" onClick={() => mutate()}>Retry</Button>
+        </span>
+      )}
     </div>
   )
 }
 
-function NotReady({ agent }) {
-  return (
-    <EmptyState
-      variant="surface"
-      icon={Settings2}
-      title={agent ? "Finish setting up your agent" : "Set up your Media Buying Agent"}
-      description={
-        agent
-          ? "It isn't switched on yet. Teach it your strategy and check the dry run, then turn it on."
-          : "Choose what it watches, teach it how you buy, then turn it on."
-      }
-      action={
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button asChild variant="primary">
-            <Link href={SETUP_PATH}>
-              {agent ? "Continue setup" : "Set up agent"}
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-          {agent && <StartOverButton agent={agent} variant="outline" />}
-        </div>
-      }
-    />
-  )
-}
-
-function AgentHome() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const tab = tabOf(searchParams?.get("tab"))
-  const setTab = useCallback(
-    (value) => router.replace(value === "work" ? AGENT_PATH : `${AGENT_PATH}?tab=${value}`, { scroll: false }),
-    [router]
-  )
-
-  const { agents, error: listError, isLoading, mutate: mutateAgents } = useAgents()
-  const listed = pickAgent(agents)
-  const { agent: fetched } = useAgent(listed?.id)
-  const agent = fetched ?? listed
-  const active = agent?.status === "active"
-
-  const { work } = useAgentWork(active ? agent.id : null)
-  const { confidence } = useAgentConfidence(active ? agent.id : null)
-  const score = confidence?.score ?? agent?.confidence?.score
-  const openCount = work.open?.length ?? 0
-
-  const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
-  const clients = useMemo(() => clientGroups.map(toClient), [clientGroups])
-  const currency = agent ? scopeCurrency(clients, agent.scope?.client_group_ids ?? []) : undefined
-
-  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Media Buying Agent" subtitle="BirdyHub" /> }), [])
-  usePageHeader(topBar)
-
-  const tabs = useMemo(
-    () => [
-      { value: "work", label: "Work list", count: openCount > 0 ? openCount : undefined },
-      { value: "playbook", label: "Playbook" },
-      { value: "train", label: "Train" },
-      { value: "activity", label: "Activity" },
-    ],
-    [openCount]
-  )
-
-  let body
-  if (listError) {
-    body = <ErrorState title="Couldn't load your agent" description={listError.message} onRetry={() => mutateAgents()} />
-  } else if (isLoading) {
-    body = <Skeleton className="h-96 w-full rounded-frame" />
-  } else if (!active) {
-    body = <NotReady agent={agent} />
-  } else {
-    body = (
-      <>
-        <SegmentedTabs value={tab} onValueChange={setTab} items={tabs} ariaLabel="Agent" panelId={PANEL_ID} />
-        <div id={PANEL_ID} role="tabpanel" aria-labelledby={`${PANEL_ID}-tab-${tab}`} className="min-w-0">
-          {tab === "work" && (
-            <div className="flex min-w-0 flex-col gap-6">
-              <LearningOffers agentId={agent.id} />
-              <ProposalList agentId={agent.id} currency={currency} clients={clients} />
-              <WorkList
-                agentId={agent.id}
-                empty={`Nothing needs you right now. Birdy checks again tomorrow at ${clockTime(agent.scope?.schedule?.time ?? "07:00") ?? "its usual time"}.`}
-              />
-            </div>
-          )}
-          {tab === "playbook" && (
-            <div className="flex min-w-0 flex-col gap-6">
-              <PlaybookDraft
-                agentId={agent.id}
-                currency={currency}
-                title="Playbook"
-                description="Click any value to change it"
-              />
-              <ProposalList
-                agentId={agent.id}
-                currency={currency}
-                clients={clients}
-                title="Suggested changes"
-                empty="Nothing to suggest yet. When the same denial reason comes up 3 times in 14 days, Birdy suggests a rule change here."
-              />
-              <TrustTable agentId={agent.id} />
-              <LearnedList agentId={agent.id} />
-            </div>
-          )}
-          {tab === "train" && <AgentTraining agent={agent} clients={clients} />}
-          {tab === "activity" && <ActivityTab agentId={agent.id} />}
-        </div>
-      </>
+function ReportTab({ agent, report, reportError, latest, runParam, clients, batches, actions, onRetry, onLatest, onSeeScoreboard }) {
+  // Data first: a failed background refetch must not cover a good report with an error screen.
+  if (report) {
+    return (
+      <MorningReport
+        key={report.run.id}
+        report={report}
+        clients={clients}
+        batches={batches}
+        actions={actions}
+        slackChannel={agent.settings?.slack?.channel_id}
+        preview={report.run.kind === "preview"}
+        onSeeScoreboard={onSeeScoreboard}
+      />
     )
   }
+  const error = reportError ?? (runParam ? null : latest.error)
+  if (error && runParam && error.status === 404) {
+    // Trying the same address again can't help, so the way out is the latest report.
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <ErrorState title="Couldn't load this report" description={error.message} />
+        <Button onClick={onLatest}>Open the latest report</Button>
+      </div>
+    )
+  }
+  if (error) return <ErrorState title="Couldn't load this report" description={error.message} onRetry={onRetry} />
+  if (!runParam && !latest.run && !latest.isLoading) {
+    return agent.turned_off_at && agent.status !== "active" ? (
+      <EmptyState
+        variant="surface"
+        title="This agent is turned off"
+        description="It isn't checking your clients, so no report is coming. Turn it on to carry on from where it was."
+        action={<TurnOn agent={agent} />}
+      />
+    ) : agent.status === "draft" ? (
+      <EmptyState
+        variant="surface"
+        title="Finish setting up your agent"
+        description="Your first report comes once the agent is on."
+        action={
+          <Button asChild variant="primary">
+            <Link href={STOCK_SETUP_PATH}>Finish setup</Link>
+          </Button>
+        }
+      />
+    ) : (
+      <EmptyState variant="surface" title="No report yet" description="Your first one appears after the next scheduled check." />
+    )
+  }
+  return <Skeleton className="h-96 w-full rounded-frame" />
+}
+
+function StockAgentPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const runParam = searchParams?.get("run") ?? null
+  const tabParam = searchParams?.get("tab")
+  const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "report"
+
+  const { agent: listed, listUnavailable, error: listError, isLoading: listLoading, mutate: mutateList } = useStockAgent()
+  const agentId = listed?.id
+  const { agent: full } = useAgent(agentId)
+  const actions = useStockActions(agentId)
+  const latest = useLatestRun(agentId)
+  const runId = runParam ?? latest.run?.id
+  const { report, error: reportError, mutate: mutateReport } = useRun(agentId, runId)
+  const { clientGroups, loading: clientsLoading, error: clientsError, refresh: refreshClients } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
+  const batches = (full ?? listed)?.settings?.batches ?? []
+
+  const section = tab === "report" ? "Morning report" : TABS.find((t) => t.value === tab).label
+  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle={section} /> }), [section])
+  usePageHeader(topBar)
+
+  // Only a list that really came back empty means no agent: a misrouted API must not send a live agent to setup.
+  const noAgent = !listed && !listLoading && !listError && !listUnavailable
+  useEffect(() => {
+    if (noAgent) router.replace(STOCK_SETUP_PATH)
+  }, [noAgent, router])
+
+  const goTo = (changes) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "")
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) params.set(key, value)
+      else params.delete(key)
+    }
+    const query = params.toString()
+    router.push(query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH)
+  }
+  const nameOf = (gid) => clientGroups.find((c) => c.id === gid)?.name ?? "A client"
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
-      <PageHeader
-        backButton={{ label: "BirdyHub", href: "/hub" }}
-        title="Media Buying Agent"
-        titleExtra={
-          active ? (
-            <Badge tone="success" variant="dot">
-              Running
-            </Badge>
-          ) : undefined
-        }
-        description={active ? summary(agent, score) : undefined}
-      />
-      {body}
+      <PageHeader backButton={{ label: "BirdyHub", href: "/hub" }} title="Birdy Media Buying Agent" />
+      {!listed ? (
+        listError || listUnavailable ? (
+          <ErrorState title="Couldn't load your agent" description={listError?.message ?? "Birdy couldn't read your agents. Try again in a moment."} onRetry={() => mutateList()} />
+        ) : (
+          <Skeleton className="h-96 w-full rounded-frame" />
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SegmentedTabs ariaLabel="Agent sections" value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value })} items={TABS} />
+            {tab === "report" && (
+              <ReportPicker agentId={agentId} current={report?.run ?? (runParam ? null : latest.run)} batches={batches} onPick={(id) => goTo({ run: id })} />
+            )}
+          </div>
+          {tab === "report" && (
+            <ReportTab
+              agent={full ?? listed}
+              report={report}
+              reportError={reportError}
+              latest={latest}
+              runParam={runParam}
+              clients={clientGroups}
+              batches={batches}
+              actions={actions}
+              onRetry={() => (runId ? mutateReport() : latest.mutate())}
+              onLatest={() => goTo({ run: null })}
+              onSeeScoreboard={() => goTo({ tab: "scoreboard" })}
+            />
+          )}
+          {tab === "scoreboard" && <ScoreboardTab agentId={agentId} actions={actions} nameOf={nameOf} />}
+          {tab === "lessons" && <LessonsList agentId={agentId} actions={actions} nameOf={nameOf} />}
+          {tab === "settings" &&
+            (clientsError ? (
+              <ErrorState title="Couldn't load your clients" description={String(clientsError)} onRetry={() => refreshClients()} />
+            ) : full && !clientsLoading ? (
+              <AgentSettings key={full.id} agent={full} clients={clientGroups.map(toClient)} actions={actions} />
+            ) : (
+              <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
+            ))}
+        </>
+      )}
     </div>
   )
 }
 
-export default function MediaBuyingAgentPage() {
+export default function StockAgentReportPage() {
   return (
     <Suspense fallback={null}>
-      <AgentHome />
+      <StockAgentPage />
     </Suspense>
   )
 }

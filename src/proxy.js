@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { SESSION_COOKIE, ADMIN_HOME, parseSession, isExpired } from "@/lib/session"
-import { PUBLIC_ROUTES, PROTECTED_ROUTES } from "@/lib/constants"
+import { PUBLIC_ROUTES, isProtectedPath } from "@/lib/constants"
 import { HANDOFF_COOKIE, isIntegrationCallback, isSafeHandoffPath } from "@/lib/oauth-handoff"
 
 /**
@@ -92,7 +92,7 @@ export function proxy(request) {
   if (!session) return NextResponse.next()
 
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
-  const isProtectedRoute = PROTECTED_ROUTES.includes(pathname)
+  const isProtectedRoute = isProtectedPath(pathname)
   const isAdminRoute = pathname.startsWith("/admin")
 
   if (isExpired(session)) {

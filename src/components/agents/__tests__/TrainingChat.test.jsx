@@ -41,6 +41,7 @@ describe("TrainingChat", () => {
     render(<TrainingChat agentId="ag1" onChanged={onChanged} />)
     expect(screen.getByText("When to pause covered")).toBeInTheDocument()
     expect(lastProps.page).toBe("agent_training")
+    expect(lastProps.agentId).toBe("ag1")
     expect(lastProps.showScopePicker).toBe(false)
     lastProps.onToolUsed("get_playbook")
     expect(onChanged).not.toHaveBeenCalled()

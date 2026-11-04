@@ -6,13 +6,15 @@ import { RotateCcw } from "lucide-react"
 import { Button, confirm, toast } from "@/components/ds"
 import { deleteAgent, useAgents } from "@/lib/agents-api"
 
-const SETUP_HREF = "/hub/agents/media-buying/setup"
+const NEW_HREF = "/hub/agents/custom/new"
+const CUSTOM_WARNING =
+  "This deletes the clients you picked, the training chat, your practice answers and any playbook changes. You can't undo it."
 
 /**
  * Throws away a draft agent (its clients, training, practice answers and playbook edits)
- * and opens setup from step 1 with a fresh one.
+ * and opens the new-agent page so it can be started again. `redirectTo={null}` stays on the page; `description` is the warning text.
  */
-export function StartOverButton({ agent, variant = "ghost", size, className }) {
+export function StartOverButton({ agent, variant = "ghost", size, className, redirectTo = NEW_HREF, description = CUSTOM_WARNING }) {
   const router = useRouter()
   const { mutate: mutateAgents } = useAgents()
   const [busy, setBusy] = useState(false)
@@ -20,8 +22,7 @@ export function StartOverButton({ agent, variant = "ghost", size, className }) {
   const startOver = async () => {
     const ok = await confirm({
       title: "Start setup over?",
-      description:
-        "This deletes the clients you picked, the training chat, your practice answers and any playbook changes. You can't undo it.",
+      description,
       confirmLabel: "Start over",
     })
     if (!ok) return
@@ -31,7 +32,7 @@ export function StartOverButton({ agent, variant = "ghost", size, className }) {
       await mutateAgents((list) => (Array.isArray(list) ? list.filter((a) => a.id !== agent.id) : []), {
         revalidate: false,
       })
-      router.push(`${SETUP_HREF}?step=1`)
+      if (redirectTo) router.push(redirectTo)
     } catch (err) {
       toast.error("Couldn't start over", {
         description: err?.status === 409 ? "This agent is already switched on." : err?.message,

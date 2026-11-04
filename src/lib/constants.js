@@ -69,6 +69,9 @@ export const PUBLIC_ROUTES = ["/", "/login", "/register"]
 // Prefix-matched public areas, for routes with an id in the path.
 export const PUBLIC_ROUTE_PREFIXES = ["/install"]
 
+/** Protected pages with an id in the path, so an exact match can't list them. */
+export const PROTECTED_ROUTE_PREFIXES = ["/hub/agents/custom/"]
+
 export const PROTECTED_ROUTES = [
   "/onboarding",
   "/clients",
@@ -82,4 +85,9 @@ export const PROTECTED_ROUTES = [
   "/hub/dashboards",
   "/hub/agents/media-buying",
   "/hub/agents/media-buying/setup",
+  "/hub/agents/custom/new",
 ]
+
+/** Whether a pathname needs a signed-in user: an exact protected route or one under a protected prefix. */
+export const isProtectedPath = (pathname) =>
+  PROTECTED_ROUTES.includes(pathname) || PROTECTED_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))

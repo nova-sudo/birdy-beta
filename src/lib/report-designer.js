@@ -24,7 +24,7 @@ const decode = (t) => t.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&am
  * Slack mrkdwn → segments React can render without innerHTML.
  * Handles what Slack does: *bold*, _italic_, ~strike~, `code`, <url|text>
  * links, and "> " quotes, line by line. Returns lines, each
- * { quote: bool, segs: [{ text, bold?, italic?, strike?, code?, href? }] }.
+ * { quote: bool, segs: [{ text, bold?, italic?, strike?, code?, href?, mention? }] }.
  */
 export function parseMrkdwn(text) {
   return String(text ?? "").split("\n").map((raw) => {
@@ -35,7 +35,7 @@ export function parseMrkdwn(text) {
       line = line.replace(/^(>|&gt;)\s?/, "")
     }
     const segs = []
-    const re = /\*([^*\n]+)\*|_([^_\n]+)_|~([^~\n]+)~|`([^`\n]+)`|<((?:https?:\/\/|mailto:)[^|>]+)(?:\|([^>]+))?>/g
+    const re = /\*([^*\n]+)\*|_([^_\n]+)_|~([^~\n]+)~|`([^`\n]+)`|<((?:https?:\/\/|mailto:)[^|>]+)(?:\|([^>]+))?>|<@[^>]+>|<!(channel|here|everyone)>/g
     let last = 0
     let m
     while ((m = re.exec(line))) {
@@ -44,7 +44,8 @@ export function parseMrkdwn(text) {
       else if (m[2] !== undefined) segs.push({ text: decode(m[2]), italic: true })
       else if (m[3] !== undefined) segs.push({ text: decode(m[3]), strike: true })
       else if (m[4] !== undefined) segs.push({ text: decode(m[4]), code: true })
-      else segs.push({ text: decode(m[6] || m[5]), href: m[5] })
+      else if (m[5] !== undefined) segs.push({ text: decode(m[6] || m[5]), href: m[5] })
+      else segs.push({ text: m[7] ? `@${m[7]}` : "@user", mention: true })
       last = m.index + m[0].length
     }
     if (last < line.length) segs.push({ text: decode(line.slice(last)) })

@@ -30,6 +30,14 @@ describe("chat-store", () => {
     expect(seen[seen.length - 1]).toBe(false)
   })
 
+  it("sends agent_id in the /api/chat body, and leaves it out without one", async () => {
+    apiRequest.mockImplementation(() => reply({ reply: "ok", tools_used: [] }))
+    await sendChatMessage("k-agent", { text: "hi", page: "agent_training", agentId: "ag1" })
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body).agent_id).toBe("ag1")
+    await sendChatMessage("k-none", { text: "hi", page: "dashboard" })
+    expect(JSON.parse(apiRequest.mock.calls[1][1].body)).not.toHaveProperty("agent_id")
+  })
+
   it("drops a reply that arrives after the chat was reset", async () => {
     let resolve
     apiRequest.mockReturnValue(new Promise((r) => { resolve = r }))

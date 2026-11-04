@@ -7,6 +7,10 @@ const IMAGE_TYPES = ["image/jpeg", "image/png"]
 const VIDEO_TYPES = ["video/mp4", "video/quicktime"]
 /** Value for an <input type="file" accept>. */
 export const CREATIVE_ACCEPT = [...IMAGE_TYPES, ...VIDEO_TYPES].join(",")
+/** Value for an <input type="file" accept> that takes only video. */
+export const VIDEO_ACCEPT = VIDEO_TYPES.join(",")
+/** Value for an <input type="file" accept> that takes only images. */
+export const IMAGE_ACCEPT = IMAGE_TYPES.join(",")
 const MAX_IMAGE = 30 * MB
 const MAX_VIDEO = 1024 * MB
 const MEASURE_TIMEOUT_MS = 10_000
@@ -81,14 +85,16 @@ export async function uploadCreativeMedia(file, { onProgress, measure = measureM
   } catch {
     // non-JSON body
   }
-  if (!res.ok || !data?.grant) {
+  // Without the prefix the upload would work and then be refused as not this user's, so stop here.
+  if (!res.ok || !data?.grant || !data?.path_prefix) {
     throw new Error(
       typeof data?.detail === "string" ? data.detail : "Could not start the upload. Try again.",
     )
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(-80)
-  const blob = await upload(`creatives/${crypto.randomUUID()}-${safeName}`, file, {
+  // The grant's prefix is what lets the backend prove later that this upload is this user's.
+  const blob = await upload(`${data.path_prefix}${crypto.randomUUID()}-${safeName}`, file, {
     access: "public",
     handleUploadUrl: "/api/creatives/upload",
     clientPayload: data.grant,
