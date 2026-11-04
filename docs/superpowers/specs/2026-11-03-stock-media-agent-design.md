@@ -341,7 +341,7 @@ So for a video Add:
 3. Otherwise the line is `needs_file`. The card shows **Upload video**, Slack links to the
    report, and Auto falls back to Ask me.
 
-Files a person uploads are kept and keyed by creative, so each is uploaded at most once per agency. Images
+Files a person uploads are kept and keyed by source account and source video or image, so each is uploaded at most once per source. Images
 don't have this problem, as the pipeline already re-uploads them.
 
 **Undo:** Remove and Bring back use the existing undo window. Undoing an Add pauses the new ad.
