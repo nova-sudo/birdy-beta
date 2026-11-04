@@ -23,6 +23,7 @@ import {
 import { ClaimConflicts } from "@/components/agents/ClaimConflicts"
 import { integrationsHref } from "@/components/agents/ClientScopeTable"
 import { currencySymbol } from "@/lib/chat-viz"
+import { ClientsBulkBar } from "./ClientsBulkBar"
 import { ErrorNotice, SetupFooter, clientErrors, parseNumber, saveMessage, settingsOf, show } from "./SetupShared"
 
 const NO_TREATMENT = "__none"
@@ -34,18 +35,22 @@ function commonCurrency(clients, ids) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 }
 
-function startingRow(client, stored, firstBatch) {
-  const own = stored?.zones ?? {}
+// Every client follows Your zones until someone gives it its own: `own` is whether its limits are open for editing.
+function startingRow(stored, firstBatch) {
+  const zones = stored?.zones ?? {}
   return {
     batch_id: stored?.batch_id ?? firstBatch,
     treatment_ids: stored?.treatment_ids ?? [],
-    // The green limit starts from the client's CPL target, as the server does the first time a client is added.
-    // Only a client whose zones were never saved starts from its CPL target. A limit saved as empty stays empty.
-    green: show(stored?.zones == null ? (own.green_under ?? client.cpl) : own.green_under),
-    red: show(own.red_over),
+    own: zones.green_under != null || zones.red_over != null,
+    green: show(zones.green_under),
+    red: show(zones.red_over),
     prepaid: Boolean(stored?.prepaid),
   }
 }
+
+const hasOwnLimits = (row) => row.green.trim() !== "" || row.red.trim() !== ""
+
+const nameList = (names) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0])
 
 /**
  * What stops a client's zones from resolving, in the server's words, or null. Mirrors the server's
@@ -84,8 +89,8 @@ function RowSeg({ batches, value, onChange, name }) {
 }
 
 /**
- * Step 2: zones for the whole agency, then one table: who is watched, which batch, which treatment, any
- * zone override and whether the account is prepaid. Saves through `patchSettings`.
+ * Step 2: zones for the whole agency, then one table. Every client follows those zones with no treatment
+ * until someone changes it, on its row or by ticking several and using the bulk bar. Saves through `patchSettings`.
  */
 export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext, saveLabel, inPlace = false }) {
   const settings = useMemo(() => settingsOf(agent), [agent])
@@ -95,7 +100,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
 
   const [selected, setSelected] = useState(() => (storedIds.length ? storedIds : clients.filter((c) => c.account).map((c) => c.id)))
   const [rows, setRows] = useState(() =>
-    Object.fromEntries(clients.map((c) => [c.id, startingRow(c, settings.clients[c.id], firstBatch)]))
+    Object.fromEntries(clients.map((c) => [c.id, startingRow(settings.clients[c.id], firstBatch)]))
   )
   const [defaults, setDefaults] = useState(() => ({
     currency: settings.zones.currency ?? commonCurrency(clients, storedIds.length ? storedIds : clients.filter((c) => c.account).map((c) => c.id)),
@@ -104,6 +109,8 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
   }))
   const [treatments, setTreatments] = useState(settings.treatments)
   const [newTreatment, setNewTreatment] = useState(null)
+  const [picked, setPicked] = useState([])
+  const [justOpened, setJustOpened] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [serverRowErrors, setServerRowErrors] = useState({})
@@ -117,13 +124,27 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
   }, [clients, defaults.currency])
 
   // A client that arrived after this step opened (an import finishing) starts from its own defaults.
-  const rowFor = (c) => rows[c.id] ?? startingRow(c, settings.clients[c.id], firstBatch)
-  const setRow = (gid, patch) => {
-    const client = clients.find((c) => c.id === gid)
-    setRows((r) => ({ ...r, [gid]: { ...(r[gid] ?? startingRow(client, settings.clients[gid], firstBatch)), ...patch } }))
-    setServerRowErrors((e) => (e[gid] ? { ...e, [gid]: undefined } : e))
+  const rowFor = (c) => rows[c.id] ?? startingRow(settings.clients[c.id], firstBatch)
+  const setRowsFor = (gids, patch) => {
+    setRows((r) => {
+      const next = { ...r }
+      for (const gid of gids) next[gid] = { ...(r[gid] ?? startingRow(settings.clients[gid], firstBatch)), ...patch }
+      return next
+    })
+    setServerRowErrors((e) => {
+      const next = { ...e }
+      for (const gid of gids) delete next[gid]
+      return next
+    })
   }
-  const toggle = (gid, on) => setSelected((ids) => (on ? [...ids, gid] : ids.filter((i) => i !== gid)))
+  const setRow = (gid, patch) => setRowsFor([gid], patch)
+  const useYourZones = (gids) => setRowsFor(gids, { own: false, green: "", red: "" })
+  const toggle = (gid, on) => setSelected((ids) => (on ? [...new Set([...ids, gid])] : ids.filter((i) => i !== gid)))
+
+  const pickable = clients.filter((c) => c.account)
+  const pickedClients = pickable.filter((c) => picked.includes(c.id))
+  const pickedIds = pickedClients.map((c) => c.id)
+  const allPicked = pickable.length > 0 && pickedClients.length === pickable.length
 
   const dg = parseNumber(defaults.green)
   const dr = parseNumber(defaults.red)
@@ -192,11 +213,23 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
     }
   }
 
-  const noMatch = defaults.currency && watched.some((c) => c.currency && c.currency !== defaults.currency)
+  // The default can't be used until it is complete, and it never covers another currency.
+  const followers = watched.filter((c) => !hasOwnLimits(rowFor(c)))
+  const needsOwn = defaults.currency ? followers.filter((c) => c.currency !== defaults.currency) : []
+  const defaultMissing = dg.value == null || dr.value == null || !defaults.currency
+  const waitingForDefault = defaultMissing && followers.length > needsOwn.length
+  const count = (test) => watched.filter((c) => test(rowFor(c))).length
+  const summary = [
+    `${selected.length} of ${clients.length} watched`,
+    `${followers.length} on your zones`,
+    `${watched.length - followers.length} with their own`,
+    `${count((r) => r.treatment_ids.length > 0)} with a treatment`,
+    `${count((r) => r.prepaid)} prepaid`,
+  ].join(" · ")
 
   return (
     <div className="flex flex-col gap-6">
-      <Frame title="Your zones" description="The default for every client in this currency. Override any client below." padded contentClassName="flex flex-col gap-3">
+      <Frame title="Your zones" description="Every client uses these unless you give it its own below." padded contentClassName="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
             <Label id="stock-zone-currency" className="text-xs text-muted-foreground">
@@ -239,23 +272,21 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
             {defaultProblem}
           </p>
         )}
-        {noMatch && (
-          <p className="text-xs text-muted-foreground">
-            Clients whose account is not in {defaults.currency} can't use these numbers. Give each its own limits below.
-          </p>
+        {waitingForDefault && !defaultProblem && (
+          <p className="text-xs text-muted-foreground">Pick a currency and set both limits, so your clients have zones to follow.</p>
         )}
       </Frame>
 
       <Frame
         title="Clients"
-        description="A client with no treatment never gets another client's ads, and its ads are never offered to another client."
+        description="Tick clients to set targets, treatment or prepaid for all of them. A client with no treatment never gets another client's ads, and its ads are never offered to another client."
         action={
           <Button size="sm" variant="ghost" onClick={() => setNewTreatment("")}>
             <Plus aria-hidden />
             Add a treatment
           </Button>
         }
-        footer={`${selected.length} of ${clients.length} watched`}
+        footer={summary}
       >
         {newTreatment !== null && (
           <form
@@ -278,29 +309,40 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
           <table className="w-full min-w-[56rem] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="w-10 px-3 py-2"><span className="sr-only">Watch</span></th>
+                <th className="w-10 px-3 py-2">
+                  <Checkbox
+                    aria-label="Select all clients"
+                    checked={allPicked ? true : pickedClients.length ? "indeterminate" : false}
+                    disabled={pickable.length === 0}
+                    onCheckedChange={(v) => setPicked(v === true ? pickable.map((c) => c.id) : [])}
+                  />
+                </th>
                 <th className="px-3 py-2 font-medium">Client</th>
+                <th className="px-3 py-2 font-medium">Targets</th>
                 <th className="px-3 py-2 font-medium">Batch</th>
                 <th className="px-3 py-2 font-medium">Treatment</th>
-                <th className="px-3 py-2 text-right font-medium">Green under</th>
-                <th className="px-3 py-2 text-right font-medium">Red over</th>
                 <th className="px-3 py-2 font-medium">Prepaid</th>
+                <th className="px-3 py-2 font-medium">Watch</th>
+                <th className="px-3 py-2"><span className="sr-only">Targets action</span></th>
               </tr>
             </thead>
             <tbody>
               {clients.map((c) => {
                 const on = chosen.has(c.id)
                 const row = rowFor(c)
-                const message = on ? serverRowErrors[c.id] || problems[c.id] : null
+                const isPicked = pickedIds.includes(c.id)
+                // A client following the default is explained by its badge and the notes around the table.
+                const message = on ? serverRowErrors[c.id] || (hasOwnLimits(row) ? problems[c.id] : null) : null
                 const sym = currencySymbol(c.currency)
+                const needs = needsOwn.includes(c)
                 return (
-                  <tr key={c.id} className="border-t align-middle">
+                  <tr key={c.id} className={isPicked ? "border-t bg-primary-soft align-middle" : "border-t align-middle"}>
                     <td className="px-3 py-2">
                       <Checkbox
-                        aria-label={`Watch ${c.name}`}
-                        checked={on}
+                        aria-label={`Select ${c.name}`}
+                        checked={isPicked}
                         disabled={!c.account}
-                        onCheckedChange={(v) => toggle(c.id, v === true)}
+                        onCheckedChange={(v) => setPicked((ids) => (v === true ? [...ids, c.id] : ids.filter((i) => i !== c.id)))}
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -323,6 +365,38 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                     {on ? (
                       <>
                         <td className="px-3 py-2">
+                          {row.own ? (
+                            <div className="flex items-center gap-2">
+                              {["green", "red"].map((key) => (
+                                <div key={key} className="relative w-24">
+                                  {sym && (
+                                    <span aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">
+                                      {sym}
+                                    </span>
+                                  )}
+                                  <Input
+                                    size="sm"
+                                    inputMode="decimal"
+                                    autoFocus={key === "green" && justOpened === c.id}
+                                    placeholder={key === "green" ? "Green" : "Red"}
+                                    aria-label={`${key === "green" ? "Green under" : "Red over"} for ${c.name}`}
+                                    warning={Boolean(message)}
+                                    value={row[key]}
+                                    onChange={(e) => setRow(c.id, { [key]: e.target.value })}
+                                    className="pl-7 text-right font-mono"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          ) : needs ? (
+                            <Badge tone="warning" size="sm" title={problems[c.id] ?? undefined}>
+                              {c.currency ? `Needs its own, in ${c.currency}` : "Needs its own"}
+                            </Badge>
+                          ) : (
+                            <Badge tone="neutral" size="sm">Your zones</Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
                           <RowSeg batches={settings.batches} value={row.batch_id} name={c.name} onChange={(v) => setRow(c.id, { batch_id: v })} />
                         </td>
                         <td className="px-3 py-2">
@@ -343,36 +417,36 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                             </SelectContent>
                           </Select>
                         </td>
-                        {["green", "red"].map((key) => (
-                          <td key={key} className="px-3 py-2 text-right">
-                            <div className="relative ml-auto w-28">
-                              {sym && (
-                                <span aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">
-                                  {sym}
-                                </span>
-                              )}
-                              <Input
-                                size="sm"
-                                inputMode="decimal"
-                                placeholder="Default"
-                                aria-label={`${key === "green" ? "Green under" : "Red over"} for ${c.name}`}
-                                warning={Boolean(message)}
-                                value={row[key]}
-                                onChange={(e) => setRow(c.id, { [key]: e.target.value })}
-                                className="pl-7 text-right font-mono"
-                              />
-                            </div>
-                          </td>
-                        ))}
                         <td className="px-3 py-2">
                           <Switch aria-label={`Prepaid ${c.name}`} checked={row.prepaid} onCheckedChange={(v) => setRow(c.id, { prepaid: v })} />
                         </td>
                       </>
                     ) : (
-                      <td colSpan={5} className="px-3 py-2 text-muted-foreground">
-                        Not watched
+                      <td colSpan={4} className="px-3 py-2 text-muted-foreground">
+                        {c.account ? "Not watched" : ""}
                       </td>
                     )}
+                    <td className="px-3 py-2">
+                      <Switch aria-label={`Watch ${c.name}`} checked={on} disabled={!c.account} onCheckedChange={(v) => toggle(c.id, v)} />
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      {on && (row.own ? (
+                        <Button size="sm" variant="link" onClick={() => useYourZones([c.id])}>
+                          Use your zones
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="link"
+                          onClick={() => {
+                            setJustOpened(c.id)
+                            setRow(c.id, { own: true })
+                          }}
+                        >
+                          Set targets
+                        </Button>
+                      ))}
+                    </td>
                   </tr>
                 )
               })}
@@ -381,6 +455,26 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
         </div>
       </Frame>
 
+      {pickedClients.length > 0 && (
+        <ClientsBulkBar
+          picked={pickedClients}
+          watching={chosen}
+          batches={settings.batches}
+          treatmentOptions={[{ value: NO_TREATMENT, label: "No treatment" }, ...treatments.map((t) => ({ value: t.id, label: t.name }))]}
+          onTreatment={(v) => setRowsFor(pickedIds, { treatment_ids: v === NO_TREATMENT ? [] : [v] })}
+          onChange={(patch) => setRowsFor(pickedIds, patch)}
+          onSetTargets={(green, red) => setRowsFor(pickedIds, { own: true, green, red })}
+          onUseZones={() => useYourZones(pickedIds)}
+          onWatch={(on) => setSelected((ids) => (on ? [...new Set([...ids, ...pickedIds])] : ids.filter((i) => !pickedIds.includes(i))))}
+          onClear={() => setPicked([])}
+        />
+      )}
+
+      {needsOwn.length > 0 && (
+        <Notice tone="warning">
+          {nameList(needsOwn.map((c) => c.name))} {needsOwn.length > 1 ? "bill" : "bills"} in a different currency from your zones, so {needsOwn.length > 1 ? "each needs its" : "it needs its"} own targets before you can continue.
+        </Notice>
+      )}
       {selected.length === 0 && <Notice tone="warning">Pick at least one client for it to watch.</Notice>}
       <ErrorNotice>{error}</ErrorNotice>
       {conflicts && (

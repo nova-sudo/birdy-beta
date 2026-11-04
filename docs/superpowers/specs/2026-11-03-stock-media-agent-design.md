@@ -155,7 +155,7 @@ Validation rules:
 - A client with no treatment tag never receives another client's ads, and its ads are never
   offered to another client. That is how an agency opts a client out of sharing.
 - `prepaid` is pre-filled from Meta's `is_prepay_account`, and the agency can change it.
-- Green zones pre-fill from an existing client CPL target when one exists.
+- Every client starts on Your zones. A client CPL target is never copied into a zone limit; agencies give a client its own targets on its row or with the bulk bar.
 - Slack is optional. Without it the report and all actions work in Birdy, and a notice says
   cards won't reach Slack.
 
