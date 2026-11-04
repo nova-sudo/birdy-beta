@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useSWRConfig } from "swr"
 import { Zap } from "lucide-react"
 
 import { Button, Notice } from "@/components/ds"
 import { ClaimConflicts } from "@/components/agents/ClaimConflicts"
 import { activateAgent, useAgents } from "@/lib/agents-api"
-import { revalidateStock } from "@/lib/stock-agent-api"
+import { STOCK_SETUP_PATH, revalidateStock } from "@/lib/stock-agent-api"
 
 /**
  * Turns a turned-off stock agent back on. It calls `activate` directly: the finished preview is still on file,
@@ -62,6 +63,11 @@ export function TurnOn({ agent, clients = [], variant = "primary", size, classNa
                 <li key={m}>{m}</li>
               ))}
             </ul>
+          )}
+          {missing.some((m) => /preview/i.test(m)) && (
+            <Link href={`${STOCK_SETUP_PATH}?step=6`} className="mt-2 inline-block text-sm font-medium underline">
+              Open the preview step
+            </Link>
           )}
         </Notice>
       )}

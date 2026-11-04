@@ -525,6 +525,19 @@ describe("Stock agent guided setup: preview and turn on", () => {
     expect(calls("/api/agents/ag1/preview", "POST")).toHaveLength(1)
   })
 
+  it("a turned off agent finishes the preview here and turns on, with no Start over", async () => {
+    agent = mkAgent({ turned_off_at: "2026-11-04T09:00:00" })
+    previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" } } }
+    report = { run: previewRun, cards: [] }
+    renderPage()
+    const turnOn = await screen.findByRole("button", { name: /Turn on/ })
+    expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
+    await waitFor(() => expect(turnOn).toBeEnabled())
+    await userEvent.click(turnOn)
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying"))
+    expect(calls("/api/agents/ag1/activate", "POST")).toHaveLength(1)
+  })
+
   it("a preview that missed a watched client is not finished", async () => {
     previewRun = { id: "r1", kind: "preview", phase: "done", clients: { gX: { state: "done" } } }
     renderPage()

@@ -391,6 +391,24 @@ describe("Agent settings: a turned off agent", () => {
     expect(screen.getByText("Pick a client")).toBeInTheDocument()
   })
 
+  it("when the preview is what's missing, the notice links to the setup preview step", async () => {
+    agent = OFF()
+    activateHandler = () => Promise.resolve(res({ detail: "not ready", missing: ["Preview the first report again: it doesn't cover every client you watch now"] }, 409))
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    const link = await screen.findByRole("link", { name: "Open the preview step" })
+    expect(link).toHaveAttribute("href", "/hub/agents/media-buying/setup?step=6")
+  })
+
+  it("no preview link when something else is missing", async () => {
+    agent = OFF()
+    activateHandler = () => Promise.resolve(res({ detail: "not ready", missing: ["Pick a client"] }, 409))
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    await screen.findByText("Pick a client")
+    expect(screen.queryByRole("link", { name: "Open the preview step" })).toBeNull()
+  })
+
   it("names a client another agent now holds and moves it or only flags it", async () => {
     agent = OFF()
     activateHandler = vi
