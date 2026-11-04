@@ -176,6 +176,16 @@ describe("Agent page: the top bar", () => {
 })
 
 describe("Morning report: the page", () => {
+  it("lists a card with a tag it doesn't know last", async () => {
+    const rep = FULL()
+    rep.cards = [{ ...rep.cards[0], tag: "something_new" }, ...rep.cards.slice(1)]
+    use(rep)
+    renderPage()
+    await heading("Morning report")
+    const names = (await screen.findAllByRole("article")).map((a) => a.getAttribute("aria-label"))
+    expect(names[names.length - 1]).toBe(rep.cards[0].client_name)
+  })
+
   it("lists cards with a decision first, then no changes, then green", async () => {
     const rep = FULL()
     rep.cards = [rep.cards[3], rep.cards[2], rep.cards[0], rep.cards[1]]

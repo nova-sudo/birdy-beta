@@ -112,9 +112,13 @@ function TabsList({
     const box = listRef.current?.parentElement
     const active = listRef.current?.querySelector("[role=tab][data-state=active]")
     if (!active || box?.dataset.slot !== "tabs-scroller" || box.scrollWidth <= box.clientWidth) return
-    const right = active.offsetLeft + active.offsetWidth
-    if (right > box.scrollLeft + box.clientWidth) box.scrollLeft = right - box.clientWidth
-    else if (active.offsetLeft < box.scrollLeft) box.scrollLeft = active.offsetLeft
+    const style = getComputedStyle(box)
+    const edges = box.getBoundingClientRect()
+    const tab = active.getBoundingClientRect()
+    const past = tab.right - (edges.right - parseFloat(style.paddingRight))
+    const before = edges.left + parseFloat(style.paddingLeft) - tab.left
+    if (past > 0) box.scrollLeft += past
+    else if (before > 0) box.scrollLeft -= before
   }, [tabs?.value])
 
   React.useEffect(() => {
