@@ -68,6 +68,7 @@ export const queryKeys = {
   stockSettings: (id) => `/api/agents/${id}/settings`,
   stockPreview: (id) => `/api/agents/${id}/preview`,
   stockLatestRun: (id) => `/api/agents/${id}/runs/latest`,
+  stockRuns: (id) => `/api/agents/${id}/runs`,
   stockRun: (id, runId) => `/api/agents/${id}/runs/${runId}`,
   stockCard: (id, cardId) => `/api/agents/${id}/cards/${cardId}`,
   stockOutcomes: (id) => `/api/agents/${id}/outcomes`,

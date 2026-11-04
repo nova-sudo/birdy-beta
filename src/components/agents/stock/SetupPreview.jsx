@@ -4,23 +4,13 @@ import { useMemo, useState } from "react"
 import { useSWRConfig } from "swr"
 import { Play, Zap } from "lucide-react"
 
-import { Badge, Button, Frame, Notice, Skeleton, Spinner } from "@/components/ds"
+import { Button, Frame, Notice, Skeleton, Spinner } from "@/components/ds"
 import { ClaimConflicts } from "@/components/agents/ClaimConflicts"
 import { HistoryProgress } from "@/components/agents/HistoryProgress"
-import { MODE_LABELS } from "./ModesTable"
+import { MorningReport } from "./MorningReport"
 import { SetupFooter } from "./SetupShared"
 import { activateAgent, historySettled, useAgentHistory } from "@/lib/agents-api"
-import { currencySymbol } from "@/lib/chat-viz"
 import { revalidateStock, usePreviewRun, useRun } from "@/lib/stock-agent-api"
-
-const TAGS = {
-  changes: { tone: "primary", text: "Changes proposed" },
-  green: { tone: "success", text: "In the green" },
-  no_changes: { tone: "neutral", text: "No changes" },
-}
-const KIND_LABELS = { remove: "Remove", add: "Add", revive: "Revive" }
-
-const money = (n, currency) => (n == null ? "none" : `${currencySymbol(currency) ?? ""}${Number(n).toFixed(2)}`)
 
 const STATES_DONE = ["done", "failed"]
 
@@ -42,47 +32,22 @@ export function previewStatus(run, ids) {
   return states.every((st) => st === "failed") ? "unread" : "finished"
 }
 
-function PreviewReport({ agentId, runId, clients }) {
+function PreviewReport({ agentId, runId, clients, actions }) {
   const { report, error, isLoading } = useRun(agentId, runId)
-  const nameOf = (gid) => clients.find((c) => c.id === gid)?.name ?? "A client"
+  if (report) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Your first report</h2>
+          <p className="text-sm text-muted-foreground">Built from your real data. Nothing was changed in Meta or posted to Slack.</p>
+        </div>
+        <MorningReport report={report} clients={clients} actions={actions} preview />
+      </div>
+    )
+  }
   if (isLoading) return <Skeleton className="h-40 w-full rounded-frame" />
-  if (error || !report) return <Notice tone="warning">Couldn&apos;t load the preview report. Try running it again.</Notice>
-  const unchecked = Object.entries(report.run?.clients ?? {}).filter(([, c]) => c.state === "failed")
-  return (
-    <Frame title="Your first report" description="Built from your real data. Nothing was changed in Meta or posted to Slack." padded contentClassName="flex flex-col gap-4">
-      {report.cards.length === 0 && unchecked.length === 0 && <p className="text-sm text-muted-foreground">No client needed a card.</p>}
-      {report.cards.map((card) => {
-        const tag = TAGS[card.tag] ?? TAGS.no_changes
-        return (
-          <article key={card.id} aria-label={`Preview for ${card.client_name}`} className="flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">{card.client_name}</h3>
-              <Badge tone={tag.tone} size="sm">{tag.text}</Badge>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                Cost per lead {money(card.previous_cpl, card.currency)} to {money(card.current_cpl, card.currency)}
-              </span>
-            </div>
-            {card.lines?.length > 0 && (
-              <ul className="flex flex-col gap-1 text-sm">
-                {card.lines.map((ln) => (
-                  <li key={ln.id}>
-                    <span className="font-medium">{KIND_LABELS[ln.kind] ?? ln.kind}</span> {ln.ad_name}{" "}
-                    <span className="text-muted-foreground">({MODE_LABELS[ln.mode] ?? ln.mode})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {card.thought_process && <p className="text-sm text-ink-secondary">{card.thought_process}</p>}
-          </article>
-        )
-      })}
-      {unchecked.map(([gid, c]) => (
-        <p key={gid} className="text-sm text-warning-ink">
-          {nameOf(gid)} couldn&apos;t be checked{c.error ? `: ${c.error}` : "."}
-        </p>
-      ))}
-    </Frame>
-  )
+  if (error) return <Notice tone="warning">Couldn&apos;t load the preview report. Try running it again.</Notice>
+  return null
 }
 
 /**
@@ -177,7 +142,7 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
         )}
       </Frame>
 
-      {finished && <PreviewReport agentId={agent.id} runId={run.id} clients={clients} />}
+      {finished && <PreviewReport agentId={agent.id} runId={run.id} clients={clients} actions={actions} />}
 
       {activateError && (
         <Notice tone="warning">

@@ -76,6 +76,12 @@ describe("uploadCreativeMedia", () => {
       mime: "image/png", bytes: 1000, width: 10, height: 20, duration_s: null,
     })
   })
+  it("uploads under the grant's path_prefix, or the file route rejects it", async () => {
+    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ grant: "G", path_prefix: "creatives/u-abc/" }) })
+    upload.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/a.png" })
+    await uploadCreativeMedia(file("image/png", 1000), { measure: async () => ({}) })
+    expect(upload.mock.calls[0][0]).toMatch(/^creatives\/u-abc\/[0-9a-f-]+-a\.png$/)
+  })
   it("surfaces a grant error", async () => {
     apiRequest.mockResolvedValue({ ok: false, json: async () => ({ detail: "nope" }) })
     await expect(uploadCreativeMedia(file("image/png", 1000), { measure: async () => ({}) })).rejects.toThrow("nope")

@@ -502,7 +502,13 @@ describe("Stock agent guided setup: preview and turn on", () => {
       ],
     }
     await userEvent.click(screen.getByRole("button", { name: /Run the preview/ }))
-    expect(await screen.findByRole("article", { name: "Preview for Lumen Skin Clinic" })).toHaveTextContent("Remove Static 4")
+    // The real report component, collapsed and with nothing to press: a preview writes nothing.
+    const row = await screen.findByRole("article", { name: "Lumen Skin Clinic" })
+    await userEvent.click(within(row).getByRole("button", { name: /Lumen Skin Clinic/ }))
+    expect(row).toHaveTextContent("Remove - Static 4")
+    for (const name of ["Apply", "Edit", "Dismiss"]) expect(within(row).queryByRole("button", { name })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^Apply \d/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("combobox", { name: "Report date" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Turn on/ })).toBeEnabled()
     expect(calls("/api/agents/ag1/preview", "POST")).toHaveLength(1)
   })

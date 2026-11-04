@@ -1,15 +1,15 @@
 "use client"
 
 import useSWR, { useSWRConfig } from "swr"
+import useSWRInfinite from "swr/infinite"
 import { fetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
-import { STOCK_AGENT_TYPE, revalidateAgentWork, send, useAgents } from "@/lib/agents-api"
+import { currencySymbol } from "@/lib/chat-viz"
+import { STOCK_AGENT_TYPE, acceptProposal, rejectProposal, revalidateAgentWork, send, useAgents } from "@/lib/agents-api"
 
 // ─── The Birdy Media Buying Agent ────────────────────────────────────────────
 // One per user. Its routes live under /api/agents/{id}; every hook and mutation
-// below matches one of them. Backend routes with no hook here yet:
-//   GET  /runs                      past reports (a later task adds it if the history list needs it)
-//   POST /outcomes/{row}/clear      take a wrong result off the scoreboard
+// below matches one of them.
 
 export { STOCK_AGENT_TYPE }
 export const STOCK_AGENT_PATH = "/hub/agents/media-buying"
@@ -34,7 +34,7 @@ export const REASON_COPY = {
   add_writes_off: "Posting new ads is switched off, so Birdy didn't post this.",
   needs_file: "Meta won't share this file, so Birdy needs you to upload it before it can post the ad.",
   no_token: "Meta isn't connected, so nothing was changed. Reconnect Meta and try again.",
-  // The ad exists but isn't on
+  // The ad exists but isn't on. The server has three messages here too (one only says the ad may exist).
   left_paused:
     "Birdy made this ad and it is paused in Meta, because a newer card replaced this one before it went live. Turn it on in Ads Manager if you want it.",
   unconfirmed:
@@ -66,7 +66,7 @@ export const REASON_COPY = {
 
 /** The words to show for a reason code. Falls back to the server's message, then to a safe line. */
 export function reasonCopy(code, serverMessage) {
-  if (code === "already_posted" && serverMessage) return serverMessage
+  if ((code === "already_posted" || code === "left_paused") && serverMessage) return serverMessage
   if (code && Object.hasOwn(REASON_COPY, code)) return REASON_COPY[code]
   return serverMessage || REASON_COPY.default
 }
@@ -74,6 +74,75 @@ export function reasonCopy(code, serverMessage) {
 /** Activity rows for the stock agent, by kind. */
 export const ACTIVITY_COPY = {
   ad_left_paused: "Birdy made an ad and left it paused in Meta. It needs turning on in Ads Manager.",
+}
+
+// ─── Reading a report ────────────────────────────────────────────────────────
+
+const WRITABLE_KINDS = ["remove", "revive", "add"]
+const LINE_BUSY = ["queued", "applying", "undoing"]
+const UNDO_WINDOW_MS = 24 * 60 * 60 * 1000
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+/** A money figure in its own currency, or null when there is none. Never defaults to a currency. */
+export function money(n, currency) {
+  if (n == null || !Number.isFinite(Number(n))) return null
+  const figure = Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${currency ? currencySymbol(currency) : ""}${figure}`
+}
+
+/** The server stores UTC and sends it with no zone, which a browser would read as local time. */
+export function parseServerDate(value) {
+  if (!value) return null
+  const text = String(value)
+  return new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(text) ? text : `${text}Z`)
+}
+
+const utcDay = (iso) => new Date(`${String(iso).slice(0, 10)}T00:00:00Z`)
+
+/** "2026-11-03" (or a longer time) as "3 Nov". */
+export function shortDay(iso) {
+  const d = utcDay(iso)
+  return Number.isNaN(d.getTime()) ? "" : `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+}
+
+/** "2026-11-03" as "Tue 3 Nov". */
+export function dayLabel(iso) {
+  const d = utcDay(iso)
+  return Number.isNaN(d.getTime()) ? "" : `${DAYS[d.getUTCDay()]} ${shortDay(iso)}`
+}
+
+/** A run's date and batch, as the report head and the date picker show them. */
+export function runLabel(run, batches = []) {
+  const batch = run.batch_id
+    ? (batches.find((b) => b.id === run.batch_id)?.name ?? `Batch ${String(run.batch_id).toUpperCase()}`)
+    : "Alerts only"
+  return `${dayLabel(run.local_date)} · ${batch}`
+}
+
+/** An ad's name without its date and result, so one creative reads the same across accounts. */
+export function creativeName(name) {
+  return String(name ?? "").replace(/\s[-–]\s\d{6}\b.*$/, "")
+}
+
+/** Whether a report is still changing by itself: the run is going, or lines are out with Meta. */
+export function reportBusy(report) {
+  if (!report?.run) return false
+  if (report.run.phase !== "done" || report.run.apply_all?.pending) return true
+  return (report.cards ?? []).some((c) => (c.lines ?? []).some((ln) => LINE_BUSY.includes(ln.state)))
+}
+
+/** The lines Apply would make on this card, by the server's own rule: proposed and not Flag. Auto that fell back to Ask me counts. */
+export function openLines(card) {
+  if (!card.can_apply) return []
+  return (card.lines ?? []).filter((ln) => ln.state === "proposed" && ln.mode !== "flag" && WRITABLE_KINDS.includes(ln.kind))
+}
+
+/** Whether a line can still be undone, by the server's own rule. */
+export function undoOpen(line, now = Date.now()) {
+  if (line.state !== "applied" || !WRITABLE_KINDS.includes(line.kind)) return false
+  const until = parseServerDate(line.undo_until)?.getTime() ?? (parseServerDate(line.applied_at)?.getTime() ?? -Infinity) + UNDO_WINDOW_MS
+  return now <= until
 }
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
@@ -91,6 +160,27 @@ export function useLatestRun(id) {
   return { run: data?.run ?? null, openCards: data?.open_cards ?? 0, error, isLoading, mutate }
 }
 
+/**
+ * Past reports, newest first, a page at a time. `loadOlder` adds the next page.
+ * @returns {{ runs: object[], hasOlder: boolean, loadOlder: () => void, error, isLoading }}
+ */
+export function useRuns(id) {
+  const base = id ? queryKeys.stockRuns(id) : null
+  const { data, error, isLoading, size, setSize } = useSWRInfinite((index, previous) => {
+    if (!base) return null
+    if (index === 0) return base
+    return previous?.next_before ? `${base}?before=${encodeURIComponent(previous.next_before)}` : null
+  }, fetcher)
+  const pages = data ?? []
+  return {
+    runs: pages.flatMap((p) => p.runs ?? []),
+    hasOlder: Boolean(pages.at(-1)?.next_before),
+    loadOlder: () => setSize(size + 1),
+    error,
+    isLoading,
+  }
+}
+
 /** The newest preview run (`run` is null before the first), for setup. Polls every 5 seconds while it is unfinished. */
 export function usePreviewRun(id) {
   const { data, error, isLoading, mutate } = useSWR(id ? `${queryKeys.stockLatestRun(id)}?kind=preview` : null, fetcher, {
@@ -102,9 +192,12 @@ export function usePreviewRun(id) {
 /**
  * One report: `{run, cards, follow_ups, scoreboard, learned, proposals, weekly}`. `weekly` is the safe
  * view (`values`, `posted`, `post_error`); `run` carries `publish_error`, `slack_pending`, `slack_late`.
+ * Polls every 5 seconds while the report is still changing by itself (see reportBusy).
  */
 export function useRun(id, runId) {
-  const { data, error, isLoading, mutate } = useSWR(id && runId ? queryKeys.stockRun(id, runId) : null, fetcher)
+  const { data, error, isLoading, mutate } = useSWR(id && runId ? queryKeys.stockRun(id, runId) : null, fetcher, {
+    refreshInterval: (latest) => (reportBusy(latest) ? 5000 : 0),
+  })
   return { report: data ?? null, error, isLoading, mutate }
 }
 
@@ -184,6 +277,11 @@ export function overruleLesson(id, lessonId) {
   return send(`${queryKeys.stockLessons(id)}/${encodeURIComponent(lessonId)}/overrule`, "POST")
 }
 
+/** A result is wrong: takes it out of the record. The row stays listed as cleared. Only a won or lost row can be cleared. */
+export function clearOutcome(id, rowId) {
+  return send(`${queryKeys.stockOutcomes(id)}/${encodeURIComponent(rowId)}/clear`, "POST")
+}
+
 /** Posts the weekly message to Slack. 409 for a preview or a post already under way; 502 when Slack refuses. */
 export function postWeekly(id, runId) {
   return send(`${queryKeys.stockRun(id, runId)}/weekly/post`, "POST")
@@ -242,6 +340,9 @@ export function useStockActions(id) {
     attachLineFile: run(attachLineFile),
     keepLesson: run(keepLesson),
     overruleLesson: run(overruleLesson),
+    acceptProposal: run(acceptProposal),
+    rejectProposal: run(rejectProposal),
+    clearOutcome: run(clearOutcome),
     postWeekly: run(postWeekly),
     saveSlackTemplate: run(saveSlackTemplate),
     resetSlackTemplate: run(resetSlackTemplate),
