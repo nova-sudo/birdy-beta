@@ -16,18 +16,109 @@ build set aside for a real account.
 
 ## Deploy order
 
-1. **Deploy the backend first, then the frontend.** The Creatives upload now uses `path_prefix` from
-   `POST /api/creatives/upload-grant`. A new frontend on the old backend makes every Creatives upload fail.
-2. The backend runs `create_agent_indexes` on startup. It moves old `media_buying` agents to custom agents
-   and replaces the old agent index. It ran cleanly on a local Mongo with seeded old agents, but not on
-   production data, so take a snapshot first if the backup schedule doesn't cover it.
-3. **`AGENT_ADD_WRITES_ENABLED` stays off in production until check M1 passes.** With it off, Add can only
+Do steps 1 to 3 in one sitting, in this order. Keep the gap between the backend and the frontend to minutes,
+and don't start near the 02:20 UTC `ensure-indexes` cron.
+
+1. **Deploy the backend.** It goes first because the Creatives upload now uses `path_prefix` from
+   `POST /api/creatives/upload-grant`, so a new frontend on the old backend makes every Creatives upload fail.
+   Take a snapshot first if the backup schedule doesn't cover it. The migration ran cleanly on a local Mongo
+   with seeded old agents, but not on production data.
+2. **Run the migration against production, then verify it.** See [Migration](#migration). On Vercel nothing
+   runs it at startup, and the daily cron could leave it for up to a day. Until it runs, every existing custom
+   agent drops to flag-only, its Apply is refused, and the new hub page wouldn't list it.
+3. **Deploy the frontend, only once verification passes.**
+4. **`AGENT_ADD_WRITES_ENABLED` stays off in production until check M1 passes.** With it off, Add can only
    be Flag. Set it on a separate backend for M1. The values that turn it on are `1`, `true`, `yes` and `on`.
    Confirm it before and after the deploy: in the backend's Vercel project, run `vercel env ls production` and
    check the name isn't listed. Then open Settings on a production agent. **Pass:** Add shows Flag selected,
    Ask me and Auto are disabled, and the note says posting new ads is switched off.
-4. After the deploy, confirm the crons in the backend repo's `vercel.json` are registered: `/api/cron/agents-tick` every
+5. After the deploy, confirm the crons in the backend repo's `vercel.json` are registered: `/api/cron/agents-tick` every
    15 minutes, `/api/cron/agents-outcomes` daily, `/api/cron/creatives-tick` as already scheduled.
+
+### Migration
+
+Run this from the backend repo on the commit you just deployed, with its Python environment active. Take both
+values from the backend's Vercel production environment. Set both: the script reads these before `.env`, and with
+`MONGODB_DB` unset it uses the one in `.env` or falls back to `birdyaidev`.
+
+```sh
+read -rs MONGODB_URI && export MONGODB_URI
+export MONGODB_DB=<production database name>
+python -m scripts.ensure_indexes; echo "exit=$?"
+```
+
+It renames `media_buying` agents to `custom`, swaps the old agent index for `user_stock_agent`, gives each active
+agent its client claims, and creates every other declared index. **Pass:** `exit=0`. It exits 1 if any index set
+failed, and logs each one as `<name>: <error>`. The agent migration is `create_agent_indexes`.
+
+Then verify, whatever the exit code said. This reads only:
+
+```sh
+cat > "${TMPDIR}stock-verify.js" <<'JS'
+const d = db.getSiblingDB(process.env.MONGODB_DB);
+print(`Database: ${d.getName()}`);
+print(`1. Agents still typed media_buying (want 0): ${d.agents.countDocuments({ type: "media_buying" })}`);
+const missing = [];
+d.agents.find({ status: "active" }).forEach((a) => {
+  const scope = a.scope || {};
+  const flagOnly = scope.flag_only_client_group_ids || [];
+  (scope.client_group_ids || []).filter((g) => !flagOnly.includes(g)).forEach((g) => {
+    if (!d.agent_client_claims.findOne({ user_id: a.user_id, client_group_id: g })) missing.push(`agent ${a._id} client ${g}`);
+  });
+});
+print(`2. Active agents' clients with no claim (want 0): ${missing.length}`);
+missing.forEach((m) => print(`   ${m}`));
+print(`3. Active agents not marked as migrated (want 0): ${d.agents.countDocuments({ status: "active", claims_migrated_at: { $exists: false } })}`);
+const names = (c) => d.getCollection(c).getIndexes().map((i) => i.name);
+const absent = [["agents", "user_stock_agent"], ["agent_client_claims", "user_client_claim"], ["agent_runs", "agent_daily_run"],
+  ["agent_runs", "agent_open_preview"], ["agent_runs", "weekly_pending_retry"]].filter(([c, n]) => !names(c).includes(n));
+print(`4. Indexes missing (want none): ${absent.map(([c, n]) => `${c}.${n}`).join(", ") || "none"}`);
+print(`5. Old agent index still there (want false): ${names("agents").includes("user_id_1_type_1")}`);
+JS
+mongosh "$MONGODB_URI" --quiet --file "${TMPDIR}stock-verify.js"
+```
+
+**Pass:** the database is production, and lines 1 to 5 all show what they want. A client held by a different agent
+counts as claimed: the newer agent only watches it. Line 2 is only meaningful now. After launch, a client can
+rightly have no claim, because a person moved it and turned the new agent off.
+
+**If verification fails, don't deploy the frontend.** Backend and old frontend can run side by side for a short
+while (see below), so fix it rather than rush.
+
+| What failed | What to do |
+| --- | --- |
+| Exit 1, or line 1, 4 or 5 | Read the `<name>: <error>` lines, fix the cause, and run the script again. It's safe to repeat: it never overwrites a claim, and an agent that failed part way finishes on the next run. If the failure is an index set other than `create_agent_indexes` and lines 1 to 5 all pass, it isn't a blocker for this launch, so note it and carry on |
+| Line 2 or 3 | Run the script again. If line 2 still names an agent that is already marked, the run won't retry it, since each agent is migrated once. Clear the marker for that agent only, then run the script again: `mongosh "$MONGODB_URI" --quiet --eval 'db.getSiblingDB(process.env.MONGODB_DB).agents.updateOne({ _id: "<agent id>" }, { $unset: { claims_migrated_at: "" } })'`. Do this only in this window, before anyone has moved a client |
+| Not fixed within about 30 minutes | Roll the backend back. See [Rollback](#rollback) |
+
+Delete the file and the variables when you finish: `rm "${TMPDIR}stock-verify.js"; unset MONGODB_URI MONGODB_DB`.
+
+**While the old frontend is still live:** an agency with no agent gets a custom agent named "Custom agent", training
+chat answers "Set up this agent first" on every tool call, and normal Creatives uploads keep working. All of this
+clears when the frontend lands.
+
+After this run, the 02:20 cron only reaches new index declarations and any agent still unmarked. It answers 200 even
+when something fails, with `ok: false` and the failures in the body, so a failed run shows only in that response and
+the log. Read it the morning after launch, as part of V2.
+
+### Rollback
+
+Traced from the code, not run. Roll back the frontend first, then the backend, because a new frontend on the old
+backend makes every Creatives upload fail. Don't undo the migration.
+
+- The `origin/main` backend tries to create its old unique `(user_id, type)` index. That fails with
+  `IndexOptionsConflict` on every `ensure_indexes` pass and is only logged. This is expected, so don't drop anything
+  to fix it.
+- Migrated `custom` agents keep working: the old backend lists them by `user_id`, and the old frontend's `pickAgent`
+  falls back to the first in the list.
+- `creative_findings` on `origin/main` looks for type `media_buying`, finds nothing, and uses default guardrails.
+- No data is lost. The stock agent's runs and cards, the claims and the `claims_migrated_at` markers stay where they
+  are, and the old code ignores them.
+- To go forward again, repeat the deploy order from step 1. Marked agents are left alone, so a client moved before the
+  rollback stays moved. Line 2 will name any client added to a marked agent during the rollback: saving that agent's
+  client list claims it.
+
+### Read-only Meta commands
 
 For the read-only commands below, keep the token out of your shell history and out of URLs. Read it without
 echoing it, and send it as a header, which the Graph API accepts:
@@ -49,7 +140,8 @@ Creatives posting has never run on real Meta. This check decides whether `AGENT_
 be turned on.
 
 1. Run a backend that only you use, with its own database and `AGENT_ADD_WRITES_ENABLED=1`. Never set the
-   flag on the production backend for this.
+   flag on the production backend for this. If it runs on Vercel, run `python -m scripts.ensure_indexes` against
+   its database first, as in [Migration](#migration), or no agent can act.
 2. Connect the test ad account. In it, make a paused campaign with one paused ad set.
 3. Set up the stock agent with two clients on test accounts: the source holds a winning image ad and a
    winning video ad, and the destination holds the paused ad set. Set Add to Ask me.
@@ -224,9 +316,10 @@ fence read and the socket, where an undo could reach Meta just after the person 
 
 1. Read the Vercel logs for `/api/cron/agents-tick` and `/api/cron/agents-outcomes` for a day after launch.
 2. Confirm that a call without the `CRON_SECRET` bearer is refused.
+3. Read the response or log of the first `/api/cron/ensure-indexes` run after launch.
 
-**Pass:** no timeouts, a 401 or 403 without the secret, and the morning run starts at the first tick after
-the agent's time.
+**Pass:** no timeouts, a 401 or 403 without the secret, the morning run starts at the first tick after
+the agent's time, and `ensure-indexes` shows `ok: true`.
 
 ## Blob
 
@@ -296,6 +389,24 @@ docker rm -f birdy-stock-verify-t21
 
 **Pass:** `docker ps -a --filter name=birdy-stock-verify-t21` lists nothing. It holds only seeded test data.
 
+### O3. Function `maxDuration` is 300 s
+
+`vercel.json` sets no `maxDuration`, so the limit is whatever the backend's Vercel project says. In the worst case the
+`agents-tick` pass runs to about 300 s: custom agents and stock agents each get the 180 s deadline in turn, with Meta,
+AI and Slack retries past it.
+
+1. In the backend's Vercel project, open Settings, then Functions, and read Function Max Duration.
+
+**Pass:** it's 300 s. If it's lower, raise it before the frontend deploy, or a long tick is killed part way. Runs
+resume on the next tick, but a morning report can land late.
+
+## After launch
+
+**First fix: the team check on suggestion buttons.** Slack suggestion buttons (`_handle_suggestion_action` in the
+backend's `routers/slack_interactions.py`) have no `user.team_id` check, though they change Meta, so a member of
+another workspace in a Slack Connect channel could press one. The gap is older than this branch, which left it alone.
+The stock agent's card buttons already refuse that press (S4), so copy their check.
+
 ## Sign-off
 
 | Check | Result | Date | Who |
@@ -317,6 +428,8 @@ docker rm -f birdy-stock-verify-t21
 | B1 Uploads | | | |
 | O1 Real-Mongo rerun | | | |
 | O2 Container removed | | | |
+| O3 `maxDuration` is 300 s | | | |
+| Migration ran, exit 0, verification passed | | | |
 | Production flag confirmed unset | | | |
 
 Turn on `AGENT_ADD_WRITES_ENABLED` in production only after M1 and the M7 rows pass.

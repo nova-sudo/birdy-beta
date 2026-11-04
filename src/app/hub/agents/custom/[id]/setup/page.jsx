@@ -90,6 +90,11 @@ function activationMessage(err) {
   return "Couldn't turn it on. Try again in a moment."
 }
 
+// Answering "Move all" after "Only flag": the flagged clients ride along, or the move takes them too.
+function moveClaims(flagOnly) {
+  return flagOnly.length > 0 ? { move_claims: true, only_flag: flagOnly } : { move_claims: true }
+}
+
 function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCancel }) {
   const stored = useMemo(() => agent.scope?.client_group_ids ?? [], [agent.scope])
   const [selected, setSelected] = useState(() =>
@@ -238,7 +243,7 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
             conflicts={conflicts}
             clients={clients}
             busy={saving}
-            onMove={() => next({ move_claims: true })}
+            onMove={() => next(moveClaims(flagOnly))}
             onOnlyFlag={(gid) => {
               const all = flagOnly.includes(gid) ? flagOnly : [...flagOnly, gid]
               setFlagOnly(all)
@@ -304,7 +309,7 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
             conflicts={conflicts}
             clients={clients}
             busy={activating}
-            onMove={() => turnOn({ move_claims: true })}
+            onMove={() => turnOn(moveClaims(flagOnly))}
             onOnlyFlag={(gid) => {
               const all = flagOnly.includes(gid) ? flagOnly : [...flagOnly, gid]
               setFlagOnly(all)

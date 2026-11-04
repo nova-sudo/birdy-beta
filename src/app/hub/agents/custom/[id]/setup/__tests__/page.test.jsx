@@ -249,6 +249,63 @@ describe("Custom agent setup", () => {
     expect(bodies[2].only_flag).toEqual(["g1", "g2"])
   })
 
+  describe("Only flag on one client, then Move all", () => {
+    const holder = (gid) => ({ client_group_id: gid, holder_id: "ag7", holder_name: "Old rules" })
+    const two = { ...AGENT, scope: { ...AGENT.scope, client_group_ids: ["g1", "g2"] } }
+    const bodies = (path, method) =>
+      vi.mocked(apiRequest).mock.calls
+        .filter(([p, init]) => p === path && init?.method === method)
+        .map(([, init]) => (init.body ? JSON.parse(init.body) : undefined))
+
+    it("the scope save keeps the flagged client out of the move", async () => {
+      agents = [two]
+      let saves = 0
+      vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+        if (path === "/api/agents/ag1" && init.method === "GET") return Promise.resolve(res(two))
+        if (path === "/api/agents/ag1" && init.method === "PATCH") {
+          saves += 1
+          if (saves === 1) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g1"), holder("g2"), holder("g3")] }, 409))
+          if (saves === 2) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g2"), holder("g3")] }, 409))
+          return Promise.resolve(res(two))
+        }
+        return mockApi(path, init)
+      })
+      renderPage()
+      await screen.findByText("Tylaesthetics")
+      await userEvent.click(screen.getByRole("button", { name: /Next: teach it your strategy/ }))
+      await userEvent.click((await screen.findAllByRole("button", { name: "Only flag" }))[0])
+      await userEvent.click(await screen.findByRole("button", { name: "Move all here" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=2"))
+      const third = bodies("/api/agents/ag1", "PATCH")[2]
+      expect(third.move_claims).toBe(true)
+      expect(third.only_flag).toEqual(["g1"])
+      expect(third.scope.client_group_ids).toContain("g1")
+    })
+
+    it("the activation keeps the flagged client out of the move", async () => {
+      agents = [two]
+      search = "step=3"
+      let tries = 0
+      vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+        if (path === "/api/agents/ag1" && init.method === "GET") return Promise.resolve(res(two))
+        if (path === "/api/agents/ag1/activate") {
+          tries += 1
+          if (tries === 1) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g1"), holder("g2"), holder("g3")] }, 409))
+          if (tries === 2) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g2"), holder("g3")] }, 409))
+          return Promise.resolve(res({ ...two, status: "active" }))
+        }
+        return mockApi(path, init)
+      })
+      renderPage()
+      await screen.findByText("Pause ads over target")
+      await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
+      await userEvent.click((await screen.findAllByRole("button", { name: "Only flag" }))[0])
+      await userEvent.click(await screen.findByRole("button", { name: "Move all here" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1"))
+      expect(bodies("/api/agents/ag1/activate", "POST")[2]).toEqual({ move_claims: true, only_flag: ["g1"] })
+    })
+  })
+
   describe("a client another agent holds", () => {
     const CONFLICT = { detail: "Client is claimed", conflicts: [{ client_group_id: "g1", holder_id: "ag7", holder_name: "Old rules" }] }
     const saves = () =>
