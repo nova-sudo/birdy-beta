@@ -11,7 +11,7 @@ import { DashboardList } from "@/components/dashboards/DashboardList"
 import { ReportsSection } from "@/components/reports/ReportsSection"
 import { StartOverButton } from "@/components/agents/StartOverButton"
 import { customAgentPath, useAgents } from "@/lib/agents-api"
-import { STOCK_AGENT_PATH, STOCK_AGENT_TYPE, STOCK_SETUP_PATH, createStockAgent } from "@/lib/stock-agent-api"
+import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, createStockAgent, useStockAgent } from "@/lib/stock-agent-api"
 
 // ─── BirdyHub ───────────────────────────────────────────────────────────────
 // Agents (Birdy teammates you train on your strategy) and dashboards, together,
@@ -39,6 +39,8 @@ function StockAgentCard({ agent }) {
       router.push(STOCK_SETUP_PATH)
     } catch (err) {
       toast.error("Couldn't set up the agent", { description: err?.message })
+      // 409: the agent already exists and this list was stale.
+      if (err?.status === 409) await mutate()
       setBusy(false)
     }
   }
@@ -69,7 +71,14 @@ function StockAgentCard({ agent }) {
               <ArrowRight aria-hidden />
             </Link>
           </Button>
-          <StartOverButton agent={agent} variant="outline" size="lg" className="w-full" redirectTo={null} />
+          <StartOverButton
+            agent={agent}
+            variant="outline"
+            size="lg"
+            className="w-full"
+            redirectTo={null}
+            description="This deletes the clients you picked and the settings you chose, including your Slack messages. You can't undo it."
+          />
         </div>
       ) : agent ? (
         <Button asChild variant="primary" size="lg">
@@ -86,6 +95,14 @@ function StockAgentCard({ agent }) {
       )}
     </Frame>
   )
+}
+
+// The agent list carries the client count but not the open work, which is a request per agent, so rows
+// show the clients and leave the waiting items to the agent's own page and the nav badge.
+function customSummary(a) {
+  const clients = a.scope?.client_group_ids?.length ?? 0
+  const state = a.status === "active" ? "Live" : "Setting up"
+  return clients > 0 ? `${state} · ${clients} ${clients === 1 ? "client" : "clients"}` : state
 }
 
 function CustomAgentsFrame({ agents }) {
@@ -107,7 +124,7 @@ function CustomAgentsFrame({ agents }) {
               >
                 <span className="min-w-0">
                   <span className="block truncate font-semibold text-foreground">{a.name || "Custom agent"}</span>
-                  <span className="block text-muted-foreground">{a.status === "active" ? "Live" : "Setting up"}</span>
+                  <span className="block text-muted-foreground">{customSummary(a)}</span>
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 text-primary">
                   Open
@@ -144,8 +161,8 @@ function CreateCustomAgentCard() {
 
 export default function HubPage() {
   const { agents, error, isLoading, mutate } = useAgents()
+  const { agent: stock } = useStockAgent()
   const [creating, setCreating] = useState(false)
-  const stock = agents.find((a) => a.type === STOCK_AGENT_TYPE) ?? null
   const custom = agents.filter((a) => a.type === "custom")
 
   const header = useMemo(

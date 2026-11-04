@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(), API_BASE_URL: "http://api.test" }))
-vi.mock("swr", () => ({ default: vi.fn(() => ({})) }))
+vi.mock("swr", async (orig) => ({ ...(await orig()), default: vi.fn(() => ({})) }))
 
 import useSWR from "swr"
 import { apiRequest } from "@/lib/api"
+import { useAgentWorkCount } from "@/lib/agents-api"
 import {
   STOCK_AGENT_TYPE,
   STOCK_SETUP_PATH,
@@ -33,6 +34,7 @@ import {
   saveSlackTemplate,
   resetSlackTemplate,
   previewSlackTemplate,
+  useStockActions,
 } from "../stock-agent-api"
 
 const ok = (body = {}) => ({ ok: true, status: 200, json: async () => body })
@@ -120,6 +122,14 @@ describe("stock agent mutations match the backend routes", () => {
     expect(lastCall().body).toEqual({})
   })
 
+  it("a 400 keeps its field errors and a 409 keeps not_ready", async () => {
+    const errors = [{ field: "zones.cpl", message: "Must be a number" }]
+    vi.mocked(apiRequest).mockResolvedValue({ ok: false, status: 400, json: async () => ({ detail: "Some settings are invalid", errors }) })
+    await expect(patchSettings("a1", { settings: {} })).rejects.toMatchObject({ status: 400, errors })
+    vi.mocked(apiRequest).mockResolvedValue({ ok: false, status: 409, json: async () => ({ detail: "Ad history isn't ready yet", not_ready: ["g1"] }) })
+    await expect(startPreview("a1")).rejects.toMatchObject({ status: 409, not_ready: ["g1"] })
+  })
+
   it("a refusal throws with the server's plain reason and status", async () => {
     vi.mocked(apiRequest).mockResolvedValue({ ok: false, status: 409, json: async () => ({ detail: "Choose at least one client first" }) })
     await expect(startPreview("a1")).rejects.toMatchObject({ status: 409, message: "Choose at least one client first" })
@@ -163,7 +173,7 @@ describe("stock agent reads use the route as the key and idle without an id", ()
 
 describe("plain-language reason copy", () => {
   it("covers the codes the backend sends", () => {
-    for (const c of ["no_words", "unsupported_landing", "now_flag", "not_auto", "left_paused", "unconfirmed", "already_run", "needs_file"]) {
+    for (const c of ["removed", "post_refused", "no_permission", "protected_tag", "pause_cap", "exception", "flag_only", "no_words", "unsupported_landing", "now_flag", "not_auto", "left_paused", "unconfirmed", "already_run", "needs_file"]) {
       expect(REASON_COPY[c], c).toBeTruthy()
     }
     expect(ACTIVITY_COPY.ad_left_paused).toBeTruthy()
@@ -173,10 +183,52 @@ describe("plain-language reason copy", () => {
       expect(text).not.toMatch(/—|_|\bAPI\b|\bsuperseded\b|\bwebhook\b/i)
     }
   })
+  it("already_posted shows the server's message, since those differ", () => {
+    expect(reasonCopy("already_posted", "Birdy already made this ad from an earlier card, and it's paused in Meta.")).toMatch(/paused in Meta/)
+    expect(reasonCopy("already_posted")).toBe(REASON_COPY.already_posted)
+  })
   it("reasonCopy falls back to the server's message, then to a safe line", () => {
     expect(reasonCopy("left_paused")).toBe(REASON_COPY.left_paused)
     expect(reasonCopy("brand_new_code", "Server said this.")).toBe("Server said this.")
     expect(reasonCopy("brand_new_code")).toBe(REASON_COPY.default)
     expect(reasonCopy(null, null)).toBe(REASON_COPY.default)
+  })
+})
+
+
+describe("useStockActions revalidates what a mutation changes", () => {
+  it("apply refreshes the run, the latest run, the outcomes and the badge", async () => {
+    const { renderHook, act } = await import("@testing-library/react")
+    const swr = await vi.importActual("swr")
+    const { SWRConfig } = swr
+    vi.mocked(useSWR).mockImplementation(swr.default)
+    const seen = []
+    vi.mocked(apiRequest).mockImplementation(async (path) => {
+      seen.push(path)
+      if (path === "/api/agents") return ok([{ id: "a1", type: "stock_media_buying", status: "active" }])
+      return ok(path.endsWith("/latest") ? { run: { id: "r1" }, open_cards: 1 } : {})
+    })
+    const wrapper = ({ children }) => <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>{children}</SWRConfig>
+    const { result } = renderHook(
+      () => {
+        const actions = useStockActions("a1")
+        const run = useRun("a1", "r1")
+        const latest = useLatestRun("a1")
+        const out = useOutcomes("a1")
+        const badge = useAgentWorkCount()
+        return { actions, run, latest, out, badge }
+      },
+      { wrapper },
+    )
+    const count = (p) => vi.mocked(apiRequest).mock.calls.filter(([x, i]) => x === p && !i?.method).length
+    const { waitFor } = await import("@testing-library/react")
+    await waitFor(() => expect(count("/api/agents/a1/runs/r1")).toBe(1))
+    await act(async () => { await result.current.actions.applyCard("c1") })
+    await waitFor(() => {
+      expect(count("/api/agents/a1/runs/r1")).toBe(2)
+      expect(count("/api/agents/a1/runs/latest")).toBe(2)
+      expect(count("/api/agents/a1/outcomes")).toBe(2)
+    })
+    expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/agents/a1/cards/c1/apply", expect.objectContaining({ method: "POST" }))
   })
 })

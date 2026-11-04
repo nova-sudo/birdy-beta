@@ -1,9 +1,9 @@
 "use client"
 
-import useSWR from "swr"
+import useSWR, { useSWRConfig } from "swr"
 import { fetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
-import { send, useAgents } from "@/lib/agents-api"
+import { STOCK_AGENT_TYPE, revalidateAgentWork, send, useAgents } from "@/lib/agents-api"
 
 // ─── The Birdy Media Buying Agent ────────────────────────────────────────────
 // One per user. Its routes live under /api/agents/{id}; every hook and mutation
@@ -11,7 +11,7 @@ import { send, useAgents } from "@/lib/agents-api"
 //   GET  /runs                      past reports (a later task adds it if the history list needs it)
 //   POST /outcomes/{row}/clear      take a wrong result off the scoreboard
 
-export const STOCK_AGENT_TYPE = "stock_media_buying"
+export { STOCK_AGENT_TYPE }
 export const STOCK_AGENT_PATH = "/hub/agents/media-buying"
 export const STOCK_SETUP_PATH = `${STOCK_AGENT_PATH}/setup`
 
@@ -28,6 +28,8 @@ export const REASON_COPY = {
   no_destination: "Birdy couldn't find a live ad in this client's main ad set to copy from, so nothing was posted.",
   no_source: "Birdy doesn't know which creative this line means, so nothing was posted.",
   already_run: "This ad account has already run this creative, so Birdy didn't post it again.",
+  // The server sends three different messages for this code (one says the ad exists and is paused in Meta),
+  // so reasonCopy prefers its message over this fallback.
   already_posted: "Birdy has already posted this creative to this ad account. Look for it in Ads Manager.",
   add_writes_off: "Posting new ads is switched off, so Birdy didn't post this.",
   needs_file: "Meta won't share this file, so Birdy needs you to upload it before it can post the ad.",
@@ -52,11 +54,19 @@ export const REASON_COPY = {
   no_ad: "This line doesn't name an ad, so nothing was changed.",
   several_ads: "This line names more than one ad, so nothing was changed.",
   live_check_failed: "Birdy couldn't read this ad set from Meta, so it didn't change anything. Try again in a few minutes.",
+  removed: "This ad was removed in Meta before it went live.",
+  post_refused: "Meta didn't accept this ad, so nothing was posted. Try again.",
+  no_permission: "This agent isn't allowed to change this kind of thing. Change its permissions to allow it.",
+  protected_tag: "This ad has a tag you told Birdy never to touch, so it left it alone.",
+  pause_cap: "This client has hit today's limit on pauses, so Birdy didn't pause more. It can try again tomorrow.",
+  exception: "You told Birdy to leave this alone, so it did.",
+  flag_only: "This change is set to Flag, so Birdy only points it out. Make it in Meta if you want it.",
   default: "Birdy didn't make this change. Look at the card for what to do next.",
 }
 
 /** The words to show for a reason code. Falls back to the server's message, then to a safe line. */
 export function reasonCopy(code, serverMessage) {
+  if (code === "already_posted" && serverMessage) return serverMessage
   if (code && Object.hasOwn(REASON_COPY, code)) return REASON_COPY[code]
   return serverMessage || REASON_COPY.default
 }
@@ -75,10 +85,10 @@ export function useStockAgent() {
   return { agent: agents.find((a) => a.type === STOCK_AGENT_TYPE) ?? null, error, isLoading, mutate }
 }
 
-/** The newest report (`run` is null before the first one). @returns {{ run: object|null, error, isLoading, mutate }} */
+/** The newest report (`run` is null before the first one). @returns {{ run: object|null, openCards: number, error, isLoading, mutate }} */
 export function useLatestRun(id) {
   const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.stockLatestRun(id) : null, fetcher)
-  return { run: data?.run ?? null, error, isLoading, mutate }
+  return { run: data?.run ?? null, openCards: data?.open_cards ?? 0, error, isLoading, mutate }
 }
 
 /**
@@ -184,4 +194,49 @@ export function resetSlackTemplate(id, kind) {
 /** Renders `blocks` (the unsaved draft; else the saved template) with sample values. Nothing is sent to Slack. */
 export function previewSlackTemplate(id, kind, blocks) {
   return send(`${queryKeys.stockSlackTemplate(id, kind)}/preview`, "POST", blocks === undefined ? {} : { blocks })
+}
+
+// ─── Revalidation ────────────────────────────────────────────────────────────
+
+/**
+ * Re-reads everything a decision can change for this agent: the agent, its reports (latest and each run),
+ * the scoreboard, lessons, Slack templates, and with them the nav badge. Pass the `mutate` from `useSWRConfig()`.
+ */
+export function revalidateStock(mutate, id) {
+  const base = `/api/agents/${id}`
+  const mine = (key) =>
+    typeof key === "string" &&
+    (key === base || ["/runs", "/outcomes", "/lessons", "/slack-templates"].some((p) => key.startsWith(`${base}${p}`)))
+  return Promise.all([mutate(mine), revalidateAgentWork(mutate)])
+}
+
+/**
+ * The mutations above bound to one agent, each re-reading what it changes once it settles (a refusal
+ * included, since the page it came from is stale). Pages use these rather than the bare functions.
+ */
+export function useStockActions(id) {
+  const { mutate } = useSWRConfig()
+  const run = (fn) => async (...args) => {
+    try {
+      return await fn(id, ...args)
+    } finally {
+      await revalidateStock(mutate, id)
+    }
+  }
+  return {
+    patchSettings: run(patchSettings),
+    startPreview: run(startPreview),
+    applyCard: run(applyCard),
+    dismissCard: run(dismissCard),
+    undoCardLine: run(undoCardLine),
+    editCard: run(editCard),
+    applyRun: run(applyRun),
+    attachLineFile: run(attachLineFile),
+    keepLesson: run(keepLesson),
+    overruleLesson: run(overruleLesson),
+    postWeekly: run(postWeekly),
+    saveSlackTemplate: run(saveSlackTemplate),
+    resetSlackTemplate: run(resetSlackTemplate),
+    previewSlackTemplate: (...args) => previewSlackTemplate(id, ...args),
+  }
 }

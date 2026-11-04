@@ -32,12 +32,12 @@ export function useAgents() {
 }
 
 const WORK_COUNT_KEY = "agent-work-count"
-const STOCK_COUNT_KEY = "stock-agent-open-cards"
-const STOCK_TYPE = "stock_media_buying"
+/** `agents.type` of the Birdy Media Buying Agent. */
+export const STOCK_AGENT_TYPE = "stock_media_buying"
 
-/** Whether an SWR key holds agent work: one agent's `/work`, the badge's multi-agent key, or the stock agent's open cards. */
+/** Whether an SWR key holds agent work: one agent's `/work`, or the badge's multi-agent key. */
 export function isAgentWorkKey(key) {
-  if (Array.isArray(key)) return key[0] === WORK_COUNT_KEY || key[0] === STOCK_COUNT_KEY
+  if (Array.isArray(key)) return key[0] === WORK_COUNT_KEY
   return typeof key === "string" && key.startsWith(`${AGENTS_KEY}/`) && key.endsWith("/work")
 }
 
@@ -51,15 +51,6 @@ export function revalidateAgentWork(mutate) {
 
 const openCount = (work) => (Array.isArray(work?.open) ? work.open.length : 0)
 
-/** Cards in the newest report that are still waiting on a person. A first run that hasn't happened yet is none. */
-async function stockOpenCards([, id]) {
-  const latest = await fetcher(queryKeys.stockLatestRun(id))
-  const runId = latest?.run?.id
-  if (!runId) return 0
-  const report = await fetcher(queryKeys.stockRun(id, runId))
-  return (report?.cards ?? []).filter((c) => c.can_apply).length
-}
-
 /**
  * Open work items across this user's live agents, for the nav badge; `null`
  * with no live agent (or before anything loaded), so the badge stays hidden.
@@ -70,20 +61,21 @@ async function stockOpenCards([, id]) {
 export function useAgentWorkCount() {
   const { agents } = useAgents()
   const live = agents.filter((a) => a.status === "active")
-  const ids = live.filter((a) => a.type !== STOCK_TYPE).map((a) => a.id)
-  const stockId = live.find((a) => a.type === STOCK_TYPE)?.id ?? null
+  const ids = live.filter((a) => a.type !== STOCK_AGENT_TYPE).map((a) => a.id)
+  const stockId = live.find((a) => a.type === STOCK_AGENT_TYPE)?.id ?? null
   const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher, FRESH_WORK)
   const many = useSWR(
     ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null,
     ([, ...list]) => Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id)))),
     FRESH_WORK
   )
-  const stock = useSWR(stockId ? [STOCK_COUNT_KEY, stockId] : null, stockOpenCards, FRESH_WORK)
+  // The newest report's own key, so the report page shares it. One cheap request: `open_cards` is counted server-side.
+  const stock = useSWR(stockId ? queryKeys.stockLatestRun(stockId) : null, fetcher, FRESH_WORK)
   if (live.length === 0) return null
   let total = 0
   if (ids.length === 1 && one.data) total += openCount(one.data)
   if (ids.length > 1 && many.data) total += many.data.reduce((n, w) => n + openCount(w), 0)
-  if (stockId && typeof stock.data === "number") total += stock.data
+  if (stockId && typeof stock.data?.open_cards === "number") total += stock.data.open_cards
   const loaded = (ids.length === 0 || (ids.length === 1 ? one.data : many.data)) && (!stockId || stock.data !== undefined || stock.error)
   return loaded ? total : null
 }
@@ -210,6 +202,9 @@ export async function send(endpoint, method, body) {
     if (Array.isArray(data?.missing)) err.missing = data.missing
     // A claimed client (409): who holds it, so the caller can offer to move it.
     if (Array.isArray(data?.conflicts)) err.conflicts = data.conflicts
+    // A refused settings patch (400) lists each bad field; a preview that can't start (409) lists the clients not ready.
+    if (Array.isArray(data?.errors)) err.errors = data.errors
+    if (Array.isArray(data?.not_ready)) err.not_ready = data.not_ready
     throw err
   }
   return data

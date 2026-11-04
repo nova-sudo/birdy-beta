@@ -27,6 +27,7 @@ const res = (body, status = 200) => ({
 })
 
 let agents
+let stockFails
 let listed
 function mockApi(path, init = {}) {
   const method = init.method ?? "GET"
@@ -37,9 +38,9 @@ function mockApi(path, init = {}) {
     return Promise.resolve(agents === 404 ? res({}, 404) : res(agents))
   }
   if (path === "/api/agents/s1" && method === "DELETE") return Promise.resolve(res({ deleted: "s1" }))
-  if (path === "/api/agents/s1/runs/latest") return Promise.resolve(res({ run: { id: "r1" } }))
-  if (path === "/api/agents/s1/runs/r1") {
-    return Promise.resolve(res({ run: { id: "r1" }, cards: [{ id: "c1", can_apply: true }, { id: "c2", can_apply: false }, { id: "c3", can_apply: true }] }))
+  if (path === "/api/agents/s1/runs/latest") {
+    if (stockFails) return Promise.resolve(res({ detail: "boom" }, 500))
+    return Promise.resolve(res({ run: { id: "r1" }, open_cards: 2 }))
   }
   if (path === "/api/dashboards" && method === "GET") return Promise.resolve(res({ items: listed }))
   return Promise.resolve(res({}, 404))
@@ -57,6 +58,7 @@ const renderPage = () =>
 
 beforeEach(() => {
   agents = []
+  stockFails = false
   listed = [
     { id: "d1", title: "Weekly spend", updatedAt: new Date(Date.now() - 3600_000).toISOString() },
     { id: "d2", title: "Lead sources", updatedAt: new Date(Date.now() - 86400_000 * 3).toISOString() },
@@ -110,6 +112,41 @@ describe("BirdyHub page", () => {
     )
     // Starting a stock agent over stays on the hub; it doesn't open the custom wizard.
     expect(push).not.toHaveBeenCalledWith("/hub/agents/custom/new")
+    // ...and the card goes back to Set up agent.
+    expect(await screen.findByRole("button", { name: /Set up agent/ })).toBeInTheDocument()
+  })
+
+  it("the Start over warning fits a stock draft", async () => {
+    agents = [STOCK("draft")]
+    renderPage()
+    fireEvent.click(await screen.findByRole("button", { name: /Start over/ }))
+    const dialog = await screen.findByRole("alertdialog")
+    expect(dialog.textContent).not.toMatch(/training chat|practice answers|playbook/i)
+    expect(dialog.textContent).toMatch(/settings/i)
+  })
+
+  it("a 409 on Set up (agent already exists) reloads the list", async () => {
+    const base = mockApi
+    let posted = false
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path === "/api/agents" && init.method === "POST") {
+        posted = true
+        agents = [STOCK("draft")]
+        return Promise.resolve(res({ detail: "You already have the Birdy Media Buying Agent" }, 409))
+      }
+      return base(path, init)
+    })
+    renderPage()
+    fireEvent.click(await screen.findByRole("button", { name: /Set up agent/ }))
+    expect(await screen.findByRole("link", { name: /Continue setup/ })).toBeInTheDocument()
+    expect(posted).toBe(true)
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it("custom rows show the client count", async () => {
+    agents = [CUSTOM({ scope: { client_group_ids: ["g1", "g2", "g3"] } })]
+    renderPage()
+    expect(await screen.findByText("Live · 3 clients")).toBeInTheDocument()
   })
 
   it("a live stock agent only offers Open agent", async () => {
@@ -175,6 +212,35 @@ describe("nav badge", () => {
     )
     renderBadge()
     await waitFor(() => expect(screen.getByLabelText("nav badge")).toHaveTextContent("3"))
+  })
+
+  it("makes one request for the stock count, and never reads the whole report", async () => {
+    agents = [STOCK("active")]
+    renderBadge()
+    await waitFor(() => expect(screen.getByLabelText("nav badge")).toHaveTextContent("2"))
+    const paths = vi.mocked(apiRequest).mock.calls.map(([p]) => p)
+    expect(paths.filter((p) => p.startsWith("/api/agents/s1/"))).toEqual(["/api/agents/s1/runs/latest"])
+  })
+
+  it("keeps a custom agent's count when the stock request fails", async () => {
+    agents = [STOCK("active"), CUSTOM({ id: "a1" })]
+    stockFails = true
+    const base = mockApi
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/a1/work" ? Promise.resolve(res({ open: [{ id: "w1" }], auto_applied: [] })) : base(path, init),
+    )
+    renderBadge()
+    await waitFor(() => expect(screen.getByLabelText("nav badge")).toHaveTextContent("1"))
+  })
+
+  it("counts only the custom agent when there is no stock agent", async () => {
+    agents = [CUSTOM({ id: "a1" }), CUSTOM({ id: "a2" })]
+    const base = mockApi
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path.endsWith("/work") ? Promise.resolve(res({ open: [{ id: "w" }, { id: "x" }], auto_applied: [] })) : base(path, init),
+    )
+    renderBadge()
+    await waitFor(() => expect(screen.getByLabelText("nav badge")).toHaveTextContent("4"))
   })
 
   it("stays hidden for a draft stock agent", async () => {
