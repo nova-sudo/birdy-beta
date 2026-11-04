@@ -91,6 +91,14 @@ export function useLatestRun(id) {
   return { run: data?.run ?? null, openCards: data?.open_cards ?? 0, error, isLoading, mutate }
 }
 
+/** The newest preview run (`run` is null before the first), for setup. Polls every 5 seconds while it is unfinished. */
+export function usePreviewRun(id) {
+  const { data, error, isLoading, mutate } = useSWR(id ? `${queryKeys.stockLatestRun(id)}?kind=preview` : null, fetcher, {
+    refreshInterval: (latest) => (latest?.run && latest.run.phase !== "done" ? 5000 : 0),
+  })
+  return { run: data?.run ?? null, error, isLoading, mutate }
+}
+
 /**
  * One report: `{run, cards, follow_ups, scoreboard, learned, proposals, weekly}`. `weekly` is the safe
  * view (`values`, `posted`, `post_error`); `run` carries `publish_error`, `slack_pending`, `slack_late`.
