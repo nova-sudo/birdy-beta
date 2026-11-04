@@ -294,7 +294,7 @@ runs on Auto for that client.
  lines: [{id, kind: add|remove|revive, ad_name, source, record,
           mode, state, error, meta_ids, flags}],
  additional_changes, thought_process, next_steps,
- status: open|applied|partly_applied|dismissed|flagged|superseded,
+ status: closing|open|applied|partly_applied|dismissed|flagged|superseded,
  original: {...}, slack: {channel_id, ts}, decided_by, decided_at}
 ```
 
