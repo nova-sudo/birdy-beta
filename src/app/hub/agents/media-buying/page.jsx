@@ -35,30 +35,59 @@ const TABS = [
 
 /** Past reports by date. The open report is always listed, so a Slack link to an old one still reads right. */
 function ReportPicker({ agentId, current, batches, onPick }) {
-  const { runs, hasOlder, loadOlder } = useRuns(agentId)
+  const { runs, hasOlder, loadOlder, error, mutate } = useRuns(agentId)
   const options = current && !runs.some((r) => r.id === current.id) ? [current, ...runs] : runs
-  if (options.length === 0) return null
   return (
-    <div className="flex items-center gap-2">
-      <Select value={current?.id ?? ""} onValueChange={onPick}>
-        <SelectTrigger aria-label="Report date" className="w-56">
-          <SelectValue placeholder="Pick a date">{current ? runLabel(current, batches) : undefined}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((r) => (
-            <SelectItem key={r.id} value={r.id}>{runLabel(r, batches)}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {options.length > 0 && (
+        <Select value={current?.id ?? ""} onValueChange={onPick}>
+          <SelectTrigger aria-label="Report date" className="w-56 max-w-full">
+            <SelectValue placeholder="Pick a date">{current ? runLabel(current, batches) : undefined}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{runLabel(r, batches)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {hasOlder && <Button size="sm" variant="ghost" onClick={loadOlder}>Older reports</Button>}
+      {error && (
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          Couldn&apos;t load past reports.
+          <Button size="sm" variant="ghost" onClick={() => mutate()}>Retry</Button>
+        </span>
+      )}
     </div>
   )
 }
 
-function ReportTab({ agent, report, reportError, latest, runParam, clients, batches, actions, onRetry, onSeeScoreboard }) {
+function ReportTab({ agent, report, reportError, latest, runParam, clients, batches, actions, onRetry, onLatest, onSeeScoreboard }) {
   // Data first: a failed background refetch must not cover a good report with an error screen.
-  if (report) return <MorningReport key={report.run.id} report={report} clients={clients} batches={batches} actions={actions} onSeeScoreboard={onSeeScoreboard} />
+  if (report) {
+    return (
+      <MorningReport
+        key={report.run.id}
+        report={report}
+        clients={clients}
+        batches={batches}
+        actions={actions}
+        slackChannel={agent.settings?.slack?.channel_id}
+        preview={report.run.kind === "preview"}
+        onSeeScoreboard={onSeeScoreboard}
+      />
+    )
+  }
   const error = reportError ?? (runParam ? null : latest.error)
+  if (error && runParam && error.status === 404) {
+    // Trying the same address again can't help, so the way out is the latest report.
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <ErrorState title="Couldn't load this report" description={error.message} />
+        <Button onClick={onLatest}>Open the latest report</Button>
+      </div>
+    )
+  }
   if (error) return <ErrorState title="Couldn't load this report" description={error.message} onRetry={onRetry} />
   if (!runParam && !latest.run && !latest.isLoading) {
     return agent.status === "draft" ? (
@@ -86,7 +115,7 @@ function StockAgentPage() {
   const tabParam = searchParams?.get("tab")
   const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "report"
 
-  const { agent: listed, error: listError, isLoading: listLoading, mutate: mutateList } = useStockAgent()
+  const { agent: listed, listUnavailable, error: listError, isLoading: listLoading, mutate: mutateList } = useStockAgent()
   const agentId = listed?.id
   const { agent: full } = useAgent(agentId)
   const actions = useStockActions(agentId)
@@ -99,7 +128,8 @@ function StockAgentPage() {
   const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle="Morning report" /> }), [])
   usePageHeader(topBar)
 
-  const noAgent = !listed && !listLoading && !listError
+  // Only a list that really came back empty means no agent: a misrouted API must not send a live agent to setup.
+  const noAgent = !listed && !listLoading && !listError && !listUnavailable
   useEffect(() => {
     if (noAgent) router.replace(STOCK_SETUP_PATH)
   }, [noAgent, router])
@@ -119,8 +149,8 @@ function StockAgentPage() {
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
       <PageHeader backButton={{ label: "BirdyHub", href: "/hub" }} title="Birdy Media Buying Agent" />
       {!listed ? (
-        listError ? (
-          <ErrorState title="Couldn't load your agent" description={listError.message} onRetry={() => mutateList()} />
+        listError || listUnavailable ? (
+          <ErrorState title="Couldn't load your agent" description={listError?.message ?? "Birdy couldn't read your agents. Try again in a moment."} onRetry={() => mutateList()} />
         ) : (
           <Skeleton className="h-96 w-full rounded-frame" />
         )
@@ -129,12 +159,12 @@ function StockAgentPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SegmentedTabs ariaLabel="Agent sections" value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value })} items={TABS} />
             {tab === "report" && (
-              <ReportPicker agentId={agentId} current={report?.run ?? latest.run} batches={batches} onPick={(id) => goTo({ run: id })} />
+              <ReportPicker agentId={agentId} current={report?.run ?? (runParam ? null : latest.run)} batches={batches} onPick={(id) => goTo({ run: id })} />
             )}
           </div>
           {tab === "report" && (
             <ReportTab
-              agent={listed}
+              agent={full ?? listed}
               report={report}
               reportError={reportError}
               latest={latest}
@@ -143,6 +173,7 @@ function StockAgentPage() {
               batches={batches}
               actions={actions}
               onRetry={() => (runId ? mutateReport() : latest.mutate())}
+              onLatest={() => goTo({ run: null })}
               onSeeScoreboard={() => goTo({ tab: "scoreboard" })}
             />
           )}

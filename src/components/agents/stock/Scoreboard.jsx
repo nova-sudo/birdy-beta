@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
-import { Badge, Button, EmptyState, ErrorState, Frame, Notice, Skeleton, confirm } from "@/components/ds"
+import { Badge, Button, DataTable, EmptyState, ErrorState, Frame, FrameAction, Notice, Skeleton, confirm } from "@/components/ds"
 import { creativeName, money, useOutcomes } from "@/lib/stock-agent-api"
+import { usePress } from "./usePress"
 
 const RESULTS = {
   won: { tone: "success", label: "Won" },
@@ -35,26 +36,14 @@ function byCreative(rows) {
 }
 
 function Suggestion({ proposal, actions }) {
-  const [busy, setBusy] = useState(null)
-  const [error, setError] = useState(null)
-  const press = async (key, fn) => {
-    setBusy(key)
-    setError(null)
-    try {
-      await fn(proposal.id)
-    } catch (err) {
-      setError(err?.message || "That didn't work. Try again.")
-    } finally {
-      setBusy(null)
-    }
-  }
+  const { busy, error, press } = usePress()
   return (
     <div className="flex flex-col gap-2 rounded-control bg-primary-soft px-2.5 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 flex-1">Make it a rule? {proposal.text}</p>
         <span className="flex gap-2">
-          <Button size="sm" variant="primary" loading={busy === "yes"} disabled={Boolean(busy)} onClick={() => press("yes", actions.acceptProposal)}>Yes</Button>
-          <Button size="sm" loading={busy === "no"} disabled={Boolean(busy)} onClick={() => press("no", actions.rejectProposal)}>No</Button>
+          <Button size="sm" variant="primary" loading={busy === "yes"} disabled={Boolean(busy)} onClick={() => press("yes", () => actions.acceptProposal(proposal.id))}>Yes</Button>
+          <Button size="sm" loading={busy === "no"} disabled={Boolean(busy)} onClick={() => press("no", () => actions.rejectProposal(proposal.id))}>No</Button>
         </span>
       </div>
       {error && <Notice tone="danger">{error}</Notice>}
@@ -71,7 +60,7 @@ export function ScoreboardFrame({ scoreboard, proposals = [], actions, onSeeAll 
   return (
     <Frame
       title={title}
-      action={rows.length > 0 ? <Button size="sm" variant="ghost" onClick={onSeeAll}>See every result</Button> : undefined}
+      action={rows.length > 0 ? <FrameAction onClick={onSeeAll}>See every result</FrameAction> : undefined}
       padded
       contentClassName="flex flex-col gap-2.5 text-xs"
     >
@@ -89,9 +78,9 @@ export function ScoreboardFrame({ scoreboard, proposals = [], actions, onSeeAll 
   )
 }
 
-function ResultRow({ row, actions, nameOf, onError }) {
+function ClearResult({ row, actions, onError }) {
   const [busy, setBusy] = useState(false)
-  const result = RESULTS[String(row.result ?? "").toLowerCase()] ?? WAITING
+  if (!CLEARABLE.includes(row.result)) return null
   const clear = async () => {
     const yes = await confirm({
       title: "Clear this result?",
@@ -109,27 +98,46 @@ function ResultRow({ row, actions, nameOf, onError }) {
       setBusy(false)
     }
   }
-  return (
-    <tr className="border-b last:border-b-0">
-      <td className="px-3.5 py-2.5 font-medium [overflow-wrap:anywhere]">{row.ad_name}</td>
-      <td className="px-3.5 py-2.5">{row.client_group_id ? nameOf(row.client_group_id) : "n/a"}</td>
-      <td className="px-3.5 py-2.5"><Badge tone={result.tone} size="sm">{result.label}</Badge></td>
-      <td className="num px-3.5 py-2.5 text-right">{money(row.spend, row.currency) ?? "n/a"}</td>
-      <td className="num px-3.5 py-2.5 text-right">{row.leads ?? "n/a"}</td>
-      <td className="num px-3.5 py-2.5 text-right">{money(row.cpl, row.currency) ?? "n/a"}</td>
-      <td className="px-3.5 py-2.5 text-right">
-        {CLEARABLE.includes(row.result) && (
-          <Button size="sm" loading={busy} aria-label={`Clear the result for ${row.ad_name}`} onClick={clear}>Clear</Button>
-        )}
-      </td>
-    </tr>
-  )
+  return <Button size="sm" loading={busy} aria-label={`Clear the result for ${row.ad_name}`} onClick={clear}>Clear</Button>
 }
+
+const Num = ({ children }) => <span className="num block text-right">{children}</span>
+const number = (id, header, cell) => ({ id, header, enableSorting: false, meta: { align: "right" }, cell: ({ row }) => <Num>{cell(row.original) ?? "n/a"}</Num> })
 
 /** The Scoreboard tab: every result, each in its own currency, and a way to take back a wrong one. */
 export function ScoreboardTab({ agentId, actions, nameOf }) {
   const { outcomes, error, mutate } = useOutcomes(agentId)
   const [clearError, setClearError] = useState(null)
+  // DataTable mounts each `cell` as a component, so new columns would remount every row and lose a Clear's busy state.
+  // `actions` and `nameOf` change on every page render, so cells read them from here and the columns stay put.
+  const latest = useRef()
+  latest.current = { actions, nameOf }
+  const columns = useMemo(
+    () => [
+      { id: "ad", header: "Ad", enableSorting: false, cell: ({ row }) => <span className="font-medium">{row.original.ad_name}</span> },
+      { id: "client", header: "Client", enableSorting: false, cell: ({ row }) => (row.original.client_group_id ? latest.current.nameOf(row.original.client_group_id) : "n/a") },
+      {
+        id: "result",
+        header: "Result",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const result = RESULTS[String(row.original.result ?? "").toLowerCase()] ?? WAITING
+          return <Badge tone={result.tone} size="sm">{result.label}</Badge>
+        },
+      },
+      number("spend", "Spend", (r) => money(r.spend, r.currency)),
+      number("leads", "Leads", (r) => r.leads),
+      number("cpl", "Cost per lead", (r) => money(r.cpl, r.currency)),
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        enableSorting: false,
+        meta: { label: "Actions", align: "right", cardHidden: false },
+        cell: ({ row }) => <ClearResult row={row.original} actions={latest.current.actions} onError={setClearError} />,
+      },
+    ],
+    []
+  )
   if (!outcomes) {
     return error ? <ErrorState title="Couldn't load the scoreboard" description={error.message} onRetry={() => mutate()} /> : <Skeleton className="h-64 w-full rounded-frame" />
   }
@@ -141,26 +149,7 @@ export function ScoreboardTab({ agentId, actions, nameOf }) {
     <div className="flex flex-col gap-4">
       {clearError && <Notice tone="danger">{clearError}</Notice>}
       <Frame title="Every result" description={`Won ${outcomes.won ?? 0} · Lost ${outcomes.lost ?? 0} · Moves ${outcomes.moves ?? 0}`} descriptionInline>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[44rem] text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs text-muted-foreground">
-                <th className="px-3.5 py-2.5 font-medium">Ad</th>
-                <th className="px-3.5 py-2.5 font-medium">Client</th>
-                <th className="px-3.5 py-2.5 font-medium">Result</th>
-                <th className="px-3.5 py-2.5 text-right font-medium">Spend</th>
-                <th className="px-3.5 py-2.5 text-right font-medium">Leads</th>
-                <th className="px-3.5 py-2.5 text-right font-medium">Cost per lead</th>
-                <th className="px-3.5 py-2.5"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <ResultRow key={row.id} row={row} actions={actions} nameOf={nameOf} onError={setClearError} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable columns={columns} data={rows} paginate={false} getRowId={(r) => r.id} />
       </Frame>
     </div>
   )

@@ -19,10 +19,11 @@ import {
   Textarea,
 } from "@/components/ds"
 import { cn } from "@/lib/utils"
-import { VIDEO_ACCEPT, uploadCreativeMedia } from "@/lib/creative-upload"
-import { creativeName, money, openLines, reasonCopy, undoOpen } from "@/lib/stock-agent-api"
-import { ZONES } from "./CplBars"
+import { IMAGE_ACCEPT, VIDEO_ACCEPT, uploadCreativeMedia, validateCreativeFile } from "@/lib/creative-upload"
+import { LINE_BUSY, creativeName, openLines, reasonCopy, undoOpen } from "@/lib/stock-agent-api"
+import { ZONES, cplText } from "./CplBars"
 import { MODE_LABELS } from "./ModesTable"
+import { usePress } from "./usePress"
 
 const VERBS = { add: "Add", remove: "Remove", revive: "Bring back" }
 const STATUS = {
@@ -38,7 +39,7 @@ const LINE_STATES = {
   applied: { tone: "success", text: "Applied" },
   failed: { tone: "danger", text: "Failed" },
   blocked: { tone: "warning", text: "Blocked" },
-  needs_file: { tone: "warning", text: "Needs a video" },
+  needs_file: { tone: "warning", text: "Needs a file" },
   undoing: { tone: "info", text: "Undoing" },
   undone: { tone: "neutral", text: "Undone" },
 }
@@ -46,7 +47,10 @@ const ACTIONABLE = ["open", "partly_applied"]
 const EDITABLE = ["open", "flagged"]
 const DROPPABLE = ["proposed", "flagged", "needs_file"]
 const NEEDS_A_PERSON = ["failed", "blocked", "needs_file"]
-const BUSY_STATES = ["queued", "applying", "undoing"]
+const OUTCOME_WORDS = {
+  noop: "Nothing here was waiting to be applied.",
+  already: "This has already been done.",
+}
 const FALLBACK = "That didn't work. Try again."
 
 const usDate = (iso) => {
@@ -71,16 +75,30 @@ function TagBadge({ card }) {
   return <Badge tone="neutral" size="sm">No changes</Badge>
 }
 
-/** Where an ad Birdy made but left off can be found. Null for a line with no such ad. */
-function pausedNote(line) {
-  if (line.paused_ad_id) return `This ad exists and is paused in Meta. Find it in Ads Manager: search for ad ID ${line.paused_ad_id}.`
-  if (line.reason_code !== "left_paused") return null
-  const id = line.meta_ids?.[0]
-  return id ? `To find it, search for ad ID ${id} in this client's Ads Manager.` : `To find it, search for "${line.ad_name}" in this client's Ads Manager.`
+/** The file an Add needs, by the backend's own rule (`add._is_video`): a video when the source has a video id, else an image. */
+function fileFor(line) {
+  return line.creative?.video_id
+    ? { kind: "video", word: "Video", label: "Upload video", accept: VIDEO_ACCEPT, wrong: "This ad needs a video, not an image." }
+    : { kind: "image", word: "Image", label: "Upload image", accept: IMAGE_ACCEPT, wrong: "This ad needs an image, not a video." }
 }
 
-/** What a line's state means, in plain words. Null when its state says enough. */
+/** Where an ad Birdy made but left off can be found. Null for a line with no such ad. Adds what the server's words leave out. */
+function pausedNote(line) {
+  if (line.paused_ad_id) return `This ad exists and is paused in Meta. Find it in Ads Manager: search for ad ID ${line.paused_ad_id}.`
+  const saysPaused = line.reason_code === "left_paused" || (line.kind === "add" && /paused in Meta/.test(line.error ?? ""))
+  if (!saysPaused) return null
+  const id = line.meta_ids?.[0]
+  return id
+    ? `To find it, search for ad ID ${id} in this client's Ads Manager.`
+    : `To find it, search for "${line.new_ad_name ?? line.ad_name}" in this client's Ads Manager.`
+}
+
+/**
+ * What a line's state means, in plain words. Null when its state says enough. An Add's message is written for the
+ * moment it stopped (whether its ad exists, which file Meta wouldn't take), so fixed copy never replaces it.
+ */
 function lineReason(line) {
+  if (line.kind === "add" && line.error) return line.error
   if (line.state === "failed") return line.error || reasonCopy(line.reason_code)
   if (line.state === "blocked") return reasonCopy(line.reason_code, line.error)
   if (line.state === "needs_file") return reasonCopy(line.reason_code || "needs_file", line.error)
@@ -88,12 +106,13 @@ function lineReason(line) {
   return line.error || null
 }
 
-function Line({ card, line, canAct, disabled, onRetry, onUndo, onFile, busy, progress }) {
+function Line({ line, canChange, canUndo, disabled, onRetry, onUndo, onFile, busy, progress }) {
   const input = useRef(null)
   const state = LINE_STATES[line.state]
   const reason = lineReason(line)
   const paused = pausedNote(line)
-  const actionable = canAct && ACTIONABLE.includes(card.status) && line.mode !== "flag"
+  const actionable = canChange && line.mode !== "flag"
+  const file = fileFor(line)
   const off = disabled || Boolean(busy)
 
   return (
@@ -105,7 +124,7 @@ function Line({ card, line, canAct, disabled, onRetry, onUndo, onFile, busy, pro
           {line.record?.moves > 0 && <span className="text-xs text-muted-foreground">worked {line.record.won} of {line.record.moves}</span>}
         </span>
         <span className="flex gap-2">
-          {canAct && undoOpen(line) && <Button size="sm" loading={busy === `undo-${line.id}`} disabled={off} onClick={() => onUndo(line)}>Undo</Button>}
+          {canUndo && undoOpen(line) && <Button size="sm" loading={busy === `undo-${line.id}`} disabled={off} onClick={() => onUndo(line)}>Undo</Button>}
           {actionable && ["failed", "blocked"].includes(line.state) && (
             <Button size="sm" loading={busy === `retry-${line.id}`} disabled={off} onClick={() => onRetry(line)}>Retry</Button>
           )}
@@ -114,8 +133,8 @@ function Line({ card, line, canAct, disabled, onRetry, onUndo, onFile, busy, pro
               <input
                 ref={input}
                 type="file"
-                accept={VIDEO_ACCEPT}
-                aria-label={`Video for ${line.ad_name}`}
+                accept={file.accept}
+                aria-label={`File for ${line.ad_name}`}
                 className="sr-only"
                 tabIndex={-1}
                 onChange={(e) => {
@@ -126,7 +145,7 @@ function Line({ card, line, canAct, disabled, onRetry, onUndo, onFile, busy, pro
               />
               <Button size="sm" loading={busy === `file-${line.id}`} disabled={off} onClick={() => input.current?.click()}>
                 <Upload aria-hidden />
-                Upload video
+                {file.label}
               </Button>
             </>
           )}
@@ -211,7 +230,7 @@ function EditDialog({ card, actions, onClose }) {
   )
 }
 
-function DismissDialog({ card, actions, onClose, onDone }) {
+function DismissDialog({ card, actions, onClose }) {
   const [reason, setReason] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -219,8 +238,8 @@ function DismissDialog({ card, actions, onClose, onDone }) {
     setSaving(true)
     setError(null)
     try {
-      const res = await actions.dismissCard(card.id, reason.trim() || undefined)
-      onDone(res)
+      await actions.dismissCard(card.id, reason.trim() || undefined)
+      onClose()
     } catch (err) {
       setError(err?.message || FALLBACK)
       setSaving(false)
@@ -251,52 +270,53 @@ function DismissDialog({ card, actions, onClose, onDone }) {
 
 /**
  * One client's card: a collapsed row with its decisions, opening to the playbook's format and each line's state.
- * A superseded card and a read-only (preview) one offer nothing to press.
+ * A read-only (preview) card offers nothing to press. One a newer card replaced offers only Undo, where the server allows it.
  */
 export function CardRow({ card, actions, readOnly = false, disabled = false }) {
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(null)
+  const { busy, error, press: run } = usePress(FALLBACK)
   const [message, setMessage] = useState(null)
   const [dialog, setDialog] = useState(null)
   const [progress, setProgress] = useState(0)
 
   const lines = card.lines ?? []
-  const status = STATUS[card.status]
-  const canAct = !readOnly && card.status !== "superseded"
+  const status = card.has_newer ? STATUS.superseded : STATUS[card.status]
+  const replaced = card.status === "superseded" || card.has_newer
   const off = disabled || Boolean(busy)
   const canApply = !readOnly && openLines(card).length > 0
-  const canEdit = canAct && EDITABLE.includes(card.status)
-  const canDismiss = canAct && [...EDITABLE, "partly_applied"].includes(card.status)
-  const needsYou = canAct && ACTIONABLE.includes(card.status) ? lines.filter((ln) => NEEDS_A_PERSON.includes(ln.state)).length : 0
-  const working = lines.some((ln) => BUSY_STATES.includes(ln.state))
+  // Only a card proposing changes has anything to edit or decline: green and no-changes cards never have lines.
+  const decidable = !readOnly && !replaced && card.tag === "changes"
+  const canEdit = decidable && EDITABLE.includes(card.status)
+  const canDismiss = decidable && [...EDITABLE, "partly_applied"].includes(card.status)
+  const canChange = !readOnly && !replaced && ACTIONABLE.includes(card.status)
+  const needsYou = canChange ? lines.filter((ln) => NEEDS_A_PERSON.includes(ln.state)).length : 0
+  const working = lines.some((ln) => LINE_BUSY.includes(ln.state))
 
   // Whatever comes back, the card opens: a line's note or error is the rest of the answer.
   const press = async (key, fn, done) => {
-    setBusy(key)
     setMessage(null)
-    try {
-      const res = await fn()
-      if (res?.reason) setMessage({ tone: res.ok === false ? "warning" : "info", text: res.reason })
-      else if (done) setMessage({ tone: "success", text: done })
-    } catch (err) {
-      setMessage({ tone: "danger", text: err?.message || FALLBACK })
-    } finally {
-      setOpen(true)
-      setBusy(null)
-    }
+    const res = await run(key, fn)
+    setOpen(true)
+    if (res?.reason) setMessage({ tone: res.ok === false ? "warning" : "info", text: res.reason })
+    else if (OUTCOME_WORDS[res?.outcome]) setMessage({ tone: "info", text: OUTCOME_WORDS[res.outcome] })
+    else if (res && done) setMessage({ tone: "success", text: done(res) })
   }
-  const upload = (line, file) =>
-    press(
+  const upload = (line, file) => {
+    const wanted = fileFor(line)
+    return press(
       `file-${line.id}`,
       async () => {
+        // The backend keeps whatever it's given as this creative's file, so the wrong kind stops here.
+        if (validateCreativeFile(file) !== wanted.kind) throw new Error(wanted.wrong)
         setProgress(0)
         const media = await uploadCreativeMedia(file, { onProgress: setProgress })
         return actions.attachLineFile(card.id, line.id, media.blob_url)
       },
-      "Video kept. Press Apply to post this ad."
+      (res) => (res.card?.can_apply ? `${wanted.word} kept. Press Apply to post this ad.` : `${wanted.word} kept.`)
     )
+  }
   // A line already showing the same words doesn't need them twice.
-  const showMessage = message && !lines.some((ln) => ln.error === message.text)
+  const showMessage = message && !lines.some((ln) => ln.error === message.text || ln.note === message.text)
 
   return (
     <article aria-label={card.client_name} className="border-b last:border-b-0">
@@ -328,6 +348,7 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
 
       {open && (
         <div className="flex flex-col gap-2 px-4 pb-4">
+          {error && <Notice tone="danger">{error}</Notice>}
           {showMessage && <Notice tone={message.tone}>{message.text}</Notice>}
           {card.press_note && <Notice tone="warning">{card.press_note}</Notice>}
           {card.stale && <Notice tone="warning">Some of this client&apos;s ad statuses couldn&apos;t be refreshed, so changes wait for you rather than running by themselves.</Notice>}
@@ -338,8 +359,8 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
               <p className="font-medium">🎯 Account Breakdown</p>
               <p>🏥 Client Name: {card.client_name}</p>
               <p>📅 Data Window: {windowText(card.window)}</p>
-              <p>📜 Previous CPL: <span className="num">{money(card.previous_cpl, card.currency) ?? "No data"}</span></p>
-              <p>📈 Current CPL: <span className="num">{money(card.current_cpl, card.currency) ?? "No data"}</span></p>
+              <p>📜 Previous CPL: <span className="num">{cplText(card, "previous_cpl")}</span></p>
+              <p>📈 Current CPL: <span className="num">{cplText(card)}</span></p>
             </div>
             <div>
               <p className="mb-1 font-medium">🎨 Creative Changes</p>
@@ -350,9 +371,9 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
                   {lines.map((line) => (
                     <Line
                       key={line.id}
-                      card={card}
                       line={line}
-                      canAct={canAct}
+                      canChange={canChange}
+                      canUndo={!readOnly}
                       disabled={disabled}
                       busy={busy}
                       progress={progress}
@@ -381,20 +402,7 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
       )}
 
       {dialog === "edit" && <EditDialog card={card} actions={actions} onClose={() => setDialog(null)} />}
-      {dialog === "dismiss" && (
-        <DismissDialog
-          card={card}
-          actions={actions}
-          onClose={() => setDialog(null)}
-          onDone={(res) => {
-            setDialog(null)
-            if (res?.reason) {
-              setMessage({ tone: "warning", text: res.reason })
-              setOpen(true)
-            }
-          }}
-        />
-      )}
+      {dialog === "dismiss" && <DismissDialog card={card} actions={actions} onClose={() => setDialog(null)} />}
     </article>
   )
 }

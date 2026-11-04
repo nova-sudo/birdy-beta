@@ -12,23 +12,29 @@ export const AGENTS_KEY = queryKeys.agents()
 /**
  * The agents this agency has set up. Only a 404 (the route not deployed yet)
  * reads as "none yet"; any other failure surfaces as `error`, so a page never
- * mistakes a broken list for an empty one.
+ * mistakes a broken list for an empty one. `LIST_UNAVAILABLE` marks that "none", so a page
+ * about to act on "this agency has no agent" can tell it apart from a real empty list.
  */
+const LIST_UNAVAILABLE = Object.freeze([])
+
+// SWR's own compare calls the marker equal to a real empty list and would keep whichever came first.
+const sameList = (a, b) => (a === LIST_UNAVAILABLE || b === LIST_UNAVAILABLE ? a === b : JSON.stringify(a) === JSON.stringify(b))
+
 async function agentsFetcher(endpoint) {
   try {
     const data = await fetcher(endpoint)
     if (Array.isArray(data)) return data
-    return Array.isArray(data?.items) ? data.items : []
+    return Array.isArray(data?.items) ? data.items : LIST_UNAVAILABLE
   } catch (err) {
-    if (err?.status === 404) return []
+    if (err?.status === 404) return LIST_UNAVAILABLE
     throw err
   }
 }
 
-/** @returns {{ agents: object[], error: Error|undefined, isLoading: boolean, mutate: Function }} */
+/** @returns {{ agents: object[], listUnavailable: boolean, error: Error|undefined, isLoading: boolean, mutate: Function }} */
 export function useAgents() {
-  const { data, error, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher)
-  return { agents: data ?? [], error, isLoading, mutate }
+  const { data, error, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher, { compare: sameList })
+  return { agents: data ?? [], listUnavailable: data === LIST_UNAVAILABLE, error, isLoading, mutate }
 }
 
 const WORK_COUNT_KEY = "agent-work-count"

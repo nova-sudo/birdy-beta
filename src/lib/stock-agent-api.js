@@ -79,7 +79,8 @@ export const ACTIVITY_COPY = {
 // ─── Reading a report ────────────────────────────────────────────────────────
 
 const WRITABLE_KINDS = ["remove", "revive", "add"]
-const LINE_BUSY = ["queued", "applying", "undoing"]
+/** Line states still out with Meta. */
+export const LINE_BUSY = ["queued", "applying", "undoing"]
 const UNDO_WINDOW_MS = 24 * 60 * 60 * 1000
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -114,6 +115,7 @@ export function dayLabel(iso) {
 
 /** A run's date and batch, as the report head and the date picker show them. */
 export function runLabel(run, batches = []) {
+  if (run.kind === "preview") return `${dayLabel(run.local_date)} · Preview`
   const batch = run.batch_id
     ? (batches.find((b) => b.id === run.batch_id)?.name ?? `Batch ${String(run.batch_id).toUpperCase()}`)
     : "Alerts only"
@@ -125,11 +127,15 @@ export function creativeName(name) {
   return String(name ?? "").replace(/\s[-–]\s\d{6}\b.*$/, "")
 }
 
+/** A run view, as opposed to some other reply: `/runs/latest` also has a `run`, but no cards. */
+const isReport = (data) => Boolean(data?.run) && Array.isArray(data?.cards)
+const NOT_A_REPORT = Object.assign(new Error("Report not found"), { status: 404 })
+
 /** Whether a report is still changing by itself: the run is going, or lines are out with Meta. */
 export function reportBusy(report) {
-  if (!report?.run) return false
+  if (!isReport(report)) return false
   if (report.run.phase !== "done" || report.run.apply_all?.pending) return true
-  return (report.cards ?? []).some((c) => (c.lines ?? []).some((ln) => LINE_BUSY.includes(ln.state)))
+  return report.cards.some((c) => (c.lines ?? []).some((ln) => LINE_BUSY.includes(ln.state)))
 }
 
 /** The lines Apply would make on this card, by the server's own rule: proposed and not Flag. Auto that fell back to Ask me counts. */
@@ -150,8 +156,8 @@ export function undoOpen(line, now = Date.now()) {
 
 /** The user's Birdy Media Buying Agent, or null before they set it up. */
 export function useStockAgent() {
-  const { agents, error, isLoading, mutate } = useAgents()
-  return { agent: agents.find((a) => a.type === STOCK_AGENT_TYPE) ?? null, error, isLoading, mutate }
+  const { agents, listUnavailable, error, isLoading, mutate } = useAgents()
+  return { agent: agents.find((a) => a.type === STOCK_AGENT_TYPE) ?? null, listUnavailable, error, isLoading, mutate }
 }
 
 /** The newest report (`run` is null before the first one). @returns {{ run: object|null, openCards: number, error, isLoading, mutate }} */
@@ -162,11 +168,11 @@ export function useLatestRun(id) {
 
 /**
  * Past reports, newest first, a page at a time. `loadOlder` adds the next page.
- * @returns {{ runs: object[], hasOlder: boolean, loadOlder: () => void, error, isLoading }}
+ * @returns {{ runs: object[], hasOlder: boolean, loadOlder: () => void, error, isLoading, mutate }}
  */
 export function useRuns(id) {
   const base = id ? queryKeys.stockRuns(id) : null
-  const { data, error, isLoading, size, setSize } = useSWRInfinite((index, previous) => {
+  const { data, error, isLoading, mutate, size, setSize } = useSWRInfinite((index, previous) => {
     if (!base) return null
     if (index === 0) return base
     return previous?.next_before ? `${base}?before=${encodeURIComponent(previous.next_before)}` : null
@@ -178,6 +184,7 @@ export function useRuns(id) {
     loadOlder: () => setSize(size + 1),
     error,
     isLoading,
+    mutate,
   }
 }
 
@@ -198,7 +205,8 @@ export function useRun(id, runId) {
   const { data, error, isLoading, mutate } = useSWR(id && runId ? queryKeys.stockRun(id, runId) : null, fetcher, {
     refreshInterval: (latest) => (reportBusy(latest) ? 5000 : 0),
   })
-  return { report: data ?? null, error, isLoading, mutate }
+  const notReport = data !== undefined && !isReport(data)
+  return { report: notReport ? null : (data ?? null), error: error ?? (notReport ? NOT_A_REPORT : undefined), isLoading, mutate }
 }
 
 /** The scoreboard rows. */

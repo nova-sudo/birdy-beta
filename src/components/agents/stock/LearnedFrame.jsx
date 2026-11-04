@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
-
 import { Badge, Button, Frame, Notice } from "@/components/ds"
 import { shortDay } from "@/lib/stock-agent-api"
+import { usePress } from "./usePress"
 
 const SOURCES = {
   edit: "From an edit",
@@ -14,26 +13,13 @@ const SOURCES = {
 }
 
 function Lesson({ lesson, actions, nameOf }) {
-  const [busy, setBusy] = useState(null)
-  const [error, setError] = useState(null)
+  const { busy, error, press } = usePress()
   const overruled = lesson.status === "overruled"
   const origin = [
     SOURCES[lesson.source],
     lesson.client_group_id ? nameOf(lesson.client_group_id) : null,
     lesson.created_at ? shortDay(lesson.created_at) : null,
   ].filter(Boolean).join(", ")
-
-  const press = async (key, fn) => {
-    setBusy(key)
-    setError(null)
-    try {
-      await fn(lesson.id)
-    } catch (err) {
-      setError(err?.message || "That didn't work. Try again.")
-    } finally {
-      setBusy(null)
-    }
-  }
 
   return (
     <div className="flex flex-col gap-2 border-b px-4 py-3 last:border-b-0">
@@ -46,10 +32,10 @@ function Lesson({ lesson, actions, nameOf }) {
           {overruled && <Badge tone="neutral" size="sm">Overruled</Badge>}
           {lesson.kept && !overruled && <Badge tone="success" size="sm">Kept</Badge>}
           {(overruled || !lesson.kept) && (
-            <Button size="sm" loading={busy === "keep"} disabled={Boolean(busy)} onClick={() => press("keep", actions.keepLesson)}>Keep</Button>
+            <Button size="sm" loading={busy === "keep"} disabled={Boolean(busy)} onClick={() => press("keep", () => actions.keepLesson(lesson.id))}>Keep</Button>
           )}
           {!overruled && (
-            <Button size="sm" loading={busy === "overrule"} disabled={Boolean(busy)} onClick={() => press("overrule", actions.overruleLesson)}>Overrule</Button>
+            <Button size="sm" loading={busy === "overrule"} disabled={Boolean(busy)} onClick={() => press("overrule", () => actions.overruleLesson(lesson.id))}>Overrule</Button>
           )}
         </span>
       </div>

@@ -17,6 +17,7 @@ import { ConfirmHost } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import ReportPage from "@/app/hub/agents/media-buying/page"
+import { ScoreboardTab } from "../Scoreboard"
 
 const res = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body })
 
@@ -29,8 +30,8 @@ Element.prototype.scrollIntoView ??= () => {}
 const WINDOW = { start: "2026-10-27", end: "2026-11-02", prev_start: "2026-10-20", prev_end: "2026-10-26" }
 const line = (over = {}) => ({ id: "l1", kind: "remove", ad_name: "Static Offer", mode: "ask", state: "proposed", error: null, flags: [], ...over })
 const card = (over = {}) => ({
-  id: "c1", client_group_id: "g1", client_name: "Harbour Body Co", tag: "changes", zone: "red", status: "open", can_apply: true,
-  currency: "GBP", previous_cpl: 10, current_cpl: 12, window: WINDOW, lines: [line()], thought_process: "CPL rose.", next_steps: "Friday.", ...over,
+  id: "c1", client_group_id: "g1", client_name: "Harbour Body Co", tag: "changes", zone: "red", status: "open", can_apply: true, has_newer: false,
+  currency: "GBP", previous_cpl: 10, current_cpl: 12, leads: 31, ads_live: 4, window: WINDOW, lines: [line()], thought_process: "CPL rose.", next_steps: "Friday.", ...over,
 })
 const run = (over = {}) => ({
   id: "r1", kind: "batch", batch_id: "b", local_date: "2026-11-03", as_of: "2026-11-03T07:00:00", phase: "done",
@@ -45,8 +46,8 @@ const FULL = () =>
     cards: [
       card(),
       card({ id: "c2", client_group_id: "g2", client_name: "Velvet Laser", zone: "yellow", previous_cpl: 8, current_cpl: 9, lines: [line({ id: "l1", ad_name: "Plans" })] }),
-      card({ id: "c3", client_group_id: "g3", client_name: "Coastline Med Spa", zone: "green", tag: "no_changes", status: "flagged", can_apply: false, previous_cpl: 7, current_cpl: 7.5, lines: [] }),
-      card({ id: "c4", client_group_id: "g4", client_name: "Lumen Skin Clinic", zone: "green", tag: "green", status: "flagged", can_apply: false, previous_cpl: 8, current_cpl: 7, lines: [] }),
+      card({ id: "c3", client_group_id: "g3", client_name: "Coastline Med Spa", zone: "green", tag: "no_changes", previous_cpl: 7, current_cpl: 7.5, lines: [] }),
+      card({ id: "c4", client_group_id: "g4", client_name: "Lumen Skin Clinic", zone: "green", tag: "green", previous_cpl: 8, current_cpl: 7, lines: [] }),
     ],
     follow_ups: [
       { client_group_id: "g1", line_id: "l1", text: "Timelapse: live and spending", ok: true },
@@ -78,7 +79,7 @@ let outcomes
 let answers
 let mutateAll
 
-const AGENT = () => ({ id: "ag1", type: "stock_media_buying", name: "Birdy Media Buying Agent", status: "active", settings: { batches: [{ id: "b", name: "Batch B", weekdays: [1] }] }, scope: { client_group_ids: ["g1"] } })
+const AGENT = () => ({ id: "ag1", type: "stock_media_buying", name: "Birdy Media Buying Agent", status: "active", settings: { batches: [{ id: "b", name: "Batch B", weekdays: [1] }], slack: { channel_id: "C1" } }, scope: { client_group_ids: ["g1"] } })
 const GROUPS = [
   { id: "g1", name: "Harbour Body Co" },
   { id: "g2", name: "Velvet Laser" },
@@ -289,16 +290,87 @@ describe("Morning report: the page", () => {
     expect(within(row).getByText("Green")).toBeInTheDocument()
   })
 
-  it("shows leads and ads live only when the cards carry them", async () => {
-    use(report({ cards: [card({ leads: 31, ads_live: 4 })] }))
+  it("shows leads and ads live; zero is a count, and an older card with neither shows a dash", async () => {
+    const older = card({ id: "c2", client_group_id: "g2", client_name: "Older Card" })
+    delete older.leads
+    delete older.ads_live
+    use(report({ cards: [card(), card({ id: "c3", client_group_id: "g3", client_name: "Zero Card", leads: 0, ads_live: 0, current_cpl: 1 }), older] }))
     renderPage()
     const frame = (await heading("Cost per lead")).closest("section")
     expect(within(frame).getByRole("columnheader", { name: "Leads" })).toBeInTheDocument()
-    expect(within(frame).getByRole("cell", { name: "31" })).toBeInTheDocument()
+    expect(within(frame).getByRole("columnheader", { name: "Ads live" })).toBeInTheDocument()
+    const cells = (name) => within(within(frame).getByRole("row", { name })).getAllByRole("cell").map((c) => c.textContent)
+    expect(cells(/Harbour/)).toEqual(expect.arrayContaining(["31", "4"]))
+    expect(cells(/Zero Card/).filter((t) => t === "0")).toHaveLength(2)
+    expect(cells(/Older Card/).filter((t) => t === "–")).toHaveLength(2)
+  })
+
+  it("the red bar is dark enough for white text and grows to fit its figure", async () => {
+    renderPage()
+    const frame = (await heading("Cost per lead")).closest("section")
+    const bar = frame.querySelector("[data-zone-bar]")
+    expect(bar.className).toContain("bg-danger-ink")
+    expect(bar.className).toContain("min-w-max")
+  })
+
+  it("spend with no leads is the worst: red, on top, and reads No leads", async () => {
+    use(report({
+      cards: [
+        card({ client_name: "Spending" , current_cpl: 12, zone: "red" }),
+        card({ id: "c2", client_group_id: "g2", client_name: "No Leads Co", current_cpl: null, previous_cpl: 9, zone: "red", leads: 0 }),
+      ],
+    }))
+    renderPage()
+    const frame = (await heading("Cost per lead")).closest("section")
+    const bars = [...frame.querySelectorAll("[data-zone-bar]")]
+    expect(bars[0]).toHaveTextContent("No leads")
+    expect(bars[0].className).toContain("bg-danger-ink")
+    expect(bars[0].style.width).toBe("100%")
+    expect(within(within(frame).getByRole("row", { name: /No Leads Co/ })).getByText("No leads")).toBeInTheDocument()
+  })
+
+  it("Apply all waits, with a reason, until the run finishes; a single card can still be applied", async () => {
+    answers["POST /api/agents/ag1/cards/c1/apply"] = res({ ok: true, outcome: "applied", reason: null, lines: [] })
+    use(report({ run: run({ phase: "writing", clients: { g1: { state: "done" }, g2: { state: "needs_writing" } } }) }))
+    renderPage()
+    expect(await screen.findByRole("button", { name: "Apply 1 change" })).toBeDisabled()
+    expect(screen.getByText(/Apply all opens when Birdy has finished this report/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }))
+    await waitFor(() => expect(calls("/api/agents/ag1/cards/c1/apply", "POST")).toHaveLength(1))
+    expect(calls("/api/agents/ag1/runs/r1/apply-all", "POST")).toHaveLength(0)
+  })
+
+  it("a card a newer one replaced isn't counted by Apply all", async () => {
+    use(report({ cards: [card({ can_apply: false, has_newer: true, status: "partly_applied" }), card({ id: "c2", client_group_id: "g2", client_name: "Velvet Laser" })] }))
+    renderPage()
+    expect(await screen.findByRole("button", { name: "Apply 1 change" })).toBeInTheDocument()
+  })
+
+  it("Apply all's Still going goes away once those lines finish", async () => {
+    answers["POST /api/agents/ag1/runs/r1/apply-all"] = () => {
+      use(report({ cards: [card({ status: "partly_applied", lines: [line({ state: "applying" })] })] }))
+      return res({ ok: true, outcome: "queued", reason: null, not_in_slack: 0, applied: 0, blocked: 0, failed: 0, needs_file: 0, queued: 1 })
+    }
+    renderPage()
+    await userEvent.click(await screen.findByRole("button", { name: "Apply 1 change" }))
+    expect(await screen.findByText(/Still going 1/)).toBeInTheDocument()
+    use(report({ cards: [card({ status: "applied", can_apply: false, lines: [line({ state: "applied" })] })] }))
+    await act(async () => { await mutateAll().catch(() => {}) })
+    await waitFor(() => expect(screen.queryByText(/Still going/)).not.toBeInTheDocument())
+  })
+
+  it("Apply all answering queued with nothing counted yet says it is still working", async () => {
+    answers["POST /api/agents/ag1/runs/r1/apply-all"] = () => {
+      use(report({ run: run({ apply_all: { pending: true } }) }))
+      return res({ ok: true, outcome: "queued", reason: null, not_in_slack: 0, applied: 0, blocked: 0, failed: 0, needs_file: 0, queued: 0 })
+    }
+    renderPage()
+    await userEvent.click(await screen.findByRole("button", { name: "Apply 1 change" }))
+    expect(await screen.findByText(/Birdy is still working through these/)).toBeInTheDocument()
   })
 
   it("Apply all counts only open Ask me lines, and applies the run", async () => {
-    answers["POST /api/agents/ag1/runs/r1/apply-all"] = res({ ok: true, outcome: "applied", reason: null, applied: 3, blocked: 1, failed: 0, needs_file: 0, queued: 0 })
+    answers["POST /api/agents/ag1/runs/r1/apply-all"] = res({ ok: true, outcome: "applied", reason: null, not_in_slack: 0, applied: 3, blocked: 1, failed: 0, needs_file: 0, queued: 0 })
     use(report({
       cards: [
         card({ lines: [line(), line({ id: "l2", mode: "flag", state: "flagged" }), line({ id: "l3", state: "failed" }), line({ id: "l4", state: "applied" }), line({ id: "l5", state: "needs_file" })] }),
@@ -338,23 +410,34 @@ describe("Morning report: the page", () => {
     expect(await screen.findByText(/now set to Flag/)).toBeInTheDocument()
   })
 
+  const NO_ACCESS = "Birdy can't post to this Slack channel. For a private channel, invite the Birdy bot to it."
   it.each([
-    [{ publish_error: "channel_not_found", slack_pending: true }, /didn't reach Slack.*channel_not_found.*try again/],
-    [{ publish_error: "not_in_channel", slack_pending: false }, /didn't reach Slack.*not_in_channel/],
-    [{ slack_pending: true }, /being sent to Slack/],
-    [{ slack_late: true }, /Posted late/],
-  ])("shows Slack delivery state %o", async (fields, copy) => {
+    [{ publish_error: "Slack timed out.", slack_pending: true }, ["This report didn't reach Slack", "Slack timed out.", "Birdy will try again."]],
+    [{ publish_error: NO_ACCESS, slack_pending: false }, ["This report didn't reach Slack", NO_ACCESS]],
+    [{ publish_error: "Slack isn't connected, so this didn't reach Slack. The report and its actions are in Birdy.", slack_pending: false }, ["Slack isn't connected"]],
+    [{ slack_pending: true }, ["being sent to Slack"]],
+    [{ slack_late: true }, ["Posted late"]],
+  ])("shows Slack delivery state %o", async (fields, copies) => {
     use(report({ run: run(fields) }))
     renderPage()
     await heading("Cards")
-    expect(screen.getByText(copy).closest("[data-slot=notice]")).toBeInTheDocument()
+    const notice = [...document.querySelectorAll("[data-slot=notice]")].find((n) => /Slack/.test(n.textContent))
+    for (const copy of copies) expect(notice).toHaveTextContent(copy)
   })
 
   it("a Slack failure doesn't say it will try again when it won't", async () => {
-    use(report({ run: run({ publish_error: "not_in_channel", slack_pending: false }) }))
+    use(report({ run: run({ publish_error: NO_ACCESS, slack_pending: false }) }))
     renderPage()
     await heading("Cards")
     expect(screen.queryByText(/try again/)).not.toBeInTheDocument()
+  })
+
+  it("no warning when Slack simply isn't set up, which setup calls optional", async () => {
+    agent = { ...AGENT(), settings: { batches: [] } }
+    use(report({ run: run({ slack: { ts: null }, publish_error: "No Slack channel is chosen for this agent, so this didn't reach Slack. The report and its actions are in Birdy." }) }))
+    renderPage()
+    await heading("Cards")
+    expect(screen.queryByText(/Slack/)).not.toBeInTheDocument()
   })
 
   it("no Slack notice when delivery went fine", async () => {
@@ -397,11 +480,46 @@ describe("Morning report: the page", () => {
     expect(calls("/api/agents/ag1/runs/r1", "GET")).toHaveLength(0)
   })
 
-  it("a run that can't be found says so", async () => {
+  it("a run that can't be found says so, and offers the way back to the latest", async () => {
     search = "run=gone"
     answers["GET /api/agents/ag1/runs/gone"] = res({ detail: "Run not found" }, 404)
     renderPage()
     expect(await screen.findByText("Run not found")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Try again/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Open the latest report" }))
+    expect(push).toHaveBeenCalledWith("/hub/agents/media-buying")
+    // The picker doesn't claim the latest report is the one open, so picking it is a real change.
+    expect(screen.getByRole("combobox", { name: "Report date" })).toHaveTextContent("Pick a date")
+  })
+
+  it("encodes the run id from the address", async () => {
+    search = "run=a%2Fb"
+    answers["GET /api/agents/ag1/runs/a%2Fb"] = res({ detail: "Run not found" }, 404)
+    renderPage()
+    expect(await screen.findByText("Run not found")).toBeInTheDocument()
+    expect(calls("/api/agents/ag1/runs/a%2Fb", "GET").length).toBeGreaterThan(0)
+  })
+
+  it("a reply that isn't a report is not found: ?run=latest doesn't read as a report with no cards", async () => {
+    search = "run=latest"
+    renderPage()
+    expect(await screen.findByText("Report not found")).toBeInTheDocument()
+    expect(screen.queryByText(/No client has a card/)).not.toBeInTheDocument()
+  })
+
+  it("?run= naming a preview is read only and labelled a preview", async () => {
+    search = "run=rp"
+    reports.rp = report({ run: run({ id: "rp", kind: "preview", batch_id: null }), cards: [card({ id: "cp", preview: true, can_apply: false })] })
+    renderPage()
+    await screen.findByRole("article", { name: "Harbour Body Co" })
+    for (const name of ["Edit", "Dismiss", "Apply"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Report date" })).toHaveTextContent("Preview")
+  })
+
+  it("when past reports can't be read the page says so", async () => {
+    answers["GET /api/agents/ag1/runs"] = res({ detail: "boom" }, 500)
+    renderPage()
+    expect(await screen.findByText(/Couldn't load past reports/)).toBeInTheDocument()
   })
 
   it("a clean alert-only day shows the one-line result and nothing else", async () => {
@@ -464,6 +582,22 @@ describe("Morning report: the page", () => {
     latest = null
     renderPage()
     expect(await screen.findByText(/No report yet/)).toBeInTheDocument()
+  })
+
+  it("doesn't redirect on a 404 from the agent list: a misrouted API isn't an agency with no agent", async () => {
+    answers["GET /api/agents"] = res({ detail: "Not Found" }, 404)
+    renderPage()
+    expect(await screen.findByText(/Couldn't load your agent/)).toBeInTheDocument()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it("Retry after that 404 trusts a list that really is empty", async () => {
+    answers["GET /api/agents"] = res({ detail: "Not Found" }, 404)
+    renderPage()
+    await screen.findByText(/Couldn't load your agent/)
+    answers["GET /api/agents"] = res([])
+    await userEvent.click(screen.getByRole("button", { name: /Try again|Retry/ }))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying/setup"))
   })
 
   it("doesn't redirect when the agent list fails to load", async () => {
@@ -586,12 +720,36 @@ describe("Morning report: follow-ups, lessons, suggestions, weekly", () => {
     expect(await screen.findByText(/channel_not_found/)).toBeInTheDocument()
   })
 
-  it("a refused weekly post says why", async () => {
-    answers["POST /api/agents/ag1/runs/r1/weekly/post"] = res({ detail: "Slack refused it." }, 502)
+  it("a refused weekly post says why, once, though the refusal is also stored", async () => {
+    answers["POST /api/agents/ag1/runs/r1/weekly/post"] = () => {
+      const s = FULL()
+      s.weekly = { ...s.weekly, post_error: "Slack refused it." }
+      use(s)
+      return res({ detail: "Slack refused it." }, 502)
+    }
     use(FULL())
     renderPage()
     await userEvent.click(await screen.findByRole("button", { name: "Post to Slack" }))
-    expect(await screen.findByText("Slack refused it.")).toBeInTheDocument()
+    await screen.findByText(/Slack refused it\./)
+    expect(screen.getAllByText(/Slack refused it\./)).toHaveLength(1)
+  })
+
+  it("a weekly that couldn't be built says so, and whether it will try again", async () => {
+    use(report({ run: run({ weekly_pending: true, weekly_error: "boom" }), weekly: null }))
+    const { unmount } = renderPage()
+    expect(await screen.findByRole("heading", { name: "Weekly message" })).toBeInTheDocument()
+    expect(screen.getByText(/couldn't build this week's message.*tries again by itself/)).toBeInTheDocument()
+    unmount()
+    use(report({ run: run({ weekly_pending: false, weekly_error: "boom" }), weekly: null }))
+    renderPage()
+    await screen.findByText(/couldn't build this week's message/)
+    expect(screen.queryByText(/tries again/)).not.toBeInTheDocument()
+  })
+
+  it("no weekly section on a day none is due", async () => {
+    renderPage()
+    await heading("Cards")
+    expect(screen.queryByRole("heading", { name: "Weekly message" })).not.toBeInTheDocument()
   })
 })
 
@@ -630,6 +788,28 @@ describe("Morning report: tabs", () => {
     await userEvent.click(within(row).getByRole("button", { name: /Clear/ }))
     await userEvent.click(await screen.findByRole("button", { name: "Clear result" }))
     await waitFor(() => expect(calls("/api/agents/ag1/outcomes/o1/clear", "POST")).toHaveLength(1))
+  })
+
+  it("a Clear in progress stays busy when the page re-renders, so it can't be pressed twice", async () => {
+    outcomes = {
+      won: 1, lost: 0, moves: 0,
+      rows: [{ id: "o1", ad_name: "Kept Ad", client_group_id: "g1", result: "won", spend: 10, leads: 2, cpl: 5, currency: "USD" }],
+    }
+    const pending = new Promise(() => {})
+    const tab = (actions) => (
+      <SWRConfig value={{ provider: () => swrCache, fetcher, dedupingInterval: 0 }}>
+        <ConfirmHost />
+        <ScoreboardTab agentId="ag1" actions={actions} nameOf={() => "A client"} />
+      </SWRConfig>
+    )
+    const swrCache = new Map()
+    const { rerender } = render(tab({ clearOutcome: () => pending }))
+    const row = await screen.findByRole("row", { name: /Kept Ad/ })
+    await userEvent.click(within(row).getByRole("button", { name: /Clear/ }))
+    await userEvent.click(await screen.findByRole("button", { name: "Clear result" }))
+    await waitFor(() => expect(within(screen.getByRole("row", { name: /Kept Ad/ })).getByRole("button", { name: /Clear/ })).toBeDisabled())
+    rerender(tab({ clearOutcome: () => pending }))
+    expect(within(screen.getByRole("row", { name: /Kept Ad/ })).getByRole("button", { name: /Clear/ })).toBeDisabled()
   })
 
   it("the Scoreboard tab starts empty", async () => {

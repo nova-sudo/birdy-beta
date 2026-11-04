@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { Button, Frame, Notice, ProgressBar, Spinner, Surface } from "@/components/ds"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
-import { dayLabel, openLines, runLabel, shortDay } from "@/lib/stock-agent-api"
+import { dayLabel, openLines, reportBusy, runLabel, shortDay } from "@/lib/stock-agent-api"
 import { AlertsFrame, clientProblems } from "./AlertsFrame"
 import { CardRow } from "./CardRow"
 import { CplBars, stoppedClients } from "./CplBars"
@@ -93,26 +93,37 @@ function Progress({ run }) {
   )
 }
 
-function SlackNotice({ run }) {
+/** Whether this report reached Slack. Slack is optional, so an agent with no channel gets no warning on every report. */
+function SlackNotice({ run, slackChannel }) {
+  if (!slackChannel && !run.slack?.ts) return null
   if (run.publish_error) {
-    const retry = run.slack_pending ? " Birdy will try again." : ""
-    return <Notice tone="warning">{`This report didn't reach Slack: ${String(run.publish_error).replace(/\.$/, "")}.${retry}`}</Notice>
+    return (
+      <Notice tone="warning" title="This report didn't reach Slack">
+        {run.publish_error}
+        {run.slack_pending ? " Birdy will try again." : ""}
+      </Notice>
+    )
   }
   if (run.slack_pending) return <Notice tone="info">This report is being sent to Slack.</Notice>
   if (run.slack_late) return <Notice tone="neutral">Posted late: Slack couldn&apos;t take this when it was ready.</Notice>
   return null
 }
 
-function ApplyAllResult({ result }) {
+function ApplyAllResult({ result, busy }) {
   if (result.error) return <Notice tone="danger">{result.error}</Notice>
+  // Once those lines have finished, each says how it ended and "still going" would be out of date.
+  if (result.outcome === "queued" && !busy) return null
   const bits = [
     result.applied && `Applied ${result.applied}.`,
     result.blocked && `Blocked ${result.blocked}.`,
     result.failed && `Failed ${result.failed}.`,
-    result.needs_file && `Waiting for a video ${result.needs_file}.`,
+    result.needs_file && `Waiting for a file ${result.needs_file}.`,
     result.queued && `Still going ${result.queued}.`,
   ].filter(Boolean)
-  return <Notice tone={result.blocked || result.failed || result.needs_file ? "warning" : "success"}>{bits.join(" ") || "Nothing was left to apply."}</Notice>
+  if (bits.length === 0) {
+    return result.outcome === "queued" ? <Notice tone="info">Birdy is still working through these.</Notice> : <Notice tone="neutral">Nothing was left to apply.</Notice>
+  }
+  return <Notice tone={result.blocked || result.failed || result.needs_file ? "warning" : result.queued ? "info" : "success"}>{bits.join(" ")}</Notice>
 }
 
 /**
@@ -124,10 +135,11 @@ function ApplyAllResult({ result }) {
  * @param {{id: string, name: string}[]} [props.clients] To name clients with no card
  * @param {{id: string, name: string}[]} [props.batches] To name the run's batch
  * @param {object} props.actions From `useStockActions`
+ * @param {string} [props.slackChannel] The agent's Slack channel, if it has one
  * @param {boolean} [props.preview]
  * @param {() => void} [props.onSeeScoreboard]
  */
-export function MorningReport({ report, clients = [], batches = [], actions, preview = false, onSeeScoreboard }) {
+export function MorningReport({ report, clients = [], batches = [], actions, slackChannel, preview = false, onSeeScoreboard }) {
   const [applying, setApplying] = useState(false)
   const [result, setResult] = useState(null)
 
@@ -172,15 +184,19 @@ export function MorningReport({ report, clients = [], batches = [], actions, pre
             <p className="text-[13px] text-muted-foreground">{subtitle(run, cards, batches)}</p>
           </div>
           {open > 0 && (
-            <Button variant="primary" loading={applying} onClick={applyAll}>
-              Apply {plural(open, "change")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Cards are still arriving, and Apply all would take ones nobody has read. */}
+              {inProgress && <span className="text-xs text-muted-foreground">Apply all opens when Birdy has finished this report.</span>}
+              <Button variant="primary" loading={applying} disabled={inProgress} onClick={applyAll}>
+                Apply {plural(open, "change")}
+              </Button>
+            </div>
           )}
         </div>
       )}
 
-      {result && <ApplyAllResult result={result} />}
-      {!preview && <SlackNotice run={run} />}
+      {result && <ApplyAllResult result={result} busy={reportBusy(report)} />}
+      {!preview && <SlackNotice run={run} slackChannel={slackChannel} />}
       {run.ended_early && <Notice tone="warning">This report stopped before it finished checking every client.</Notice>}
       {summary.stale && <Notice tone="warning">Some ad statuses couldn&apos;t be refreshed, so stored ones were used. Changes on those clients wait for you.</Notice>}
 
@@ -217,7 +233,7 @@ export function MorningReport({ report, clients = [], batches = [], actions, pre
         </Frame>
       )}
 
-      {!preview && report.weekly && <WeeklyMessage weekly={report.weekly} runId={run.id} actions={actions} />}
+      {!preview && <WeeklyMessage weekly={report.weekly} run={run} actions={actions} />}
     </div>
   )
 }

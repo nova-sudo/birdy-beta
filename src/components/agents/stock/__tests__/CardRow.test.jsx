@@ -15,6 +15,13 @@ import { CardRow } from "../CardRow"
 const res = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body })
 
 const line = (over = {}) => ({ id: "l1", kind: "remove", ad_name: "Static Offer - 082526 - Win", mode: "ask", state: "proposed", error: null, flags: [], meta_ids: ["111"], ...over })
+// An Add as `_lines` builds it: no ad id yet, and the source's creative says whether it is a video or an image.
+const videoAdd = (over = {}) => line({ kind: "add", meta_ids: [], creative_key: "vid:v1", creative: { video_id: "v1", title: "T", body: "B" }, ...over })
+const imageAdd = (over = {}) => line({ kind: "add", meta_ids: [], creative_key: "img:h1", creative: { image_hash: "h1", title: "T", body: "B" }, ...over })
+// The server's words from ai/agents/stock/add.py.
+const NEEDS_FILE = "Meta won't share this video. Upload the video file to post it."
+const NEEDS_IMAGE_FILE = "Meta won't share this image. Upload the image file to post it."
+const VIDEO_REJECTED = "Meta couldn't process this video. Upload the video file to post it."
 const mkCard = (over = {}) => ({
   id: "c1",
   client_group_id: "g1",
@@ -23,6 +30,7 @@ const mkCard = (over = {}) => ({
   zone: "red",
   status: "open",
   can_apply: true,
+  has_newer: false,
   currency: "GBP",
   previous_cpl: 9.85,
   current_cpl: 11.62,
@@ -138,31 +146,170 @@ describe("CardRow", () => {
     expect(await within(dialog).findByText(/changed while you were editing/)).toBeInTheDocument()
   })
 
-  it("needs_file shows Upload video, uploads under the grant's path_prefix and attaches the file", async () => {
+  it("needs_file on a video Add shows the server's words and Upload video, uploads under the grant's path_prefix and attaches the file", async () => {
     answers["POST /api/creatives/upload-grant"] = res({ grant: "G", path_prefix: "creatives/u-abc/" })
-    answers["POST /api/agents/ag1/cards/c1/lines/l1/file"] = res({ ok: true, outcome: "attached", reason: null, lines: [] })
+    answers["POST /api/agents/ag1/cards/c1/lines/l1/file"] = res({ ok: true, outcome: "attached", reason: null, card: mkCard({ can_apply: true }), lines: [] })
     vi.mocked(upload).mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/v.mp4" })
-    renderRow(mkCard({ lines: [line({ kind: "add", state: "needs_file", reason_code: "needs_file", error: "Upload it." })] }))
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_FILE })] }))
     await expand()
-    expect(screen.getByText(/Meta won't share this file/)).toBeInTheDocument()
+    expect(screen.getByText(NEEDS_FILE)).toBeInTheDocument()
     expect(btn("Upload video")).toBeInTheDocument()
-    await userEvent.upload(screen.getByLabelText(/Video for Static Offer/), new File(["x"], "v.mp4", { type: "video/mp4" }))
+    const input = screen.getByLabelText(/File for Static Offer/)
+    expect(input).toHaveAttribute("accept", "video/mp4,video/quicktime")
+    await userEvent.upload(input, new File(["x"], "v.mp4", { type: "video/mp4" }))
     await waitFor(() =>
       expect(bodies("/api/agents/ag1/cards/c1/lines/l1/file", "POST")).toEqual([
         { blob_url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/v.mp4" },
       ])
     )
     expect(vi.mocked(upload).mock.calls[0][0]).toMatch(/^creatives\/u-abc\/.+-v\.mp4$/)
-    expect(await screen.findByText(/Press Apply to post this ad/)).toBeInTheDocument()
+    expect(await screen.findByText("Video kept. Press Apply to post this ad.")).toBeInTheDocument()
+  })
+
+  it("needs_file on an image Add asks for an image, as the backend holds image files too", async () => {
+    answers["POST /api/creatives/upload-grant"] = res({ grant: "G", path_prefix: "creatives/u-abc/" })
+    answers["POST /api/agents/ag1/cards/c1/lines/l1/file"] = res({ ok: true, outcome: "attached", reason: null, card: mkCard({ can_apply: true }), lines: [] })
+    vi.mocked(upload).mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/a.png" })
+    renderRow(mkCard({ lines: [imageAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_IMAGE_FILE })] }))
+    await expand()
+    expect(screen.getByText(NEEDS_IMAGE_FILE)).toBeInTheDocument()
+    expect(btn("Upload image")).toBeInTheDocument()
+    expect(btn("Upload video")).not.toBeInTheDocument()
+    const input = screen.getByLabelText(/File for Static Offer/)
+    expect(input).toHaveAttribute("accept", "image/jpeg,image/png")
+    await userEvent.upload(input, new File(["x"], "a.png", { type: "image/png" }))
+    expect(await screen.findByText("Image kept. Press Apply to post this ad.")).toBeInTheDocument()
+  })
+
+  it("a video can't attach to an image Add, even past the picker's filter", async () => {
+    const user = userEvent.setup({ applyAccept: false })
+    renderRow(mkCard({ lines: [imageAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_IMAGE_FILE })] }))
+    await user.click(screen.getByRole("button", { name: /Harbour Body Co/ }))
+    await user.upload(screen.getByLabelText(/File for Static Offer/), new File(["x"], "v.mp4", { type: "video/mp4" }))
+    expect(await screen.findByText("This ad needs an image, not a video.")).toBeInTheDocument()
+    expect(calls("/api/creatives/upload-grant", "POST")).toHaveLength(0)
+    expect(upload).not.toHaveBeenCalled()
+  })
+
+  it("an image can't attach to a video Add either", async () => {
+    const user = userEvent.setup({ applyAccept: false })
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_FILE })] }))
+    await user.click(screen.getByRole("button", { name: /Harbour Body Co/ }))
+    await user.upload(screen.getByLabelText(/File for Static Offer/), new File(["x"], "a.png", { type: "image/png" }))
+    expect(await screen.findByText("This ad needs a video, not an image.")).toBeInTheDocument()
+    expect(calls("/api/creatives/upload-grant", "POST")).toHaveLength(0)
+  })
+
+  it("a kept file only says Press Apply when Apply is available", async () => {
+    answers["POST /api/creatives/upload-grant"] = res({ grant: "G", path_prefix: "creatives/u-abc/" })
+    answers["POST /api/agents/ag1/cards/c1/lines/l1/file"] = res({ ok: true, outcome: "attached", reason: null, card: mkCard({ can_apply: false, has_newer: true }), lines: [] })
+    vi.mocked(upload).mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/creatives/u-abc/v.mp4" })
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_FILE })] }))
+    await expand()
+    await userEvent.upload(screen.getByLabelText(/File for Static Offer/), new File(["x"], "v.mp4", { type: "video/mp4" }))
+    expect(await screen.findByText("Video kept.")).toBeInTheDocument()
+    expect(screen.queryByText(/Press Apply/)).not.toBeInTheDocument()
+  })
+
+  it("VIDEO_REJECTED shows the server's text", async () => {
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file", reason_code: "needs_file", error: VIDEO_REJECTED })] }))
+    await expand()
+    expect(screen.getByText(VIDEO_REJECTED)).toBeInTheDocument()
+    expect(screen.queryByText(/won't share/)).not.toBeInTheDocument()
   })
 
   it("a failed upload says why and attaches nothing", async () => {
     answers["POST /api/creatives/upload-grant"] = res({ detail: "Uploads are off." }, 503)
-    renderRow(mkCard({ lines: [line({ kind: "add", state: "needs_file", reason_code: "needs_file" })] }))
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file", reason_code: "needs_file", error: NEEDS_FILE })] }))
     await expand()
-    await userEvent.upload(screen.getByLabelText(/Video for Static Offer/), new File(["x"], "v.mp4", { type: "video/mp4" }))
+    await userEvent.upload(screen.getByLabelText(/File for Static Offer/), new File(["x"], "v.mp4", { type: "video/mp4" }))
     expect(await screen.findByText("Uploads are off.")).toBeInTheDocument()
     expect(calls("/api/agents/ag1/cards/c1/lines/l1/file", "POST")).toHaveLength(0)
+  })
+
+  it("a card a newer one replaced has no Retry, Upload or needs you, says so, and keeps Undo", async () => {
+    const until = new Date(Date.now() + 3600_000).toISOString()
+    renderRow(mkCard({
+      status: "partly_applied", can_apply: false, has_newer: true,
+      lines: [
+        line({ state: "applied", undo_until: until }),
+        line({ id: "l2", state: "failed", error: "Bad." }),
+        videoAdd({ id: "l3", state: "needs_file", reason_code: "needs_file", error: NEEDS_FILE }),
+      ],
+    }))
+    expect(screen.queryByText(/needs? you/)).not.toBeInTheDocument()
+    expect(screen.getByText("Replaced by a newer card")).toBeInTheDocument()
+    await expand()
+    for (const name of ["Retry", "Upload video", "Apply", "Edit", "Dismiss"]) expect(btn(name)).not.toBeInTheDocument()
+    expect(btn("Undo")).toBeInTheDocument()
+  })
+
+  it("a card with only failed lines left and no newer card still offers Retry", async () => {
+    renderRow(mkCard({ status: "partly_applied", can_apply: false, has_newer: false, lines: [line({ state: "applied" }), line({ id: "l2", state: "failed", error: "Bad." })] }))
+    await expand()
+    expect(btn("Retry")).toBeInTheDocument()
+    expect(screen.getByText("1 needs you")).toBeInTheDocument()
+  })
+
+  it.each([
+    ["green"],
+    ["no_changes"],
+  ])("%s: the real shape (open, can_apply true, no lines) shows no Edit, Dismiss or Apply", async (tag) => {
+    renderRow(mkCard({ tag, zone: tag === "green" ? "green" : "yellow", status: "open", can_apply: true, lines: [] }))
+    for (const name of ["Edit", "Dismiss", "Apply"]) expect(btn(name)).not.toBeInTheDocument()
+    await expand()
+    for (const name of ["Edit", "Dismiss", "Apply"]) expect(btn(name)).not.toBeInTheDocument()
+  })
+
+  it("a changes card with only additional changes keeps Edit and Dismiss", () => {
+    renderRow(mkCard({ tag: "changes", lines: [], additional_changes: "Lift the budget." }))
+    expect(btn("Edit")).toBeInTheDocument()
+    expect(btn("Dismiss")).toBeInTheDocument()
+    expect(btn("Apply")).not.toBeInTheDocument()
+  })
+
+  it("a blocked Add whose ad exists shows the server's words, and where to find it, under its new name", async () => {
+    const said = "This ad set is at its live ad limit now, so Birdy left the new ad paused in Meta. Try again when there's room."
+    renderRow(mkCard({ status: "open", lines: [videoAdd({ state: "blocked", reason_code: "max_ads_live", error: said, new_ad_name: "BS - Timelapse - 110426 - Win" })] }))
+    await expand()
+    expect(screen.getByText(said)).toBeInTheDocument()
+    expect(screen.queryByText(/didn't add another/)).not.toBeInTheDocument()
+    expect(screen.getByText(/search for "BS - Timelapse - 110426 - Win" in this client's Ads Manager/)).toBeInTheDocument()
+  })
+
+  it("a blocked Add that never made an ad doesn't claim one exists", async () => {
+    const said = "This ad set is at its live ad limit, so Birdy didn't add another."
+    renderRow(mkCard({ lines: [videoAdd({ state: "blocked", reason_code: "max_ads_live", error: said })] }))
+    await expand()
+    expect(screen.getByText(said)).toBeInTheDocument()
+    expect(screen.queryByText(/Ads Manager/)).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["noop", /Nothing here was waiting/],
+    ["already", /already been done/],
+  ])("Apply answering %s says so rather than nothing", async (outcome, copy) => {
+    answers["POST /api/agents/ag1/cards/c1/apply"] = res({ ok: true, outcome, reason: null, lines: [] })
+    renderRow(mkCard())
+    await userEvent.click(btn("Apply"))
+    expect(await screen.findByText(copy)).toBeInTheDocument()
+  })
+
+  it("the same words on the answer and on a line's note show once", async () => {
+    const flag = "This change is now set to Flag, so Birdy didn't make it. Make it in Meta if you want it."
+    answers["POST /api/agents/ag1/cards/c1/apply"] = res({ ok: true, outcome: "flagged", reason: flag, lines: [] })
+    renderRow(mkCard({ lines: [line(), line({ id: "l2", state: "flagged", mode: "flag", note: flag })] }))
+    await userEvent.click(btn("Apply"))
+    await waitFor(() => expect(calls("/api/agents/ag1/cards/c1/apply", "POST")).toHaveLength(1))
+    await screen.findByText("CPL moved into red.")
+    expect(screen.getAllByText(flag)).toHaveLength(1)
+  })
+
+  it("spend with no leads reads No leads, not No data", async () => {
+    renderRow(mkCard({ zone: "red", current_cpl: null, previous_cpl: 9 }))
+    await expand()
+    expect(screen.getByText("No leads")).toBeInTheDocument()
+    expect(screen.queryByText("No data")).not.toBeInTheDocument()
   })
 
   it("failed shows the error and Retry, which names the line", async () => {
@@ -235,8 +382,18 @@ describe("CardRow", () => {
     expect(screen.getByText("Ask me")).toBeInTheDocument()
   })
 
+  it("a superseded card keeps Undo on a line that went live, and offers nothing else", async () => {
+    const until = new Date(Date.now() + 3600_000).toISOString()
+    answers["POST /api/agents/ag1/cards/c1/undo"] = res({ ok: true, outcome: "undone", reason: null, lines: [] })
+    renderRow(mkCard({ status: "superseded", can_apply: false, lines: [videoAdd({ state: "applied", undo_until: until }), line({ id: "l2", state: "failed", error: "x" })] }))
+    await expand()
+    for (const name of ["Edit", "Dismiss", "Apply", "Retry"]) expect(btn(name)).not.toBeInTheDocument()
+    await userEvent.click(btn("Undo"))
+    await waitFor(() => expect(bodies("/api/agents/ag1/cards/c1/undo", "POST")).toEqual([{ line_id: "l1" }]))
+  })
+
   it("superseded shows Replaced by a newer card and no actions", async () => {
-    renderRow(mkCard({ status: "superseded", can_apply: false, lines: [line(), line({ id: "l2", state: "failed", error: "x" }), line({ id: "l3", state: "needs_file" })] }))
+    renderRow(mkCard({ status: "superseded", can_apply: false, lines: [line(), line({ id: "l2", state: "failed", error: "x" }), videoAdd({ id: "l3", state: "needs_file" })] }))
     expect(screen.getByText("Replaced by a newer card")).toBeInTheDocument()
     await expand()
     for (const name of ["Edit", "Dismiss", "Apply", "Retry", "Undo", "Upload video"]) expect(btn(name)).not.toBeInTheDocument()
@@ -256,7 +413,7 @@ describe("CardRow", () => {
   })
 
   it("an open card with only a file to wait for has no Apply", () => {
-    renderRow(mkCard({ lines: [line({ kind: "add", state: "needs_file" })] }))
+    renderRow(mkCard({ lines: [videoAdd({ state: "needs_file" })] }))
     expect(btn("Apply")).not.toBeInTheDocument()
   })
 
@@ -264,7 +421,7 @@ describe("CardRow", () => {
     renderRow(mkCard({
       status: "partly_applied",
       can_apply: false,
-      lines: [line({ kind: "add", state: "failed", reason_code: "no_destination", error: "The other ads aren't live.", paused_ad_id: "987" })],
+      lines: [videoAdd({ state: "failed", reason_code: "no_destination", error: "The other ads aren't live.", paused_ad_id: "987" })],
     }))
     await expand()
     expect(screen.getByText("The other ads aren't live.")).toBeInTheDocument()
@@ -273,7 +430,7 @@ describe("CardRow", () => {
 
   it("left_paused keeps the server's words, which say whether the ad is sure to exist", async () => {
     const maybe = "Birdy may have created this ad, and if so it's paused in Meta."
-    renderRow(mkCard({ status: "superseded", can_apply: false, lines: [line({ kind: "add", state: "failed", reason_code: "left_paused", error: maybe, meta_ids: [] })] }))
+    renderRow(mkCard({ status: "superseded", can_apply: false, lines: [videoAdd({ state: "failed", reason_code: "left_paused", error: maybe })] }))
     await expand()
     expect(screen.getByText(maybe)).toBeInTheDocument()
     expect(screen.queryByText(/exists and is paused/)).not.toBeInTheDocument()
@@ -288,13 +445,13 @@ describe("CardRow", () => {
   })
 
   it("read only: a preview card has no actions", async () => {
-    renderRow(mkCard({ preview: true, can_apply: false, lines: [line({ state: "needs_file" }), line({ id: "l2", state: "failed", error: "x" })] }), { readOnly: true })
+    renderRow(mkCard({ preview: true, can_apply: false, lines: [videoAdd({ state: "needs_file" }), line({ id: "l2", state: "failed", error: "x" }), line({ id: "l3", state: "applied", undo_until: new Date(Date.now() + 3600_000).toISOString() })] }), { readOnly: true })
     await expand()
     for (const name of ["Edit", "Dismiss", "Apply", "Retry", "Undo", "Upload video"]) expect(btn(name)).not.toBeInTheDocument()
   })
 
   it("shows No data for a missing CPL and the card's own currency", async () => {
-    renderRow(mkCard({ currency: "EUR", previous_cpl: 4.2, current_cpl: null }))
+    renderRow(mkCard({ currency: "EUR", zone: "no_data", previous_cpl: 4.2, current_cpl: null }))
     await expand()
     expect(screen.getByText("€4.20")).toBeInTheDocument()
     expect(screen.getByText("No data")).toBeInTheDocument()
