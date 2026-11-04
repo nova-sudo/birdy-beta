@@ -10,9 +10,9 @@ const NEW_HREF = "/hub/agents/custom/new"
 
 /**
  * Throws away a draft agent (its clients, training, practice answers and playbook edits)
- * and opens the new-agent page so it can be started again.
+ * and opens the new-agent page so it can be started again. `redirectTo={null}` stays on the page.
  */
-export function StartOverButton({ agent, variant = "ghost", size, className }) {
+export function StartOverButton({ agent, variant = "ghost", size, className, redirectTo = NEW_HREF }) {
   const router = useRouter()
   const { mutate: mutateAgents } = useAgents()
   const [busy, setBusy] = useState(false)
@@ -31,7 +31,7 @@ export function StartOverButton({ agent, variant = "ghost", size, className }) {
       await mutateAgents((list) => (Array.isArray(list) ? list.filter((a) => a.id !== agent.id) : []), {
         revalidate: false,
       })
-      router.push(NEW_HREF)
+      if (redirectTo) router.push(redirectTo)
     } catch (err) {
       toast.error("Couldn't start over", {
         description: err?.status === 409 ? "This agent is already switched on." : err?.message,

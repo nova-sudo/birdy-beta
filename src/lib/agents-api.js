@@ -32,10 +32,12 @@ export function useAgents() {
 }
 
 const WORK_COUNT_KEY = "agent-work-count"
+const STOCK_COUNT_KEY = "stock-agent-open-cards"
+const STOCK_TYPE = "stock_media_buying"
 
-/** Whether an SWR key holds agent work: one agent's `/work`, or the badge's multi-agent key. */
+/** Whether an SWR key holds agent work: one agent's `/work`, the badge's multi-agent key, or the stock agent's open cards. */
 export function isAgentWorkKey(key) {
-  if (Array.isArray(key)) return key[0] === WORK_COUNT_KEY
+  if (Array.isArray(key)) return key[0] === WORK_COUNT_KEY || key[0] === STOCK_COUNT_KEY
   return typeof key === "string" && key.startsWith(`${AGENTS_KEY}/`) && key.endsWith("/work")
 }
 
@@ -49,24 +51,41 @@ export function revalidateAgentWork(mutate) {
 
 const openCount = (work) => (Array.isArray(work?.open) ? work.open.length : 0)
 
+/** Cards in the newest report that are still waiting on a person. A first run that hasn't happened yet is none. */
+async function stockOpenCards([, id]) {
+  const latest = await fetcher(queryKeys.stockLatestRun(id))
+  const runId = latest?.run?.id
+  if (!runId) return 0
+  const report = await fetcher(queryKeys.stockRun(id, runId))
+  return (report?.cards ?? []).filter((c) => c.can_apply).length
+}
+
 /**
  * Open work items across this user's live agents, for the nav badge; `null`
  * with no live agent (or before anything loaded), so the badge stays hidden.
- * Phase 1 has one agent per user, so this reads the same SWR entry as
- * `useAgentWork` and costs no extra request on the agent page.
+ * A custom agent's open work items and the Birdy Media Buying Agent's open
+ * cards add together. One custom agent shares the SWR entry `useAgentWork`
+ * reads, so it costs no extra request on the agent page.
  */
 export function useAgentWorkCount() {
   const { agents } = useAgents()
-  const ids = agents.filter((a) => a.status === "active").map((a) => a.id)
+  const live = agents.filter((a) => a.status === "active")
+  const ids = live.filter((a) => a.type !== STOCK_TYPE).map((a) => a.id)
+  const stockId = live.find((a) => a.type === STOCK_TYPE)?.id ?? null
   const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher, FRESH_WORK)
   const many = useSWR(
     ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null,
     ([, ...list]) => Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id)))),
     FRESH_WORK
   )
-  if (ids.length === 0) return null
-  if (ids.length === 1) return one.data ? openCount(one.data) : null
-  return many.data ? many.data.reduce((n, w) => n + openCount(w), 0) : null
+  const stock = useSWR(stockId ? [STOCK_COUNT_KEY, stockId] : null, stockOpenCards, FRESH_WORK)
+  if (live.length === 0) return null
+  let total = 0
+  if (ids.length === 1 && one.data) total += openCount(one.data)
+  if (ids.length > 1 && many.data) total += many.data.reduce((n, w) => n + openCount(w), 0)
+  if (stockId && typeof stock.data === "number") total += stock.data
+  const loaded = (ids.length === 0 || (ids.length === 1 ? one.data : many.data)) && (!stockId || stock.data !== undefined || stock.error)
+  return loaded ? total : null
 }
 
 // ─── One agent ───────────────────────────────────────────────────────────────
@@ -167,7 +186,7 @@ export function revalidateAgentLearning(mutate, id) {
  * Sends a request and returns its JSON. A failure throws an Error carrying
  * `status` and the server's `detail` (which may be an object, e.g. `{missing}`).
  */
-async function send(endpoint, method, body) {
+export async function send(endpoint, method, body) {
   const res = await apiRequest(endpoint, {
     method,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

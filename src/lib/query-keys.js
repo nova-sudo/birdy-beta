@@ -64,6 +64,15 @@ export const queryKeys = {
   agentOffers: (id) => `/api/agents/${id}/offers`,
   agentProposals: (id) => `/api/agents/${id}/proposals`,
   agentJob: (id, jobId) => `/api/agents/${id}/jobs/${jobId}`,
+  // The Birdy Media Buying Agent (stock): reports, scoreboard, lessons, Slack templates.
+  stockSettings: (id) => `/api/agents/${id}/settings`,
+  stockPreview: (id) => `/api/agents/${id}/preview`,
+  stockLatestRun: (id) => `/api/agents/${id}/runs/latest`,
+  stockRun: (id, runId) => `/api/agents/${id}/runs/${runId}`,
+  stockCard: (id, cardId) => `/api/agents/${id}/cards/${cardId}`,
+  stockOutcomes: (id) => `/api/agents/${id}/outcomes`,
+  stockLessons: (id) => `/api/agents/${id}/lessons`,
+  stockSlackTemplate: (id, kind) => `/api/agents/${id}/slack-templates/${kind}`,
 
   // Creative tests. Mutations through lib/creatives-api revalidate these.
   creatives: () => "/api/creatives",
