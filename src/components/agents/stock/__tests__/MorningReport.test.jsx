@@ -340,6 +340,54 @@ describe("Morning report: the page", () => {
     expect(calls("/api/agents/ag1/runs/r1/apply-all", "POST")).toHaveLength(0)
   })
 
+  it("Apply all opens by itself once the run finishes", async () => {
+    answers["POST /api/agents/ag1/runs/r1/apply-all"] = res({ ok: true, outcome: "applied", reason: null, applied: 1, blocked: 0, failed: 0, needs_file: 0, queued: 0 })
+    const c = report().cards
+    use(report({ run: run({ phase: "writing", clients: { g1: { state: "done" }, g2: { state: "needs_writing" } } }), cards: c }))
+    renderPage()
+    expect(await screen.findByRole("button", { name: "Apply 1 change" })).toBeDisabled()
+    use(report({ cards: c }))
+    await act(async () => { await mutateAll().catch(() => {}) })
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply 1 change" })).toBeEnabled())
+    expect(screen.queryByText(/Apply all opens when Birdy has finished this report/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Apply 1 change" }))
+    await waitFor(() => expect(calls("/api/agents/ag1/runs/r1/apply-all", "POST")).toHaveLength(1))
+  })
+
+  it("names the client with spend and no leads first, ahead of a red one with a figure", async () => {
+    use(report({
+      cards: [
+        card({ client_name: "Steady Red Clinic", current_cpl: 12 }),
+        card({ id: "c2", client_group_id: "g2", client_name: "No Leads Clinic", current_cpl: null, leads: 0 }),
+      ],
+    }))
+    renderPage()
+    expect(await screen.findByRole("heading", { name: /Look at No Leads Clinic first\./ })).toBeInTheDocument()
+  })
+
+  it("names the client with no leads first even when its currency is listed second", async () => {
+    use(report({
+      cards: [
+        card({ client_name: "Pounds Clinic", currency: "GBP", current_cpl: 12 }),
+        card({ id: "c2", client_group_id: "g2", client_name: "Euro Clinic", currency: "EUR", current_cpl: null, leads: 0 }),
+      ],
+    }))
+    renderPage()
+    expect(await screen.findByRole("heading", { name: /Look at Euro Clinic first\./ })).toBeInTheDocument()
+  })
+
+  it("among red clients with a figure, names the highest in the report's order", async () => {
+    use(report({
+      cards: [
+        card({ client_name: "Lower Clinic", current_cpl: 12 }),
+        card({ id: "c2", client_group_id: "g2", client_name: "Higher Clinic", current_cpl: 30 }),
+        card({ id: "c3", client_group_id: "g3", client_name: "Green Clinic", zone: "green", tag: "green", current_cpl: 90, lines: [] }),
+      ],
+    }))
+    renderPage()
+    expect(await screen.findByRole("heading", { name: /Look at Higher Clinic first\./ })).toBeInTheDocument()
+  })
+
   it("a card a newer one replaced isn't counted by Apply all", async () => {
     use(report({ cards: [card({ can_apply: false, has_newer: true, status: "partly_applied" }), card({ id: "c2", client_group_id: "g2", client_name: "Velvet Laser" })] }))
     renderPage()

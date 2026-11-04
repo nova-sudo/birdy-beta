@@ -18,7 +18,7 @@ const NO_LEADS = "No leads"
 const NOT_STORED = "–"
 
 /** Spend with no leads has no CPL but is red (checks.zone), and is as bad as a client can be. */
-const spentNoLeads = (card) => card.current_cpl == null && card.zone === "red"
+export const spentNoLeads = (card) => card.current_cpl == null && card.zone === "red"
 
 /** A card's CPL as words: its figure, else why it has none. */
 export function cplText(card, field = "current_cpl") {
@@ -51,6 +51,15 @@ function byCurrency(cards) {
     max: Math.max(0, ...rows.map((c) => c.current_cpl ?? 0)),
     rows: [...rows].sort((a, b) => worstFirst(b) - worstFirst(a)),
   }))
+}
+
+/**
+ * The client who most needs attention, by the bars' own order: spend with no leads above all, in any currency, then
+ * the first red or stopped client. Two currencies are never compared, so a higher figure only wins within its own.
+ */
+export function worstClient(cards, stopped) {
+  const order = byCurrency(cards).flatMap((g) => g.rows)
+  return order.find(spentNoLeads) ?? order.find((c) => c.zone === "red" || stopped.has(c.client_group_id)) ?? null
 }
 
 const barWidth = (card, max) => {

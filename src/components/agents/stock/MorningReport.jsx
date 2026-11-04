@@ -7,7 +7,7 @@ import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { dayLabel, openLines, reportBusy, runLabel, shortDay } from "@/lib/stock-agent-api"
 import { AlertsFrame, clientProblems } from "./AlertsFrame"
 import { CardRow } from "./CardRow"
-import { CplBars, stoppedClients } from "./CplBars"
+import { CplBars, stoppedClients, worstClient } from "./CplBars"
 import { FollowUps } from "./FollowUps"
 import { LearnedFrame } from "./LearnedFrame"
 import { ScoreboardFrame } from "./Scoreboard"
@@ -37,12 +37,12 @@ function answer(cards, alerts, nameOf) {
   ].filter(Boolean)
   const open = alerts.filter((a) => a.severity !== "info")
   const urgent = alerts.find((a) => a.severity === "critical")
-  const firstRed = cards.find((c) => c.zone === "red" || isStopped(c))
+  const worst = worstClient(cards, stopped)
 
   let title = parts.length ? `${parts.join(", ")}.` : open.length ? `${plural(open.length, "alert")} to look at.` : "No client has a card in this report."
   if (urgent?.client_group_id) title += ` Look at ${nameOf(urgent.client_group_id)} first.`
   else if (urgent) title += ` Start with this: ${urgent.title}.`
-  else if (firstRed) title += ` Look at ${firstRed.client_name} first.`
+  else if (worst) title += ` Look at ${worst.client_name} first.`
 
   const waiting = cards.filter((c) => openLines(c).length > 0)
   const bits = []
