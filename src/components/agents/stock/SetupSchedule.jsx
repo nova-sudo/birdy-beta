@@ -36,7 +36,7 @@ export function timeProblem(time) {
 }
 
 /** Step 1: the time and zone the run starts, which weekdays each batch runs, and the weekly message. */
-export function SetupSchedule({ agent, actions, onNext }) {
+export function SetupSchedule({ agent, actions, onNext, saveLabel }) {
   const settings = useMemo(() => settingsOf(agent), [agent])
   const [time, setTime] = useState(agent.scope?.schedule?.time ?? "07:00")
   const [tz, setTz] = useState(agent.scope?.schedule?.tz ?? "Europe/London")
@@ -65,6 +65,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
       await patchAgent(agent.id, { scope: { schedule: { time, tz } } })
       await actions.patchSettings({ settings: { batches, weekly: { enabled: Boolean(weekly.enabled), weekday: weekly.weekday ?? 0 } } })
       onNext()
+      setSaving(false)
     } catch (err) {
       setError(saveMessage(err))
       setSaving(false)
@@ -180,7 +181,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
       </Frame>
 
       <ErrorNotice>{error}</ErrorNotice>
-      <SetupFooter onNext={save} saving={saving} disabled={Boolean(timeError) || noDays} />
+      <SetupFooter onNext={save} saving={saving} disabled={Boolean(timeError) || noDays} label={saveLabel} />
     </div>
   )
 }

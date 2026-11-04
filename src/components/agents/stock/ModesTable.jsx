@@ -61,8 +61,9 @@ export function modesOf(settings) {
  * @param {object} props.settings The agent's settings, with `modes`, `clients` and `add_writes_enabled`
  * @param {{id: string, name: string}[]} props.clients The watched clients
  * @param {(next: {modes: object, clientModes: Record<string, object>}) => void} props.onChange The whole new state
+ * @param {Record<string, string>} [props.errors] The server's refusal for a client, by client id, shown on its row
  */
-export function ModesTable({ settings, clients, onChange }) {
+export function ModesTable({ settings, clients, onChange, errors = {} }) {
   const { modes, clientModes } = modesOf(settings)
   const addOn = settings?.add_writes_enabled === true
   const shown = (kind, mode) => (kind === "add" && !addOn ? "flag" : mode)
@@ -142,7 +143,14 @@ export function ModesTable({ settings, clients, onChange }) {
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id} className="border-t">
-                  <td className="px-3 py-2 font-medium text-foreground">{c.name}</td>
+                  <td className="px-3 py-2 align-top font-medium text-foreground">
+                    {c.name}
+                    {errors[c.id] && (
+                      <p role="alert" className="mt-1 text-xs font-normal text-danger-ink">
+                        {errors[c.id]}
+                      </p>
+                    )}
+                  </td>
                   {CHANGE_TYPES.map(({ kind, label }) => {
                     const locked = kind === "add" && !addOn
                     const own = clientModes[c.id]?.[kind]

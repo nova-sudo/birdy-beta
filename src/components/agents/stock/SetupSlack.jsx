@@ -11,7 +11,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { ErrorNotice, SetupFooter, saveMessage, settingsOf } from "./SetupShared"
 
 /** Step 4: where cards and reports are posted. Optional: without Slack everything works in Birdy. */
-export function SetupSlack({ agent, actions, onBack, onNext }) {
+export function SetupSlack({ agent, actions, onBack, onNext, saveLabel }) {
   const { data: status, error: statusError, isLoading } = useSWR(queryKeys.slackStatus(), fetcher)
   const connected = Boolean(status?.installed)
   const { data: channelData, error: channelError } = useSWR(connected ? queryKeys.slackChannels() : null, fetcher)
@@ -32,6 +32,7 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
         settings: { slack: channelId ? { channel_id: channelId, channel_name: channel?.name ?? null } : { channel_id: null, channel_name: null } },
       })
       onNext()
+      setSaving(false)
     } catch (err) {
       setError(saveMessage(err))
       setSaving(false)
@@ -93,7 +94,7 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
         </Frame>
       )}
       <ErrorNotice>{error}</ErrorNotice>
-      <SetupFooter onBack={onBack} onNext={save} saving={saving} />
+      <SetupFooter onBack={onBack} onNext={save} saving={saving} label={saveLabel} />
     </div>
   )
 }

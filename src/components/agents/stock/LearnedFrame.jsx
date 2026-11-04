@@ -12,7 +12,7 @@ const SOURCES = {
   promoted: "From a rule you accepted",
 }
 
-function Lesson({ lesson, actions, nameOf }) {
+export function Lesson({ lesson, actions, nameOf }) {
   const { busy, error, press } = usePress()
   const overruled = lesson.status === "overruled"
   const origin = [

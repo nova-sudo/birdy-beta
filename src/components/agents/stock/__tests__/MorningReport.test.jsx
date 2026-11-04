@@ -141,6 +141,21 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
+describe("Agent page: lessons and settings tabs", () => {
+  it("the Lessons tab lists the lessons, empty at first", async () => {
+    search = "tab=lessons"
+    renderPage()
+    expect(await screen.findByText(/Nothing yet. When you edit a card/)).toBeInTheDocument()
+  })
+
+  it("the Settings tab opens the agent's settings once the clients are in", async () => {
+    search = "tab=settings"
+    renderPage()
+    expect(await screen.findByRole("region", { name: "Schedule settings" })).toBeInTheDocument()
+    expect(screen.getByRole("region", { name: "Flag, Ask me or Auto settings" })).toBeInTheDocument()
+  })
+})
+
 describe("Morning report: the page", () => {
   it("renders the sections in the spec's order", async () => {
     use(FULL())

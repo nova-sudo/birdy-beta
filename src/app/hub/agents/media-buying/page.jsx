@@ -21,6 +21,9 @@ import {
 } from "@/components/ds"
 import { MorningReport } from "@/components/agents/stock/MorningReport"
 import { ScoreboardTab } from "@/components/agents/stock/Scoreboard"
+import { AgentSettings } from "@/components/agents/stock/AgentSettings"
+import { LessonsList } from "@/components/agents/stock/LessonsList"
+import { toClient } from "@/components/agents/AgentTraining"
 import { useAgent } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, runLabel, useLatestRun, useRun, useRuns, useStockActions, useStockAgent } from "@/lib/stock-agent-api"
@@ -122,7 +125,7 @@ function StockAgentPage() {
   const latest = useLatestRun(agentId)
   const runId = runParam ?? latest.run?.id
   const { report, error: reportError, mutate: mutateReport } = useRun(agentId, runId)
-  const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
+  const { clientGroups, loading: clientsLoading, error: clientsError, refresh: refreshClients } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const batches = (full ?? listed)?.settings?.batches ?? []
 
   const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle="Morning report" /> }), [])
@@ -178,19 +181,15 @@ function StockAgentPage() {
             />
           )}
           {tab === "scoreboard" && <ScoreboardTab agentId={agentId} actions={actions} nameOf={nameOf} />}
-          {tab === "lessons" && <EmptyState variant="surface" title="Lessons" description="Every lesson Birdy has learned will be listed here." />}
-          {tab === "settings" && (
-            <EmptyState
-              variant="surface"
-              title="Settings"
-              description="You can change this agent's schedule, clients and rules in setup."
-              action={
-                <Button asChild>
-                  <Link href={STOCK_SETUP_PATH}>Open setup</Link>
-                </Button>
-              }
-            />
-          )}
+          {tab === "lessons" && <LessonsList agentId={agentId} actions={actions} nameOf={nameOf} />}
+          {tab === "settings" &&
+            (clientsError ? (
+              <ErrorState title="Couldn't load your clients" description={String(clientsError)} onRetry={() => refreshClients()} />
+            ) : full && !clientsLoading ? (
+              <AgentSettings key={full.id} agent={full} clients={clientGroups.map(toClient)} actions={actions} />
+            ) : (
+              <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
+            ))}
         </>
       )}
     </div>

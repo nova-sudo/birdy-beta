@@ -26,7 +26,7 @@ function problem(field, raw) {
 }
 
 /** Step 3: the numbers behind removing, adding and reviving ads. Defaults are fine to keep. */
-export function SetupCreative({ agent, actions, onBack, onNext }) {
+export function SetupCreative({ agent, actions, onBack, onNext, saveLabel }) {
   const stored = useMemo(() => settingsOf(agent).creative, [agent])
   const [values, setValues] = useState(() => Object.fromEntries(FIELDS.map((f) => [f.key, show(stored[f.key])])))
   const [saving, setSaving] = useState(false)
@@ -41,6 +41,7 @@ export function SetupCreative({ agent, actions, onBack, onNext }) {
     try {
       await actions.patchSettings({ settings: { creative: Object.fromEntries(FIELDS.map((f) => [f.key, Number(values[f.key])])) } })
       onNext()
+      setSaving(false)
     } catch (err) {
       setError(saveMessage(err))
       setSaving(false)
@@ -74,7 +75,7 @@ export function SetupCreative({ agent, actions, onBack, onNext }) {
         ))}
       </Frame>
       <ErrorNotice>{error}</ErrorNotice>
-      <SetupFooter onBack={onBack} onNext={save} saving={saving} disabled={blocked} />
+      <SetupFooter onBack={onBack} onNext={save} saving={saving} disabled={blocked} label={saveLabel} />
     </div>
   )
 }

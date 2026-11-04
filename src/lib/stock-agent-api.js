@@ -243,6 +243,14 @@ export function patchSettings(id, patch) {
   return send(queryKeys.stockSettings(id), "PATCH", patch)
 }
 
+/**
+ * Switches the agent off: it stops running and can't change any client until it is turned on again in setup.
+ * The server has no route for this yet (`status` is owned by /activate); see the Task 20 report.
+ */
+export function deactivateAgent(id) {
+  return send(`${queryKeys.agent(id)}/deactivate`, "POST")
+}
+
 /** Runs on real data and writes nothing. @returns {Promise<{run_id: string, kind: string, phase: string, done: boolean}>} 409 `{detail, not_ready?}` when it can't start. */
 export function startPreview(id) {
   return send(queryKeys.stockPreview(id), "POST")
@@ -339,6 +347,7 @@ export function useStockActions(id) {
   }
   return {
     patchSettings: run(patchSettings),
+    deactivateAgent: run(deactivateAgent),
     startPreview: run(startPreview),
     applyCard: run(applyCard),
     dismissCard: run(dismissCard),
