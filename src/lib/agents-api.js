@@ -113,6 +113,12 @@ export function useAgentWork(id) {
   return { work: data ?? { open: [], auto_applied: [] }, error, isLoading, mutate }
 }
 
+/** Who acts on each client the agent watches: `acting` is this_agent, other_agent or no_agent. */
+export function useAgentClaims(id) {
+  const { data, mutate } = useSWR(id ? queryKeys.agentClaims(id) : null, optionalFetcher)
+  return { clients: data?.clients ?? [], mutate }
+}
+
 /** Confidence score; `null` while the route is not deployed yet. */
 export function useAgentConfidence(id) {
   const { data, isLoading, mutate } = useSWR(id ? queryKeys.agentConfidence(id) : null, optionalFetcher)

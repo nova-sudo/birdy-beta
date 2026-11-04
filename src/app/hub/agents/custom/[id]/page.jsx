@@ -18,6 +18,7 @@ import { LearnedList } from "@/components/agents/LearnedList"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
 import { ProposalList } from "@/components/agents/ProposalDiff"
 import { TrustTable } from "@/components/agents/TrustTable"
+import { UnheldClients } from "@/components/agents/UnheldClients"
 import { WorkList } from "@/components/agents/WorkList"
 import {
   isAgentImpactKey,
@@ -183,6 +184,7 @@ function AgentHome({ params }) {
   } else {
     body = (
       <>
+        <UnheldClients agent={agent} onSaved={(updated) => mutateAgent(updated, { revalidate: false })} />
         <SegmentedTabs value={tab} onValueChange={setTab} items={tabs} ariaLabel="Agent" panelId={PANEL_ID} />
         <div id={PANEL_ID} role="tabpanel" aria-labelledby={`${PANEL_ID}-tab-${tab}`} className="min-w-0">
           {tab === "work" && (

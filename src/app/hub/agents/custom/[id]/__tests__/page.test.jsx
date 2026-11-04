@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 
@@ -64,6 +64,28 @@ beforeEach(() => {
   })
 })
 
+const row = (id, acting, holder_name = null) => ({ client_group_id: id, name: `Client ${id}`, acting, holder_name })
+
+/** The claims route answers `claims`; a save resolves to `onSave`, then the route answers `after`. */
+function withClaims(claims, { after = claims, onSave = () => res(agent) } = {}) {
+  let current = claims
+  const base = vi.mocked(apiRequest).getMockImplementation()
+  vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+    if (path === "/api/agents/ag1/claims") return Promise.resolve(res({ clients: current }))
+    if (path === "/api/agents/ag1" && init.method === "PATCH") {
+      const answer = onSave()
+      if (answer.ok) current = after
+      return Promise.resolve(answer)
+    }
+    return base(path, init)
+  })
+}
+
+const saves = () =>
+  vi.mocked(apiRequest).mock.calls
+    .filter(([p, init]) => p === "/api/agents/ag1" && init?.method === "PATCH")
+    .map(([, init]) => JSON.parse(init.body))
+
 const renderPage = () =>
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
@@ -72,6 +94,63 @@ const renderPage = () =>
   )
 
 describe("Custom agent page", () => {
+  describe("a client no agent is acting on", () => {
+    it("says so and takes it back through the scope save", async () => {
+      withClaims([row("g1", "no_agent"), row("g2", "this_agent")], {
+        after: [row("g1", "this_agent"), row("g2", "this_agent")],
+      })
+      renderPage()
+      expect(await screen.findByText(/No agent is acting on Client g1/)).toBeInTheDocument()
+      expect(screen.queryByText(/Another agent/)).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole("button", { name: "Take back Client g1" }))
+      await waitFor(() => expect(screen.queryByText(/No agent is acting on/)).not.toBeInTheDocument())
+      expect(saves()).toEqual([{ scope: { client_group_ids: ["g1", "g2"] }, only_flag: [] }])
+    })
+
+    it("keeps a client held elsewhere as only flag, so that holder's client doesn't refuse the save", async () => {
+      agent.scope.flag_only_client_group_ids = ["g4"]
+      withClaims([row("g1", "no_agent"), row("g2", "other_agent", "Birdy Media Buying Agent"), row("g3", "this_agent"), row("g4", "no_agent")])
+      renderPage()
+      await userEvent.click(await screen.findByRole("button", { name: "Take back Client g1" }))
+      await waitFor(() => expect(saves()).toHaveLength(1))
+      expect(saves()[0]).toEqual({ scope: { client_group_ids: ["g1", "g2", "g3", "g4"] }, only_flag: ["g2", "g4"] })
+    })
+
+    it("names each client when there are several", async () => {
+      withClaims([row("g1", "no_agent"), row("g2", "no_agent")])
+      renderPage()
+      expect(await screen.findByRole("button", { name: "Take back Client g1" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Take back Client g2" })).toBeInTheDocument()
+    })
+
+    it("offers nothing for a client another agent really holds", async () => {
+      withClaims([row("g1", "other_agent", "Birdy Media Buying Agent"), row("g2", "this_agent")])
+      renderPage()
+      await screen.findByText("Pause “Summer BBL – Video 3”")
+      await waitFor(() =>
+        expect(vi.mocked(apiRequest).mock.calls.some(([p]) => p === "/api/agents/ag1/claims")).toBe(true)
+      )
+      expect(screen.queryByText(/No agent is acting on/)).not.toBeInTheDocument()
+      expect(screen.queryByRole("button", { name: /Take back/ })).not.toBeInTheDocument()
+    })
+
+    it("says so if another agent got there first, and nothing is saved twice", async () => {
+      withClaims([row("g1", "no_agent")], {
+        onSave: () => res({ detail: "Another agent already acts on Stock", conflicts: [{ client_group_id: "g1" }] }, 409),
+      })
+      renderPage()
+      await userEvent.click(await screen.findByRole("button", { name: "Take back Client g1" }))
+      expect(await screen.findByText(/Another agent has just taken this client/)).toBeInTheDocument()
+      expect(saves()).toHaveLength(1)
+    })
+
+    it("shows nothing while the route is missing", async () => {
+      renderPage() // the default mock answers 404
+      await screen.findByText("Pause “Summer BBL – Video 3”")
+      expect(screen.queryByRole("button", { name: /Take back/ })).not.toBeInTheDocument()
+    })
+  })
+
   it("reads the agent by its id from the route, never from the list", async () => {
     renderPage()
     expect(await screen.findByRole("heading", { name: "Lead rules" })).toBeInTheDocument()

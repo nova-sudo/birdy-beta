@@ -37,13 +37,26 @@ and don't start near the 02:20 UTC `ensure-indexes` cron.
 
 ### Migration
 
-Run this from the backend repo on the commit you just deployed, with its Python environment active. Take both
-values from the backend's Vercel production environment. Set both: the script reads these before `.env`, and with
-`MONGODB_DB` unset it uses the one in `.env` or falls back to `birdyaidev`.
+**Before you start**, on the machine you'll run this from:
+
+- **`mongosh` is installed.** Check with `mongosh --version`. On a Mac, `brew install mongosh`. Without it, verification
+  stops at "command not found" with the backend already live. It has never run against a real `mongosh`, so rehearse
+  the verification script once against a dev database before deploy day.
+- **You're in a backend checkout with a `.env`.** Run everything from its root, on the commit you're deploying, with its
+  Python environment active. The script needs `.env` for more than the database: without it, it crashes at
+  `core/crypto.py` on `AI_CREDENTIAL_ENCRYPTION_KEY`, before any database call. That's a traceback, not the error lines
+  described below. A new worktree has no `.env`, so copy one from the main checkout. Its `MONGODB_*` values point at dev,
+  and the two variables below override them.
+- **You know how many agents production has.** Read the count of the `agents` collection in the production cluster in
+  Atlas, before you set anything. The check below compares against it, so a mistyped database can't pass.
+
+Take both values below from the backend's Vercel production environment. Set both: the script reads these before
+`.env`, and with `MONGODB_DB` unset it uses the one in `.env` or falls back to `birdyaidev`.
 
 ```sh
 read -rs MONGODB_URI && export MONGODB_URI
 export MONGODB_DB=<production database name>
+export EXPECTED_AGENTS=<the count you read from Atlas>
 python -m scripts.ensure_indexes; echo "exit=$?"
 ```
 
@@ -56,7 +69,10 @@ Then verify, whatever the exit code said. This reads only:
 ```sh
 cat > "${TMPDIR}stock-verify.js" <<'JS'
 const d = db.getSiblingDB(process.env.MONGODB_DB);
+const total = d.agents.countDocuments({});
+const expected = Number(process.env.EXPECTED_AGENTS);
 print(`Database: ${d.getName()}`);
+print(`0. Agents here: ${total}, expected ${process.env.EXPECTED_AGENTS}: ${total > 0 && total === expected ? "ok" : "STOP, check MONGODB_DB and EXPECTED_AGENTS"}`);
 print(`1. Agents still typed media_buying (want 0): ${d.agents.countDocuments({ type: "media_buying" })}`);
 const missing = [];
 d.agents.find({ status: "active" }).forEach((a) => {
@@ -78,7 +94,8 @@ JS
 mongosh "$MONGODB_URI" --quiet --file "${TMPDIR}stock-verify.js"
 ```
 
-**Pass:** the database is production, and lines 1 to 5 all show what they want. A client held by a different agent
+**Pass:** the database is production, line 0 says `ok`, and lines 1 to 5 all show what they want. Line 0 comes first because
+lines 1 to 5 also pass on an empty database. An agency creating an agent since you read the count can put it off by one or two, which is fine once you've checked why. Zero never is. A client held by a different agent
 counts as claimed: the newer agent only watches it. Line 2 is only meaningful now. After launch, a client can
 rightly have no claim, because a person moved it and turned the new agent off.
 
@@ -87,11 +104,12 @@ while (see below), so fix it rather than rush.
 
 | What failed | What to do |
 | --- | --- |
-| Exit 1, or line 1, 4 or 5 | Read the `<name>: <error>` lines, fix the cause, and run the script again. It's safe to repeat: it never overwrites a claim, and an agent that failed part way finishes on the next run. If the failure is an index set other than `create_agent_indexes` and lines 1 to 5 all pass, it isn't a blocker for this launch, so note it and carry on |
+| Line 0 | You're probably on the wrong database. Nothing is lost: the script only created indexes in it. Correct `MONGODB_DB` or `EXPECTED_AGENTS`, then run the script and the verification again |
+| Exit 1, or line 1, 4 or 5 | Read the `<name>: <error>` lines, fix the cause, and run the script again. It's safe to repeat: it never overwrites a claim, and an agent that failed part way finishes on the next run. If the failure is an index set other than `create_agent_indexes` and lines 0 to 5 all pass, it isn't a blocker for this launch, so note it and carry on |
 | Line 2 or 3 | Run the script again. If line 2 still names an agent that is already marked, the run won't retry it, since each agent is migrated once. Clear the marker for that agent only, then run the script again: `mongosh "$MONGODB_URI" --quiet --eval 'db.getSiblingDB(process.env.MONGODB_DB).agents.updateOne({ _id: "<agent id>" }, { $unset: { claims_migrated_at: "" } })'`. Do this only in this window, before anyone has moved a client |
 | Not fixed within about 30 minutes | Roll the backend back. See [Rollback](#rollback) |
 
-Delete the file and the variables when you finish: `rm "${TMPDIR}stock-verify.js"; unset MONGODB_URI MONGODB_DB`.
+Delete the file and the variables when you finish: `rm "${TMPDIR}stock-verify.js"; unset MONGODB_URI MONGODB_DB EXPECTED_AGENTS`.
 
 **While the old frontend is still live:** an agency with no agent gets a custom agent named "Custom agent", training
 chat answers "Set up this agent first" on every tool call, and normal Creatives uploads keep working. All of this
@@ -106,17 +124,17 @@ the log. Read it the morning after launch, as part of V2.
 Traced from the code, not run. Roll back the frontend first, then the backend, because a new frontend on the old
 backend makes every Creatives upload fail. Don't undo the migration.
 
-- The `origin/main` backend tries to create its old unique `(user_id, type)` index. That fails with
-  `IndexOptionsConflict` on every `ensure_indexes` pass and is only logged. This is expected, so don't drop anything
-  to fix it.
+- The `origin/main` backend tries to create its old unique `(user_id, type)` index on every `ensure_indexes` pass. What
+  happens then hasn't been observed. It may be created, or fail and only be logged, for example with a duplicate key if
+  a user has two custom agents. Either is harmless, so don't drop anything to fix it. Going forward again drops it.
 - Migrated `custom` agents keep working: the old backend lists them by `user_id`, and the old frontend's `pickAgent`
   falls back to the first in the list.
 - `creative_findings` on `origin/main` looks for type `media_buying`, finds nothing, and uses default guardrails.
 - No data is lost. The stock agent's runs and cards, the claims and the `claims_migrated_at` markers stay where they
   are, and the old code ignores them.
 - To go forward again, repeat the deploy order from step 1. Marked agents are left alone, so a client moved before the
-  rollback stays moved. Line 2 will name any client added to a marked agent during the rollback: saving that agent's
-  client list claims it.
+  rollback stays moved. Line 2 will name any client added to a marked agent during the rollback: press Take back on that
+  agent's page, which the new frontend shows for a client no agent acts on.
 
 ### Read-only Meta commands
 
@@ -406,6 +424,10 @@ resume on the next tick, but a morning report can land late.
 backend's `routers/slack_interactions.py`) have no `user.team_id` check, though they change Meta, so a member of
 another workspace in a Slack Connect channel could press one. The gap is older than this branch, which left it alone.
 The stock agent's card buttons already refuse that press (S4), so copy their check.
+
+**Tidy-up: the no-body create.** `POST /api/agents` with no body exists only for the old frontend during the deploy
+window, and skips the name check because it has no name to check. Remove it once the new frontend is live, as the comment in
+`routers/agents.py` says.
 
 ## Sign-off
 
