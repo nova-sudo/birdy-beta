@@ -87,7 +87,7 @@ function RowSeg({ batches, value, onChange, name }) {
  * Step 2: zones for the whole agency, then one table: who is watched, which batch, which treatment, any
  * zone override and whether the account is prepaid. Saves through `patchSettings`.
  */
-export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext, saveLabel }) {
+export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext, saveLabel, inPlace = false }) {
   const settings = useMemo(() => settingsOf(agent), [agent])
   const firstBatch = settings.batches[0]?.id ?? null
   // A client deleted since it was chosen is dropped, so it isn't sent back.
@@ -180,7 +180,8 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
         ...(extra.move_claims ? { move_claims: true } : {}),
       })
       onNext()
-      setSaving(false)
+      // Setup moves to the next step, so the button stays busy until the page changes; in settings it is done.
+      if (inPlace) setSaving(false)
     } catch (err) {
       if (err?.status === 409 && err.conflicts?.length) setConflicts(err.conflicts)
       else {

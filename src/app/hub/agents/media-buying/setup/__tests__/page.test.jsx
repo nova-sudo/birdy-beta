@@ -116,6 +116,18 @@ beforeEach(() => {
   vi.mocked(apiRequest).mockImplementation(mockApi)
 })
 
+describe("Stock agent guided setup: a turned off agent", () => {
+  it("offers Start over to a draft but never to a turned off agent", async () => {
+    const { unmount } = renderPage()
+    expect(await screen.findByRole("button", { name: /Start over/ })).toBeInTheDocument()
+    unmount()
+    agent = mkAgent({ turned_off_at: "2026-11-04T09:00:00" })
+    renderPage()
+    await screen.findByRole("heading", { name: "When should it check?" })
+    expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
+  })
+})
+
 describe("Stock agent guided setup: steps", () => {
   it("shows the step named by ?step= and falls back to the first", async () => {
     search = "step=4"

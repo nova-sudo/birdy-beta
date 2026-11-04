@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 
@@ -65,6 +65,7 @@ let lessons
 let views
 let patchHandler
 let previewHandler
+let activateHandler
 
 function mockApi(path, init = {}) {
   const method = init.method ?? "GET"
@@ -73,7 +74,8 @@ function mockApi(path, init = {}) {
   if (path === "/api/agents/ag1" && method === "PATCH") return Promise.resolve(res(agent))
   if (path === "/api/agents") return Promise.resolve(res([agent]))
   if (path === "/api/agents/ag1/settings" && method === "PATCH") return patchHandler(body)
-  if (path === "/api/agents/ag1/deactivate" && method === "POST") return Promise.resolve(res({ ...agent, status: "paused" }))
+  if (path === "/api/agents/ag1/deactivate" && method === "POST") return Promise.resolve(res({ ...agent, status: "draft", turned_off_at: "2026-11-04T09:00:00" }))
+  if (path === "/api/agents/ag1/activate" && method === "POST") return activateHandler(body)
   if (path === "/api/integrations/slack/status") return Promise.resolve(res({ installed: true }))
   if (path === "/api/integrations/slack/channels") return Promise.resolve(res({ channels: [{ id: "C1", name: "media" }] }))
   if (path === "/api/agents/ag1/lessons" && method === "GET") return Promise.resolve(res(lessons))
@@ -118,6 +120,7 @@ function Lessons() {
   const actions = useStockActions("ag1")
   return <LessonsList agentId="ag1" actions={actions} nameOf={(gid) => CLIENTS.find((c) => c.id === gid)?.name ?? "A client"} />
 }
+const fireEventTime = (el, value) => fireEvent.change(el, { target: { value } })
 const renderSettings = () => render(<Host><Settings /></Host>)
 const section = (name) => screen.getByRole("region", { name })
 
@@ -126,6 +129,7 @@ beforeEach(() => {
   lessons = []
   views = { card: view("card"), summary: view("summary", { placeholders: ["date", "batch"] }), weekly: view("weekly", { placeholders: ["week"] }) }
   patchHandler = () => Promise.resolve(res(agent))
+  activateHandler = () => Promise.resolve(res({ ...agent, status: "active", turned_off_at: null }))
   previewHandler = () => Promise.resolve(res({ kind: "card", blocks: [{ type: "header", text: { type: "plain_text", text: "Glow Aesthetics" } }], sample: true }))
   vi.mocked(apiRequest).mockReset()
   vi.mocked(apiRequest).mockImplementation(mockApi)
@@ -354,5 +358,156 @@ describe("Lessons", () => {
     const overruled = within(screen.getByRole("region", { name: "Overruled" }))
     expect(overruled.getByText(/Wait 3 days/)).toBeInTheDocument()
     expect(calls("/api/agents/ag1/lessons/l1/overrule", "POST")).toHaveLength(1)
+  })
+})
+
+
+describe("Agent settings: a turned off agent", () => {
+  const OFF = () => mkAgent({ status: "draft", turned_off_at: "2026-11-04T09:00:00" })
+
+  it("says Turned off and offers Turn on, never setup or Start over", async () => {
+    agent = OFF()
+    renderSettings()
+    expect(await screen.findByText("Turned off")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Turn on" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Turn off" })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Start over/ })).toBeNull()
+    expect(screen.queryByText(/Finish setup/)).toBeNull()
+  })
+
+  it("Turn on calls activate with the flagged clients and nothing else", async () => {
+    agent = { ...OFF(), scope: { ...OFF().scope, flag_only_client_group_ids: ["g2"] } }
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    await waitFor(() => expect(bodies("/api/agents/ag1/activate", "POST")).toEqual([{ only_flag: ["g2"] }]))
+  })
+
+  it("lists what is missing", async () => {
+    agent = OFF()
+    activateHandler = () => Promise.resolve(res({ detail: "The agent isn't ready to switch on yet", missing: ["Pick a client", "Set zones for Velvet Laser"] }, 409))
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    expect(await screen.findByText("Set zones for Velvet Laser")).toBeInTheDocument()
+    expect(screen.getByText("Pick a client")).toBeInTheDocument()
+  })
+
+  it("names a client another agent now holds and moves it or only flags it", async () => {
+    agent = OFF()
+    activateHandler = vi
+      .fn()
+      .mockResolvedValueOnce(res({ detail: "held", conflicts: [{ client_group_id: "g2", holder_name: "Pause and revive rules" }] }, 409))
+      .mockResolvedValue(res({ ...agent, status: "active" }))
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    const conflict = (await screen.findByText(/is with Pause and revive rules/)).closest("li")
+    expect(within(conflict).getByText("Velvet Laser")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Move it here" }))
+    await waitFor(() => expect(bodies("/api/agents/ag1/activate", "POST")[1]).toEqual({ only_flag: [], move_claims: true }))
+  })
+
+  it("the confirm copy says what really happens", async () => {
+    renderSettings()
+    await userEvent.click(await screen.findByRole("button", { name: "Turn off" }))
+    const text = (await screen.findByRole("alertdialog")).textContent
+    expect(text).toMatch(/clients are released/)
+    expect(text).toMatch(/can't be applied until it is on again/)
+    expect(text).toMatch(/undone/)
+    expect(text).toMatch(/without a new preview/)
+    expect(text).not.toMatch(/Nothing in Meta is touched|from setup/)
+  })
+})
+
+describe("Agent settings: saving details", () => {
+  it("a schedule save on a live agent leaves the scope alone when the time and zone are unchanged", async () => {
+    renderSettings()
+    const schedule = within(await screen.findByRole("region", { name: "Schedule settings" }))
+    await userEvent.click(schedule.getByRole("button", { name: "Batch A Tue" }))
+    await userEvent.click(schedule.getByRole("button", { name: "Save changes" }))
+    await waitFor(() => expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(1))
+    expect(calls("/api/agents/ag1", "PATCH")).toHaveLength(0)
+  })
+
+  it("a claim conflict on the schedule is a readable message, and a half-saved schedule says so", async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    const schedule = within(await screen.findByRole("region", { name: "Schedule settings" }))
+    fireEventTime(schedule.getByLabelText("Every day at"), "08:00")
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents/ag1" && init.method === "PATCH"
+        ? Promise.resolve(res({ detail: "held", conflicts: [{ client_group_id: "g2", holder_name: "Rules" }] }, 409))
+        : mockApi(path, init)
+    )
+    await user.click(schedule.getByRole("button", { name: "Save changes" }))
+    expect(await schedule.findByText(/Another agent now handles some of your clients/)).toBeInTheDocument()
+    expect(schedule.queryByText(/HTTP 409/)).toBeNull()
+
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents/ag1/settings" ? Promise.resolve(res({ detail: "nope" }, 500)) : mockApi(path, init)
+    )
+    await user.click(schedule.getByRole("button", { name: "Save changes" }))
+    expect(await schedule.findByText(/The time and time zone were saved, but the days and weekly message weren't/)).toBeInTheDocument()
+  })
+
+  it("no Saved. when the Slack channel is as it was", async () => {
+    renderSettings()
+    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    await userEvent.click(await slack.findByRole("button", { name: "Save changes" }))
+    await new Promise((r) => setTimeout(r, 30))
+    expect(slack.queryByText("Saved.")).toBeNull()
+    expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(0)
+  })
+
+  it("a refetch of the agent while a template is open doesn't preview again", async () => {
+    const { rerender } = renderSettings()
+    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    await userEvent.click(await slack.findByRole("button", { name: "Edit Card" }))
+    await screen.findByText("Glow Aesthetics")
+    const before = calls("/api/agents/ag1/slack-templates/card/preview", "POST").length
+    agent = { ...agent } // as a background refetch of the agent gives a new object
+    rerender(<Host><Settings /></Host>)
+    await new Promise((r) => setTimeout(r, 800))
+    expect(calls("/api/agents/ag1/slack-templates/card/preview", "POST")).toHaveLength(before)
+  })
+
+  it("a save error goes away once the draft changes", async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    await user.click(await slack.findByRole("button", { name: "Edit Card" }))
+    await screen.findByText("Glow Aesthetics")
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents/ag1/slack-templates/card" && init.method === "PUT"
+        ? Promise.resolve(res({ detail: "no", errors: ["block 1: nope"] }, 400))
+        : mockApi(path, init)
+    )
+    await user.click(screen.getByRole("button", { name: "Save template" }))
+    expect(await screen.findByText("block 1: nope")).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText("Report blocks"), { target: { value: JSON.stringify([{ type: "divider" }]) } })
+    await waitFor(() => expect(screen.queryByText("block 1: nope")).toBeNull(), { timeout: 3000 })
+  })
+
+  it("the summary's client table can be added back", async () => {
+    const user = userEvent.setup()
+    views.summary = view("summary", { placeholders: ["date"], template: { blocks: [{ type: "divider" }] } })
+    renderSettings()
+    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    await user.click(await slack.findByRole("button", { name: "Edit Daily summary" }))
+    await user.click(await screen.findByRole("button", { name: /add block/i }))
+    await user.click(await screen.findByRole("menuitem", { name: /client table/i }))
+    expect(JSON.parse(screen.getByLabelText("Report blocks").value)[1]).toEqual({ type: "table", birdy_data: { source: "agent_run" } })
+  })
+})
+
+describe("Lessons: removed ones", () => {
+  it("a lesson removed from memory is not listed as in force", async () => {
+    lessons = [
+      { id: "l1", text: "Keep this one.", status: "active", active: true, source: "edit", created_at: "2026-10-30T08:00:00" },
+      { id: "l2", text: "Removed one.", status: "active", active: false, source: "edit", created_at: "2026-10-30T08:00:00" },
+    ]
+    render(<Host><Lessons /></Host>)
+    const active = within(await screen.findByRole("region", { name: "Lessons" }))
+    expect(active.getByText(/Keep this one/)).toBeInTheDocument()
+    expect(screen.queryByText(/Removed one/)).toBeNull()
+    expect(active.getByText("1")).toBeInTheDocument()
   })
 })

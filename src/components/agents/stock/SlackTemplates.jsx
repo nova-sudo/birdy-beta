@@ -1,11 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { RotateCcw } from "lucide-react"
 
 import { Badge, Button, Frame, Notice, confirm } from "@/components/ds"
 import ReportEditor from "@/components/report-designer/ReportEditor"
 import { useSlackTemplate } from "@/lib/stock-agent-api"
+
+// The summary's client table is a binding the server fills from the run's own cards.
+const CLIENT_TABLE = {
+  id: "client_table",
+  label: "Client table",
+  hint: "One row per client: previous cost per lead, current cost per lead and zone",
+  block: () => ({ type: "table", birdy_data: { source: "agent_run" } }),
+}
 
 const TEMPLATES = [
   { kind: "card", name: "Card", help: "One message per client. Birdy adds the Apply, Edit and Dismiss buttons under it." },
@@ -52,6 +60,8 @@ function TemplateEditor({ template, initial, actions, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [problems, setProblems] = useState([])
+  // A new object each render would redo the preview whenever anything above re-renders (an SWR refetch on focus).
+  const brief = useMemo(() => ({ blocks: view.template?.blocks ?? [] }), [view])
 
   const save = async (draft) => {
     setSaving(true)
@@ -111,8 +121,13 @@ function TemplateEditor({ template, initial, actions, onClose, onSaved }) {
       )}
       <ReportEditor
         key={version}
-        brief={{ blocks: view.template?.blocks ?? [] }}
-        previewFn={(draft) => actions.previewSlackTemplate(template.kind, draft.blocks)}
+        brief={brief}
+        // Each edit previews again, which also clears a save error that no longer describes the draft.
+        previewFn={(draft) => {
+          setProblems([])
+          return actions.previewSlackTemplate(template.kind, draft.blocks)
+        }}
+        extraBlocks={template.kind === "summary" ? [CLIENT_TABLE] : undefined}
         placeholders={view.placeholders}
         extraMetricsDisabled
         saveLabel="Save template"

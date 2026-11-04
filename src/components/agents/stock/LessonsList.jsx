@@ -19,8 +19,10 @@ export function LessonsList({ agentId, actions, nameOf }) {
   }
   if (isLoading && lessons.length === 0) return <Skeleton className="h-40 w-full rounded-frame" />
 
-  const active = lessons.filter((l) => l.status !== "overruled")
-  const overruled = lessons.filter((l) => l.status === "overruled")
+  // A lesson removed through the memory route comes back as `active: false`; it is in force nowhere, so it isn't listed.
+  const listed = lessons.filter((l) => l.active !== false)
+  const active = listed.filter((l) => l.status !== "overruled")
+  const overruled = listed.filter((l) => l.status === "overruled")
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">

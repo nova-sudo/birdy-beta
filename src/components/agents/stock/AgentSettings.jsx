@@ -10,6 +10,7 @@ import { SetupCreative } from "./SetupCreative"
 import { SetupSchedule } from "./SetupSchedule"
 import { SetupSlack } from "./SetupSlack"
 import { SlackTemplates } from "./SlackTemplates"
+import { TurnOn } from "./TurnOn"
 
 const SAVE = "Save changes"
 
@@ -36,7 +37,8 @@ function Section({ title, description, children }) {
           </p>
         )}
       </div>
-      {children(() => setSaved(true))}
+      {/* A form that found nothing to save says so with { changed: false }. */}
+      {children((result) => result?.changed !== false && setSaved(true))}
     </section>
   )
 }
@@ -94,7 +96,7 @@ function TurnOff({ actions }) {
     const yes = await confirm({
       title: "Turn off this agent?",
       description:
-        "Birdy stops checking your clients and posting reports, and won't change any ad. Nothing in Meta is touched, and your settings and lessons stay. You can turn it on again from setup.",
+        "Birdy stops checking your clients and posting reports, and your clients are released. Cards waiting for approval can't be applied until it is on again, though anything Birdy already did can still be undone. Your settings, lessons and past reports stay, and Turn on brings it back without a new preview.",
       confirmLabel: "Turn off agent",
     })
     if (!yes) return
@@ -135,37 +137,43 @@ export function AgentSettings({ agent, clients, actions }) {
   // The server takes only_flag as the whole list, so clients flagged earlier ride along on every save.
   const [flagOnly, setFlagOnly] = useState(() => agent.scope?.flag_only_client_group_ids ?? [])
   const live = agent.status === "active"
+  const turnedOff = !live && Boolean(agent.turned_off_at)
 
   return (
     <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Badge tone={live ? "success" : "neutral"}>{live ? "Live" : "Not on yet"}</Badge>
+          <Badge tone={live ? "success" : "neutral"}>{live ? "Live" : turnedOff ? "Turned off" : "Not on yet"}</Badge>
           <span className="text-sm text-muted-foreground">
-            {live ? "Changes here apply from the next check." : "Finish setup to turn it on."}
+            {live
+              ? "Changes here apply from the next check."
+              : turnedOff
+                ? "Birdy isn't checking your clients. Your settings are kept."
+                : "Finish setup to turn it on."}
           </span>
         </div>
         {live && <TurnOff actions={actions} />}
+        {turnedOff && <TurnOn agent={agent} clients={clients} />}
       </div>
 
       <Section title="Flag, Ask me or Auto" description="What Birdy does with each kind of change.">
         {(onSaved) => <ModesSection agent={agent} clients={clients} actions={actions} onSaved={onSaved} />}
       </Section>
       <Section title="Schedule" description="When the morning run starts and which days each batch runs.">
-        {(onSaved) => <SetupSchedule agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} />}
+        {(onSaved) => <SetupSchedule agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} inPlace />}
       </Section>
       <Section title="Clients and targets" description="Who Birdy watches and what a good cost per lead is for each.">
         {(onSaved) => (
-          <SetupClients agent={agent} clients={clients} actions={actions} flagOnly={flagOnly} setFlagOnly={setFlagOnly} onNext={onSaved} saveLabel={SAVE} />
+          <SetupClients agent={agent} clients={clients} actions={actions} flagOnly={flagOnly} setFlagOnly={setFlagOnly} onNext={onSaved} saveLabel={SAVE} inPlace />
         )}
       </Section>
       <Section title="Creative rules" description="The limits behind removing, adding and reviving ads.">
-        {(onSaved) => <SetupCreative agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} />}
+        {(onSaved) => <SetupCreative agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} inPlace />}
       </Section>
       <Section title="Slack" description="Where cards and reports go, and how the messages look.">
         {(onSaved) => (
           <div className="flex flex-col gap-6">
-            <SetupSlack agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} />
+            <SetupSlack agent={agent} actions={actions} onNext={onSaved} saveLabel={SAVE} inPlace />
             <div className="max-w-3xl">
               <SlackTemplates agentId={agent.id} actions={actions} />
             </div>

@@ -11,7 +11,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { ErrorNotice, SetupFooter, saveMessage, settingsOf } from "./SetupShared"
 
 /** Step 4: where cards and reports are posted. Optional: without Slack everything works in Birdy. */
-export function SetupSlack({ agent, actions, onBack, onNext, saveLabel }) {
+export function SetupSlack({ agent, actions, onBack, onNext, saveLabel, inPlace = false }) {
   const { data: status, error: statusError, isLoading } = useSWR(queryKeys.slackStatus(), fetcher)
   const connected = Boolean(status?.installed)
   const { data: channelData, error: channelError } = useSWR(connected ? queryKeys.slackChannels() : null, fetcher)
@@ -23,7 +23,7 @@ export function SetupSlack({ agent, actions, onBack, onNext, saveLabel }) {
 
   const save = async () => {
     // Nothing to save without Slack, or when the channel is as it was.
-    if (!connected || (channelId ?? null) === (stored.channel_id ?? null)) return onNext()
+    if (!connected || (channelId ?? null) === (stored.channel_id ?? null)) return onNext({ changed: false })
     setSaving(true)
     setError(null)
     const channel = channels.find((c) => c.id === channelId)
@@ -32,7 +32,8 @@ export function SetupSlack({ agent, actions, onBack, onNext, saveLabel }) {
         settings: { slack: channelId ? { channel_id: channelId, channel_name: channel?.name ?? null } : { channel_id: null, channel_name: null } },
       })
       onNext()
-      setSaving(false)
+      // Setup moves to the next step, so the button stays busy until the page changes; in settings it is done.
+      if (inPlace) setSaving(false)
     } catch (err) {
       setError(saveMessage(err))
       setSaving(false)

@@ -52,6 +52,9 @@ export function clientErrors(err) {
 
 /** The words for a save that was refused. */
 export function saveMessage(err) {
+  if (err?.status === 409 && err.conflicts?.length) {
+    return "Another agent now handles some of your clients, so this couldn't be saved. Open Clients and targets, choose Move here or Only flag, then try again."
+  }
   const lines = generalErrors(err)
   if (lines.length) return lines.join(" ")
   if (err?.status === 400 && err.errors?.length) return "Some settings need fixing. Check the highlighted rows."

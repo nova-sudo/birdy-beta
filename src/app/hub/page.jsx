@@ -10,6 +10,7 @@ import { Badge, Button, ErrorState, Frame, Skeleton, Surface, toast } from "@/co
 import { DashboardList } from "@/components/dashboards/DashboardList"
 import { ReportsSection } from "@/components/reports/ReportsSection"
 import { StartOverButton } from "@/components/agents/StartOverButton"
+import { TurnOn } from "@/components/agents/stock/TurnOn"
 import { customAgentPath, useAgents } from "@/lib/agents-api"
 import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, createStockAgent, useStockAgent } from "@/lib/stock-agent-api"
 
@@ -29,7 +30,9 @@ function StockAgentCard({ agent }) {
   const router = useRouter()
   const { mutate } = useAgents()
   const [busy, setBusy] = useState(false)
-  const isDraft = Boolean(agent) && agent.status !== "active"
+  // A turned-off agent is a draft with a mark. It has a finished setup, so it gets Turn on and never Start over.
+  const turnedOff = Boolean(agent) && agent.status !== "active" && Boolean(agent.turned_off_at)
+  const isDraft = Boolean(agent) && agent.status !== "active" && !turnedOff
 
   const setUp = async () => {
     setBusy(true)
@@ -48,7 +51,7 @@ function StockAgentCard({ agent }) {
   return (
     <Frame
       title="Birdy Media Buying Agent"
-      action={<Badge tone="primary">Default</Badge>}
+      action={turnedOff ? <Badge tone="neutral">Turned off</Badge> : <Badge tone="primary">Default</Badge>}
       padded
       contentClassName="flex flex-col gap-4"
     >
@@ -81,12 +84,20 @@ function StockAgentCard({ agent }) {
           />
         </div>
       ) : agent ? (
-        <Button asChild variant="primary" size="lg">
-          <Link href={STOCK_AGENT_PATH}>
-            Open agent
-            <ArrowRight aria-hidden />
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-2">
+          {turnedOff && (
+            <>
+              <p className="text-sm text-muted-foreground">Birdy isn&apos;t checking your clients. Your settings and reports are kept.</p>
+              <TurnOn agent={agent} size="lg" className="w-full" />
+            </>
+          )}
+          <Button asChild variant={turnedOff ? "outline" : "primary"} size="lg">
+            <Link href={STOCK_AGENT_PATH}>
+              Open agent
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
+        </div>
       ) : (
         <Button variant="primary" size="lg" loading={busy} onClick={setUp}>
           Set up agent

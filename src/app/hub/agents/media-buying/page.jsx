@@ -24,6 +24,7 @@ import { ScoreboardTab } from "@/components/agents/stock/Scoreboard"
 import { AgentSettings } from "@/components/agents/stock/AgentSettings"
 import { LessonsList } from "@/components/agents/stock/LessonsList"
 import { toClient } from "@/components/agents/AgentTraining"
+import { TurnOn } from "@/components/agents/stock/TurnOn"
 import { useAgent } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, runLabel, useLatestRun, useRun, useRuns, useStockActions, useStockAgent } from "@/lib/stock-agent-api"
@@ -93,7 +94,14 @@ function ReportTab({ agent, report, reportError, latest, runParam, clients, batc
   }
   if (error) return <ErrorState title="Couldn't load this report" description={error.message} onRetry={onRetry} />
   if (!runParam && !latest.run && !latest.isLoading) {
-    return agent.status === "draft" ? (
+    return agent.turned_off_at && agent.status !== "active" ? (
+      <EmptyState
+        variant="surface"
+        title="This agent is turned off"
+        description="It isn't checking your clients, so no report is coming. Turn it on to carry on from where it was."
+        action={<TurnOn agent={agent} />}
+      />
+    ) : agent.status === "draft" ? (
       <EmptyState
         variant="surface"
         title="Finish setting up your agent"

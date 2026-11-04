@@ -36,7 +36,7 @@ export function timeProblem(time) {
 }
 
 /** Step 1: the time and zone the run starts, which weekdays each batch runs, and the weekly message. */
-export function SetupSchedule({ agent, actions, onNext, saveLabel }) {
+export function SetupSchedule({ agent, actions, onNext, saveLabel, inPlace = false }) {
   const settings = useMemo(() => settingsOf(agent), [agent])
   const [time, setTime] = useState(agent.scope?.schedule?.time ?? "07:00")
   const [tz, setTz] = useState(agent.scope?.schedule?.tz ?? "Europe/London")
@@ -58,16 +58,26 @@ export function SetupSchedule({ agent, actions, onNext, saveLabel }) {
       )
     )
 
+  // The time and zone live on the agent and the days and weekly message in its settings, so this is two
+  // requests and not atomic: if the second fails, the time is already saved and the message says so.
+  // A live agent re-checks its client claims on every scope patch, so in settings the scope is only sent when it changes. Setup always sends it.
+  const savedTime = agent.scope?.schedule?.time ?? "07:00"
+  const savedTz = agent.scope?.schedule?.tz ?? "Europe/London"
   const save = async () => {
     setSaving(true)
     setError(null)
+    let scopeSaved = false
     try {
-      await patchAgent(agent.id, { scope: { schedule: { time, tz } } })
+      if (!inPlace || time !== savedTime || tz !== savedTz) {
+        await patchAgent(agent.id, { scope: { schedule: { time, tz } } })
+        scopeSaved = true
+      }
       await actions.patchSettings({ settings: { batches, weekly: { enabled: Boolean(weekly.enabled), weekday: weekly.weekday ?? 0 } } })
       onNext()
-      setSaving(false)
+      // Setup moves to the next step, so the button stays busy until the page changes; in settings it is done.
+      if (inPlace) setSaving(false)
     } catch (err) {
-      setError(saveMessage(err))
+      setError(scopeSaved ? `${saveMessage(err)} The time and time zone were saved, but the days and weekly message weren't.` : saveMessage(err))
       setSaving(false)
     }
   }

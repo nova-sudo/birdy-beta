@@ -223,17 +223,6 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
   )
 }
 
-/**
- * @param {object} props
- * @param {object} [props.brief] `{blocks, frequency?, time?, day?}`
- * @param {(template: object) => Promise<{blocks: object[], sample?: boolean}>} [props.previewFn]
- *   Renders the draft for another feature (the stock agent's Slack templates). It rejects with an Error whose
- *   `errors` lists what Slack won't accept. Without it, the Slack report's own preview is used.
- * @param {string[]} [props.placeholders] Values to offer as `{{name}}` under "Insert value".
- * @param {boolean} [props.extraMetricsDisabled] Turns off everything that reads the user's report figures:
- *   the live-number picker, and the chart, table and card blocks. For messages that have their own values.
- * @param {string} [props.saveLabel] The Save button's words.
- */
 /** "Insert value": the placeholders a message has of its own, like {{client}}. */
 function InsertValue({ names, onInsert }) {
   return (
@@ -254,8 +243,21 @@ function InsertValue({ names, onInsert }) {
   )
 }
 
+/**
+ * @param {object} props
+ * @param {object} [props.brief] `{blocks, frequency?, time?, day?}`; keep it referentially stable (memoize it)
+ * @param {(template: object) => Promise<{blocks: object[], sample?: boolean}>} [props.previewFn]
+ *   Renders the draft for another feature (the stock agent's Slack templates). It rejects with an Error whose
+ *   `errors` lists what Slack won't accept. Without it, the Slack report's own preview is used.
+ * @param {string[]} [props.placeholders] Values to offer as `{{name}}` under "Insert value".
+ * @param {boolean} [props.extraMetricsDisabled] Turns off everything that reads the user's report figures:
+ *   the live-number picker, and the chart, table and card blocks. For messages that have their own values.
+ * @param {{id: string, label: string, hint: string, block: () => object}[]} [props.extraBlocks]
+ *   More "Add block" items for a message with its own data, shown with `extraMetricsDisabled`.
+ * @param {string} [props.saveLabel] The Save button's words.
+ */
 export default function ReportEditor({
-  brief, onSave, onCancel, saving = false, previewFn, placeholders, extraMetricsDisabled = false, saveLabel = "Save report",
+  brief, onSave, onCancel, saving = false, previewFn, placeholders, extraMetricsDisabled = false, extraBlocks, saveLabel = "Save report",
 }) {
   const [catalog, setCatalog] = useState([])
   const [clients, setClients] = useState([])
@@ -375,7 +377,10 @@ export default function ReportEditor({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="pd-scrolly max-h-[420px] w-[290px] overflow-y-auto">
-              {(extraMetricsDisabled ? PLAIN_BLOCK_TEMPLATES : BLOCK_TEMPLATES).map((group) => (
+              {(extraMetricsDisabled
+                ? [...PLAIN_BLOCK_TEMPLATES, ...(extraBlocks?.length ? [{ group: "Birdy data", items: extraBlocks }] : [])]
+                : BLOCK_TEMPLATES
+              ).map((group) => (
                 <div key={group.group}>
                   <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-pd-faint">{group.group}</DropdownMenuLabel>
                   {group.items.map((tpl) => {

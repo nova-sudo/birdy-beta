@@ -100,7 +100,7 @@ function SetupWizard() {
         title={heading.title}
         description={heading.description}
         actions={
-          agent && agent.status !== "active" ? (
+          agent && agent.status !== "active" && !agent.turned_off_at ? (
             <StartOverButton
               agent={agent}
               redirectTo="/hub"

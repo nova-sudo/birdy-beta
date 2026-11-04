@@ -157,6 +157,46 @@ describe("BirdyHub page", () => {
     expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
   })
 
+  it("a turned off stock agent offers Turn on and Open agent, and never Start over or Continue setup", async () => {
+    agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
+    renderPage()
+    expect(await screen.findByText("Turned off")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Open agent/ })).toHaveAttribute("href", "/hub/agents/media-buying")
+    expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Continue setup/ })).not.toBeInTheDocument()
+  })
+
+  it("Turn on calls activate directly, with no setup step", async () => {
+    agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
+    const base = mockApi
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path === "/api/agents/s1/activate" && init.method === "POST") {
+        agents = [STOCK("active")]
+        return Promise.resolve(res({ ...STOCK("active") }))
+      }
+      return base(path, init)
+    })
+    renderPage()
+    fireEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    await waitFor(() => expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/agents/s1/activate", expect.objectContaining({ method: "POST" })))
+    expect(await screen.findByRole("link", { name: /Open agent/ })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Turn on" })).not.toBeInTheDocument())
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it("Turn on lists what the server says is missing", async () => {
+    agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
+    const base = mockApi
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents/s1/activate"
+        ? Promise.resolve(res({ detail: "The agent isn't ready to switch on yet", missing: ["Preview the first report again"] }, 409))
+        : base(path, init)
+    )
+    renderPage()
+    fireEvent.click(await screen.findByRole("button", { name: "Turn on" }))
+    expect(await screen.findByText("Preview the first report again")).toBeInTheDocument()
+  })
+
   it("lists each custom agent linking to its page", async () => {
     agents = [CUSTOM(), CUSTOM({ id: "a2", name: "Winner mover", status: "draft" })]
     renderPage()
