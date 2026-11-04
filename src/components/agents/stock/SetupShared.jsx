@@ -9,39 +9,22 @@ export const STOCK_STEPS = ["Schedule", "Clients and targets", "Creative rules",
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-/** Shown when an agent has no stored value yet; the server's defaults are the source of truth. */
-export const FALLBACK = {
-  batches: [
-    { id: "a", name: "Batch A", weekdays: [0, 3] },
-    { id: "b", name: "Batch B", weekdays: [1, 4] },
-  ],
-  weekly: { enabled: false, weekday: 0, auto_post: false },
-  zones: { currency: null, green_under: null, red_over: null },
-  creative: {
-    max_ads_live: 4,
-    winner_days: 14,
-    winner_min_leads: 8,
-    revive_after_days: 60,
-    major_downtrend_pct: 30,
-    auto_max_adds: 2,
-    data_window_days: 7,
-  },
-  modes: { remove: "ask", add: "ask", revive: "ask" },
-}
-
-/** The agent's settings with anything missing filled from the fallbacks. */
+/**
+ * The agent's settings as the setup forms read them. The server creates the stock agent with its default
+ * settings, so every number and default comes from there; this only makes sure each part exists.
+ */
 export function settingsOf(agent) {
   const s = agent?.settings ?? {}
   return {
     ...s,
-    batches: s.batches ?? FALLBACK.batches,
-    weekly: { ...FALLBACK.weekly, ...s.weekly },
-    zones: { ...FALLBACK.zones, ...s.zones },
+    batches: s.batches ?? [],
+    weekly: { ...s.weekly },
+    zones: { ...s.zones },
     treatments: s.treatments ?? [],
     clients: s.clients ?? {},
-    creative: { ...FALLBACK.creative, ...s.creative },
-    modes: { ...FALLBACK.modes, ...s.modes },
-    slack: s.slack ?? {},
+    creative: { ...s.creative },
+    modes: { ...s.modes },
+    slack: { ...s.slack },
   }
 }
 

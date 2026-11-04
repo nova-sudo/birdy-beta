@@ -58,7 +58,7 @@ function ModesStep({ agent, clients, actions, onBack, onNext }) {
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <ModesTable settings={{ ...settings, add_writes_enabled: agent.add_writes_enabled ?? settings.add_writes_enabled, modes: next.modes, clients: Object.fromEntries(Object.entries(next.clientModes).map(([gid, modes]) => [gid, { modes }])) }} clients={watched} onChange={setNext} />
+      <ModesTable settings={{ ...settings, add_writes_enabled: agent.add_writes_enabled === true, modes: next.modes, clients: Object.fromEntries(Object.entries(next.clientModes).map(([gid, modes]) => [gid, { modes }])) }} clients={watched} onChange={setNext} />
       <ErrorNotice>{error}</ErrorNotice>
       <SetupFooter onBack={onBack} onNext={save} saving={saving} />
     </div>
@@ -74,7 +74,7 @@ function SetupWizard() {
   const { agent: listed, error: listError, isLoading: listLoading, mutate: mutateList } = useStockAgent()
   const { agent, error: agentError, mutate: mutateAgent } = useAgent(listed?.id)
   const actions = useStockActions(listed?.id)
-  const { clientGroups, loading: clientsLoading } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
+  const { clientGroups, loading: clientsLoading, error: clientsError, refresh: refreshClients } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const clients = useMemo(() => clientGroups.map(toClient), [clientGroups])
   // The server takes only_flag as the whole list, so clients flagged earlier ride along on every save.
   const [flagOnly, setFlagOnly] = useState([])
@@ -90,7 +90,7 @@ function SetupWizard() {
   usePageHeader(topBar)
 
   const heading = HEADINGS[step]
-  const failed = listError || agentError
+  const failed = listError || agentError || clientsError
   const ready = agent && flagSeeded && !clientsLoading
 
   return (
@@ -113,9 +113,9 @@ function SetupWizard() {
 
       {failed ? (
         <ErrorState
-          title="Couldn't load your agent"
-          description={(agentError || listError)?.message || "The request failed."}
-          onRetry={() => (listError ? mutateList() : mutateAgent())}
+          title={clientsError && !listError && !agentError ? "Couldn't load your clients" : "Couldn't load your agent"}
+          description={(agentError || listError)?.message || clientsError || "The request failed."}
+          onRetry={() => (listError ? mutateList() : agentError ? mutateAgent() : refreshClients())}
         />
       ) : !listLoading && !listed ? (
         <EmptyState

@@ -5,7 +5,7 @@ import Link from "next/link"
 import useSWR from "swr"
 import { Lock } from "lucide-react"
 
-import { Frame, Label, Notice, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@/components/ds"
+import { Button, Frame, Label, Notice, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@/components/ds"
 import { fetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
 import { ErrorNotice, SetupFooter, saveMessage, settingsOf } from "./SetupShared"
@@ -22,13 +22,15 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
   const [error, setError] = useState(null)
 
   const save = async () => {
-    // Nothing to save without Slack, or when no channel was picked.
-    if (!connected || !channelId || channelId === stored.channel_id) return onNext()
+    // Nothing to save without Slack, or when the channel is as it was.
+    if (!connected || (channelId ?? null) === (stored.channel_id ?? null)) return onNext()
     setSaving(true)
     setError(null)
     const channel = channels.find((c) => c.id === channelId)
     try {
-      await actions.patchSettings({ settings: { slack: { channel_id: channelId, channel_name: channel?.name ?? stored.channel_name ?? null } } })
+      await actions.patchSettings({
+        settings: { slack: channelId ? { channel_id: channelId, channel_name: channel?.name ?? null } : { channel_id: null, channel_name: null } },
+      })
       onNext()
     } catch (err) {
       setError(saveMessage(err))
@@ -50,7 +52,9 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
             </Link>
           }
         >
-          Reports and every action still work in Birdy. Cards just won&apos;t reach Slack. You can connect it later.
+          {statusError
+            ? "Birdy couldn't reach Slack to check. Reports and every action still work in Birdy. You can set Slack up later in Settings."
+            : "Reports and every action still work in Birdy. Cards just won't reach Slack. You can connect it later."}
         </Notice>
       ) : (
         <Frame title="Slack channel" description="Birdy posts each client's card, the daily summary and the weekly message here." padded contentClassName="flex flex-col gap-3">
@@ -58,7 +62,7 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
             <Label id="stock-slack-channel" className="text-xs text-muted-foreground">
               Channel
             </Label>
-            <Select value={channelId ?? undefined} onValueChange={setChannelId}>
+            <Select value={channelId ?? ""} onValueChange={setChannelId}>
               <SelectTrigger aria-labelledby="stock-slack-channel" className="w-full max-w-80">
                 <SelectValue placeholder="Pick a channel" />
               </SelectTrigger>
@@ -70,7 +74,18 @@ export function SetupSlack({ agent, actions, onBack, onNext }) {
                 ))}
               </SelectContent>
             </Select>
-            {channelError && <p className="text-xs text-danger-ink">Couldn&apos;t load your channels. You can pick one later in Settings.</p>}
+            {channelId && (
+              <Button size="sm" variant="ghost" className="w-fit" onClick={() => setChannelId(null)}>
+                Clear channel
+              </Button>
+            )}
+            {channelError?.status === 409 ? (
+              <Notice tone="warning" action={<Link href="/settings?tab=integrations" className="text-sm font-medium underline">Reconnect Slack</Link>}>
+                {channelError.message}
+              </Notice>
+            ) : (
+              channelError && <p className="text-xs text-danger-ink">{channelError.message || "Couldn't load your channels."} You can pick one later in Settings.</p>
+            )}
           </div>
           <Notice tone="warning" icon={Lock}>
             Anyone in this channel can approve a card. Birdy records who pressed Apply on each decision.

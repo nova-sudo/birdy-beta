@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { SWRConfig } from "swr"
+import { SWRConfig, useSWRConfig } from "swr"
 
 vi.mock("@/lib/api", () => ({
   apiRequest: vi.fn(),
@@ -52,6 +52,7 @@ const mkAgent = (over = {}) => ({
   status: "draft",
   scope: { client_group_ids: ["g1"], schedule: { time: "07:00", tz: "Europe/London" } },
   settings: BASE_SETTINGS,
+  add_writes_enabled: false,
   ...over,
 })
 
@@ -79,9 +80,18 @@ const GROUPS = [
   { id: "g3", name: "No Meta Ltd", meta_ad_account_id: null },
 ]
 
+// A background refetch of everything on screen, as focus or a poll would trigger.
+let refetchAll
+function GrabMutate() {
+  const { mutate } = useSWRConfig()
+  refetchAll = () => mutate(() => true)
+  return null
+}
+
 const renderPage = () =>
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
+      <GrabMutate />
       <SetupPage />
     </SWRConfig>
   )
@@ -135,13 +145,13 @@ describe("Stock agent guided setup: steps", () => {
     expect(sent.weekly).toEqual({ enabled: false, weekday: 0 })
   })
 
-  it("refuses a run time after 23:45, says why, and allows 23:45", async () => {
+  it("refuses a run time after 23:30, says why, and allows 23:30", async () => {
     renderPage()
     const time = await screen.findByLabelText("Every day at")
     fireEvent.change(time, { target: { value: "23:50" } })
-    expect(await screen.findByRole("alert")).toHaveTextContent(/last check of the day is 23:45/)
+    expect(await screen.findByRole("alert")).toHaveTextContent(/23:30/)
     expect(cont()).toBeDisabled()
-    fireEvent.change(time, { target: { value: "23:45" } })
+    fireEvent.change(time, { target: { value: "23:30" } })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(cont()).toBeEnabled()
   })
@@ -184,6 +194,85 @@ describe("Stock agent guided setup: clients and targets", () => {
     expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("7")
     expect(within(row).getByRole("alert")).toHaveTextContent(/only one zone limit set; it needs a red limit too/)
     expect(cont()).toBeDisabled()
+  })
+
+  it("blocks Continue when one client's red is below its green, on that row", async () => {
+    renderPage()
+    const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "12")
+    await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "9")
+    expect(within(row).getByRole("alert")).toHaveTextContent(/red must be at least the green limit/)
+    expect(cont()).toBeDisabled()
+  })
+
+  it("blocks Continue on a typed green limit with no red, and clears when red is typed", async () => {
+    renderPage()
+    const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await userEvent.type(within(row).getByLabelText("Green under for Berlin Body Co"), "9")
+    expect(within(row).getByRole("alert")).toHaveTextContent(/only one zone limit set; it needs a red limit too/)
+    expect(cont()).toBeDisabled()
+    await userEvent.type(within(row).getByLabelText("Red over for Berlin Body Co"), "12")
+    expect(cont()).toBeEnabled()
+  })
+
+  it("a cleared green limit stays cleared, even after unticking and ticking the client", async () => {
+    groups = [{ ...GROUPS[0], targets: { cpl: 7 } }, GROUPS[1], GROUPS[2]]
+    renderPage()
+    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
+    await userEvent.clear(within(row).getByLabelText("Green under for Lumen Skin Clinic"))
+    expect(within(row).queryByRole("alert")).not.toBeInTheDocument()
+    await userEvent.click(within(row).getByRole("checkbox"))
+    await userEvent.click(within(row).getByRole("checkbox"))
+    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("")
+  })
+
+  it("does not refill a green limit that was saved as empty", async () => {
+    groups = [{ ...GROUPS[0], targets: { cpl: 7 } }, GROUPS[1], GROUPS[2]]
+    agent = mkAgent({ settings: { ...BASE_SETTINGS, clients: { g1: { batch_id: "a", zones: { green_under: null, red_over: null } } } } })
+    renderPage()
+    const row = (await screen.findByText("Lumen Skin Clinic")).closest("tr")
+    expect(within(row).getByLabelText("Green under for Lumen Skin Clinic")).toHaveValue("")
+  })
+
+  it("gives a client that arrives later a row, and ticking it does not throw", async () => {
+    let creating = true
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path.startsWith("/api/client-groups")
+        ? Promise.resolve(res({ client_groups: creating ? GROUPS.slice(0, 1) : GROUPS }))
+        : mockApi(path, init)
+    )
+    renderPage()
+    await screen.findByText("Lumen Skin Clinic")
+    creating = false
+    await act(async () => { await refetchAll() })
+    const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    await userEvent.click(within(row).getByRole("checkbox"))
+    expect(within(row).getByLabelText("Green under for Berlin Body Co")).toBeInTheDocument()
+  })
+
+  it("lets a client that was deleted be dropped: it is not sent back", async () => {
+    agent = mkAgent({ scope: { client_group_ids: ["g1", "gone"], schedule: { time: "07:00", tz: "Europe/London" } } })
+    renderPage()
+    await screen.findByText("Lumen Skin Clinic")
+    await userEvent.click(cont())
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(bodies("/api/agents/ag1/settings", "PATCH")[0].client_group_ids).toEqual(["g1"])
+  })
+
+  it("a background refetch while someone is typing does not overwrite their input", async () => {
+    renderPage()
+    const row = (await screen.findByText("Berlin Body Co")).closest("tr")
+    const green = within(row).getByLabelText("Green under for Berlin Body Co")
+    await userEvent.type(green, "9")
+    const defaultGreen = screen.getByLabelText("Green under", { selector: "#stock-zone-green" })
+    await userEvent.clear(defaultGreen)
+    await userEvent.type(defaultGreen, "6")
+    const before = calls("/api/agents/ag1", "GET").length
+    agent = mkAgent({ scope: agent.scope, settings: { ...agent.settings, zones: { currency: "GBP", green_under: 3, red_over: 4 } } })
+    await act(async () => { await refetchAll() })
+    expect(calls("/api/agents/ag1", "GET").length).toBeGreaterThan(before)
+    expect(screen.getByLabelText("Green under for Berlin Body Co")).toHaveValue("9")
+    expect(screen.getByLabelText("Green under", { selector: "#stock-zone-green" })).toHaveValue("6")
   })
 
   it("shows a client with no Meta account disabled, with the reason", async () => {
@@ -299,27 +388,68 @@ describe("Stock agent guided setup: Slack", () => {
   })
 })
 
+describe("Stock agent guided setup: Slack channel problems", () => {
+  beforeEach(() => {
+    search = "step=4"
+    slackStatus = { installed: true }
+  })
+
+  it("a channel list the token can't read gives a Reconnect Slack link", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/integrations/slack/channels"
+        ? Promise.resolve(res({ detail: "Birdy can't read your channel list yet. Reconnect Slack to grant channel access." }, 409))
+        : mockApi(path, init)
+    )
+    renderPage()
+    const link = await screen.findByRole("link", { name: "Reconnect Slack" })
+    expect(link).toHaveAttribute("href", "/settings?tab=integrations")
+  })
+
+  it("a chosen channel can be cleared", async () => {
+    agent = mkAgent({ settings: { ...BASE_SETTINGS, slack: { channel_id: "C1", channel_name: "media" } } })
+    renderPage()
+    await userEvent.click(await screen.findByRole("button", { name: "Clear channel" }))
+    await userEvent.click(cont())
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(bodies("/api/agents/ag1/settings", "PATCH")[0].settings.slack).toEqual({ channel_id: null, channel_name: null })
+  })
+})
+
 describe("Stock agent guided setup: modes", () => {
   beforeEach(() => {
     search = "step=5"
   })
 
+  const addGroup = async () => (await screen.findByText("Add", { selector: "div" })).closest("div.flex")
+
   it("Add shows Flag only while the server has adding switched off", async () => {
-    agent = mkAgent({ settings: { ...BASE_SETTINGS, add_writes_enabled: false } })
+    agent = mkAgent({ add_writes_enabled: false })
     renderPage()
-    const add = (await screen.findByText("Add", { selector: "div" })).closest("div.flex")
+    const add = await addGroup()
     expect(within(add).getByRole("tab", { name: "Flag" })).toHaveAttribute("aria-selected", "true")
     expect(within(add).getByRole("tab", { name: "Ask me" })).toBeDisabled()
     expect(within(add).getByRole("tab", { name: "Auto" })).toBeDisabled()
     expect(screen.getByText(/Posting new ads is switched off/)).toBeInTheDocument()
   })
 
-  it("Add can be Auto once the server allows it, and Auto warns", async () => {
-    agent = mkAgent({ settings: { ...BASE_SETTINGS, add_writes_enabled: true } })
+  it("Add can be Ask me or Auto when the agent view says adding is on, and Auto warns", async () => {
+    agent = mkAgent({ add_writes_enabled: true })
     renderPage()
-    await screen.findByText("For every client")
-    await userEvent.click(screen.getAllByRole("tab", { name: "Auto" })[0])
+    const add = await addGroup()
+    expect(within(add).getByRole("tab", { name: "Ask me" })).toBeEnabled()
+    expect(within(add).getByRole("tab", { name: "Auto" })).toBeEnabled()
+    expect(within(add).getByRole("tab", { name: "Ask me" })).toHaveAttribute("aria-selected", "true")
+    await userEvent.click(within(add).getByRole("tab", { name: "Auto" }))
     expect(await screen.findByText("Auto changes live Meta ads")).toBeInTheDocument()
+    await userEvent.click(cont())
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(bodies("/api/agents/ag1/settings", "PATCH")[0].settings.modes.add).toBe("auto")
+  })
+
+  it("an add_writes_enabled left inside settings is not used", async () => {
+    agent = mkAgent({ add_writes_enabled: false, settings: { ...BASE_SETTINGS, add_writes_enabled: true } })
+    renderPage()
+    expect(within(await addGroup()).getByRole("tab", { name: "Auto" })).toBeDisabled()
   })
 })
 
@@ -412,5 +542,82 @@ describe("Stock agent guided setup: preview and turn on", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Turn on/ }))
     await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying"))
     expect(bodies("/api/agents/ag1/activate", "POST")[0]).toEqual({ only_flag: [] })
+  })
+
+  it("a preview that stopped early says so and offers a retry, with Turn on disabled", async () => {
+    previewRun = { id: "r1", kind: "preview", phase: "done", ended_early: true, clients: { g1: { state: "done" } } }
+    renderPage()
+    expect(await screen.findByText(/stopped before it finished/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Run the preview again/ })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /Turn on/ })).toBeDisabled()
+  })
+
+  it("a preview where every client failed is not finished and shows the reason", async () => {
+    previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "failed", error: "Meta needs reconnecting. Reconnect to check this client." } } }
+    renderPage()
+    expect(await screen.findByText(/couldn't check any client/)).toBeInTheDocument()
+    expect(screen.getByText(/Meta needs reconnecting/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Turn on/ })).toBeDisabled()
+  })
+
+  it("reloading mid-preview shows it running, with the button held, then finishes by itself", async () => {
+    previewRun = { id: "r1", kind: "preview", phase: "checks", clients: { g1: { state: "pending" } } }
+    renderPage()
+    expect(await screen.findByText(/This can take a few minutes/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Run the preview/ })).toBeDisabled()
+    previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" } } }
+    report = { run: previewRun, cards: [] }
+    await act(async () => { await refetchAll() })
+    expect(await screen.findByText("Your first report")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Turn on/ })).toBeEnabled()
+  })
+
+  it("a preview waiting on data says it is waiting, not that it takes a few minutes", async () => {
+    previewRun = { id: "r1", kind: "preview", phase: "checks", clients: { g1: { state: "waiting" } } }
+    renderPage()
+    expect(await screen.findByText(/waiting for ad data/i)).toBeInTheDocument()
+    expect(screen.queryByText(/few minutes/)).not.toBeInTheDocument()
+  })
+
+  it("shows the few-minutes status while the start request is out, and a double click starts once", async () => {
+    let release
+    startHandler = () => new Promise((r) => { release = () => r(res({ run_id: "r1", kind: "preview", phase: "checks", done: false })) })
+    renderPage()
+    const run = await screen.findByRole("button", { name: /Run the preview/ })
+    await userEvent.dblClick(run)
+    expect(await screen.findByText(/This can take a few minutes/)).toBeInTheDocument()
+    expect(calls("/api/agents/ag1/preview", "POST")).toHaveLength(1)
+    release()
+  })
+
+  describe("turning on when another agent holds clients (the real path: a 409 on activate)", () => {
+    const two = () => {
+      agent = mkAgent({ scope: { client_group_ids: ["g1", "g2"], schedule: { time: "07:00", tz: "Europe/London" } } })
+      previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" }, g2: { state: "done" } } }
+      report = { run: previewRun, cards: [] }
+    }
+    const CONFLICT = {
+      detail: "Another agent already acts on Old rules",
+      conflicts: [
+        { client_group_id: "g1", holder_id: "ag7", holder_name: "Old rules" },
+        { client_group_id: "g2", holder_id: "ag7", holder_name: "Old rules" },
+      ],
+    }
+
+    it("Only flag on one client, then Move all, never moves the flagged one", async () => {
+      two()
+      let n = 0
+      activateHandler = () => (++n <= 2 ? Promise.resolve(res(CONFLICT, 409)) : Promise.resolve(res({ ...agent, status: "active" })))
+      renderPage()
+      await userEvent.click(await screen.findByRole("button", { name: /Turn on/ }))
+      await screen.findByRole("button", { name: "Move all here" })
+      await userEvent.click(screen.getAllByRole("button", { name: "Only flag" })[0])
+      await screen.findByRole("button", { name: "Move all here" })
+      await userEvent.click(screen.getByRole("button", { name: "Move all here" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying"))
+      const sent = bodies("/api/agents/ag1/activate", "POST")
+      expect(sent[1]).toEqual({ only_flag: ["g1"] })
+      expect(sent[2]).toEqual({ only_flag: ["g1"], move_claims: true })
+    })
   })
 })

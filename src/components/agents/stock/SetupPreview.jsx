@@ -22,9 +22,24 @@ const KIND_LABELS = { remove: "Remove", add: "Add", revive: "Revive" }
 
 const money = (n, currency) => (n == null ? "none" : `${currencySymbol(currency) ?? ""}${Number(n).toFixed(2)}`)
 
-/** Whether a preview run finished and looked at every client now watched. */
-export function previewFinished(run, ids) {
-  return Boolean(run) && run.phase === "done" && !run.ended_early && ids.every((g) => g in (run.clients ?? {}))
+const STATES_DONE = ["done", "failed"]
+
+/**
+ * Where a preview stands for the clients watched now:
+ * none (never run), running, waiting (running, but every open client waits for ad data), ended (stopped early),
+ * stale (done, but missed a client), unread (every client failed) or finished.
+ * Only finished lets Turn on through, as on the server.
+ */
+export function previewStatus(run, ids) {
+  if (!run) return "none"
+  const states = ids.map((g) => run.clients?.[g]?.state)
+  if (run.ended_early) return "ended"
+  if (run.phase !== "done") {
+    const open = states.filter((st) => !STATES_DONE.includes(st))
+    return open.length > 0 && open.every((st) => st === "waiting") ? "waiting" : "running"
+  }
+  if (states.some((st) => st == null)) return "stale"
+  return states.every((st) => st === "failed") ? "unread" : "finished"
 }
 
 function PreviewReport({ agentId, runId, clients }) {
@@ -87,9 +102,10 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
   const [conflicts, setConflicts] = useState(null)
 
   const nameOf = (gid) => clients.find((c) => c.id === gid)?.name ?? "A client"
-  const running = Boolean(run) && run.phase !== "done" && !run.ended_early
-  const finished = previewFinished(run, ids)
-  const stale = Boolean(run) && run.phase === "done" && !finished
+  const status = previewStatus(run, ids)
+  const finished = status === "finished"
+  const running = status === "running" || status === "waiting"
+  const failedReasons = [...new Set(ids.map((g) => run?.clients?.[g]?.error).filter(Boolean))]
   const waitingOnHistory = history ? !historySettled(history) : false
 
   const runPreview = async () => {
@@ -133,19 +149,32 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
 
       <Frame title="Preview your first report" description="Runs on your real data with Birdy writing the cards. It changes nothing in Meta and posts nothing to Slack." padded contentClassName="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant={finished ? "outline" : "primary"} loading={starting} disabled={running || waitingOnHistory} onClick={runPreview}>
+          <Button variant={finished ? "outline" : "primary"} loading={starting} disabled={running || starting || waitingOnHistory} onClick={runPreview}>
             <Play aria-hidden />
-            {finished || stale ? "Run the preview again" : "Run the preview"}
+            {status === "none" ? "Run the preview" : "Run the preview again"}
           </Button>
           {waitingOnHistory && <span className="text-sm text-muted-foreground">Waiting for your ad history.</span>}
-          {running && (
+          {(starting || status === "running") && (
             <span role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner aria-hidden /> Birdy is checking your clients. This can take a few minutes.
             </span>
           )}
+          {!starting && status === "waiting" && (
+            <span role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner aria-hidden /> Birdy is waiting for ad data from Meta. It carries on by itself once the data arrives.
+            </span>
+          )}
         </div>
         {startError && <Notice tone="warning">{startError}</Notice>}
-        {stale && <Notice tone="warning">The last preview didn&apos;t finish or didn&apos;t cover every client you watch now. Run it again.</Notice>}
+        {status === "stale" && <Notice tone="warning">The last preview didn&apos;t finish or didn&apos;t cover every client you watch now. Run it again.</Notice>}
+        {status === "ended" && (
+          <Notice tone="warning">The last preview stopped before it finished checking every client, so it can&apos;t be used to turn on. Run it again.</Notice>
+        )}
+        {status === "unread" && (
+          <Notice tone="danger" title="The preview couldn't check any client">
+            {failedReasons.length > 0 ? failedReasons.map((r) => <p key={r}>{r}</p>) : <p>Fix what stopped it, then run it again.</p>}
+          </Notice>
+        )}
       </Frame>
 
       {finished && <PreviewReport agentId={agent.id} runId={run.id} clients={clients} />}
@@ -181,7 +210,11 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
             <Zap aria-hidden />
             Turn on
           </Button>
-          {!finished && <span className="text-xs text-muted-foreground">Turn on after the preview has finished.</span>}
+          {!finished && (
+            <span className="text-xs text-muted-foreground">
+              {status === "unread" ? "Turn on needs a preview that checked at least one client." : "Turn on after the preview has finished."}
+            </span>
+          )}
         </div>
       </SetupFooter>
     </div>

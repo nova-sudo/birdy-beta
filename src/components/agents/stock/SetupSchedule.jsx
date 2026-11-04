@@ -15,42 +15,22 @@ import {
   SelectValue,
   Switch,
 } from "@/components/ds"
+import { timezoneOptions } from "@/components/reports/report-format"
 import { patchAgent } from "@/lib/agents-api"
 import { ErrorNotice, SetupFooter, WEEKDAYS, saveMessage, settingsOf } from "./SetupShared"
 
-const TIMEZONES = [
-  "Europe/London",
-  "Europe/Dublin",
-  "Europe/Paris",
-  "Europe/Berlin",
-  "Europe/Madrid",
-  "Europe/Amsterdam",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Toronto",
-  "America/Sao_Paulo",
-  "Asia/Dubai",
-  "Asia/Kolkata",
-  "Asia/Singapore",
-  "Australia/Sydney",
-  "Australia/Melbourne",
-  "Pacific/Auckland",
-  "UTC",
-]
-
 /**
  * The agent checks every 15 minutes and starts the day's run at the first check after the chosen time.
- * The last check of a day is 23:45, so a later time would never come due.
+ * The last check of a day is 23:45, so a later time never comes due. The picker stops at 23:30 so one
+ * late check doesn't lose the whole day.
  */
-export const LATEST_RUN_TIME = "23:45"
+export const LATEST_RUN_TIME = "23:30"
 
 /** Why a run time is refused, or null. */
 export function timeProblem(time) {
   if (!/^\d{2}:\d{2}$/.test(time ?? "")) return "Pick a time of day."
   if (time > LATEST_RUN_TIME) {
-    return `Birdy checks every 15 minutes and the last check of the day is ${LATEST_RUN_TIME}, so a run set for ${time} would never start. Pick ${LATEST_RUN_TIME} or earlier.`
+    return `Birdy checks every 15 minutes and the last check of the day is 23:45, so a run set for ${time} could miss the day. Pick ${LATEST_RUN_TIME} or earlier.`
   }
   return null
 }
@@ -67,7 +47,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
 
   const timeError = timeProblem(time)
   const noDays = !batches.some((b) => b.weekdays.length > 0)
-  const zones = TIMEZONES.includes(tz) ? TIMEZONES : [tz, ...TIMEZONES]
+  const zones = timezoneOptions(tz)
 
   const toggleDay = (batchId, day) =>
     setBatches((list) =>
@@ -83,7 +63,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
     setError(null)
     try {
       await patchAgent(agent.id, { scope: { schedule: { time, tz } } })
-      await actions.patchSettings({ settings: { batches, weekly: { enabled: weekly.enabled, weekday: weekly.weekday } } })
+      await actions.patchSettings({ settings: { batches, weekly: { enabled: Boolean(weekly.enabled), weekday: weekly.weekday ?? 0 } } })
       onNext()
     } catch (err) {
       setError(saveMessage(err))
@@ -173,7 +153,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
         <div className="flex items-center gap-2">
           <Switch
             id="stock-weekly"
-            checked={weekly.enabled}
+            checked={Boolean(weekly.enabled)}
             onCheckedChange={(enabled) => setWeekly((w) => ({ ...w, enabled }))}
           />
           <Label htmlFor="stock-weekly">Prepare a weekly message</Label>
@@ -183,7 +163,7 @@ export function SetupSchedule({ agent, actions, onNext }) {
             <Label id="stock-weekly-day" className="text-sm text-muted-foreground">
               Every
             </Label>
-            <Select value={String(weekly.weekday)} onValueChange={(v) => setWeekly((w) => ({ ...w, weekday: Number(v) }))}>
+            <Select value={String(weekly.weekday ?? 0)} onValueChange={(v) => setWeekly((w) => ({ ...w, weekday: Number(v) }))}>
               <SelectTrigger aria-labelledby="stock-weekly-day" className="w-32">
                 <SelectValue />
               </SelectTrigger>

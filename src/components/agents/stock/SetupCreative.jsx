@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 
 import { Frame, Input, Label } from "@/components/ds"
-import { ErrorNotice, FALLBACK, SetupFooter, saveMessage, settingsOf } from "./SetupShared"
+import { ErrorNotice, SetupFooter, saveMessage, settingsOf, show } from "./SetupShared"
 
 // `min` is the server's floor. Each of these is a whole number.
 const FIELDS = [
@@ -28,13 +28,12 @@ function problem(field, raw) {
 /** Step 3: the numbers behind removing, adding and reviving ads. Defaults are fine to keep. */
 export function SetupCreative({ agent, actions, onBack, onNext }) {
   const stored = useMemo(() => settingsOf(agent).creative, [agent])
-  const [values, setValues] = useState(() => Object.fromEntries(FIELDS.map((f) => [f.key, String(stored[f.key] ?? FALLBACK.creative[f.key])])))
+  const [values, setValues] = useState(() => Object.fromEntries(FIELDS.map((f) => [f.key, show(stored[f.key])])))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   const problems = Object.fromEntries(FIELDS.map((f) => [f.key, problem(f, values[f.key])]))
   const blocked = Object.values(problems).some(Boolean)
-  const isDefault = FIELDS.every((f) => Number(values[f.key]) === FALLBACK.creative[f.key])
 
   const save = async () => {
     setSaving(true)
@@ -52,7 +51,7 @@ export function SetupCreative({ agent, actions, onBack, onNext }) {
     <div className="flex max-w-3xl flex-col gap-6">
       <Frame
         title="Creative rules"
-        description={isDefault ? "These are Birdy's defaults. Keep them or change any." : "You've changed some of Birdy's defaults."}
+        description="These start at Birdy's defaults. Keep them or change any."
         padded
         contentClassName="grid grid-cols-1 gap-5 sm:grid-cols-2"
       >

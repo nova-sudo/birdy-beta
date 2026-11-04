@@ -40,7 +40,8 @@ function startingRow(client, stored, firstBatch) {
     batch_id: stored?.batch_id ?? firstBatch,
     treatment_ids: stored?.treatment_ids ?? [],
     // The green limit starts from the client's CPL target, as the server does the first time a client is added.
-    green: show(own.green_under ?? client.cpl),
+    // Only a client whose zones were never saved starts from its CPL target. A limit saved as empty stays empty.
+    green: show(stored?.zones == null ? (own.green_under ?? client.cpl) : own.green_under),
     red: show(own.red_over),
     prepaid: Boolean(stored?.prepaid),
   }
@@ -89,7 +90,8 @@ function RowSeg({ batches, value, onChange, name }) {
 export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext }) {
   const settings = useMemo(() => settingsOf(agent), [agent])
   const firstBatch = settings.batches[0]?.id ?? null
-  const storedIds = agent.scope?.client_group_ids ?? []
+  // A client deleted since it was chosen is dropped, so it isn't sent back.
+  const storedIds = (agent.scope?.client_group_ids ?? []).filter((id) => clients.some((c) => c.id === id))
 
   const [selected, setSelected] = useState(() => (storedIds.length ? storedIds : clients.filter((c) => c.account).map((c) => c.id)))
   const [rows, setRows] = useState(() =>
@@ -114,8 +116,11 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
     return codes.size ? [...codes].sort() : ["GBP", "USD", "EUR"]
   }, [clients, defaults.currency])
 
+  // A client that arrived after this step opened (an import finishing) starts from its own defaults.
+  const rowFor = (c) => rows[c.id] ?? startingRow(c, settings.clients[c.id], firstBatch)
   const setRow = (gid, patch) => {
-    setRows((r) => ({ ...r, [gid]: { ...r[gid], ...patch } }))
+    const client = clients.find((c) => c.id === gid)
+    setRows((r) => ({ ...r, [gid]: { ...(r[gid] ?? startingRow(client, settings.clients[gid], firstBatch)), ...patch } }))
     setServerRowErrors((e) => (e[gid] ? { ...e, [gid]: undefined } : e))
   }
   const toggle = (gid, on) => setSelected((ids) => (on ? [...ids, gid] : ids.filter((i) => i !== gid)))
@@ -129,7 +134,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
       : null
 
   const watched = clients.filter((c) => chosen.has(c.id))
-  const problems = Object.fromEntries(watched.map((c) => [c.id, zoneProblem(c, rows[c.id], defaults)]))
+  const problems = Object.fromEntries(watched.map((c) => [c.id, zoneProblem(c, rowFor(c), defaults)]))
   const blocked = selected.length === 0 || Boolean(defaultProblem) || Object.values(problems).some(Boolean)
 
   const addTreatment = () => {
@@ -154,7 +159,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
     const clientsPatch = {}
     for (const gid of Object.keys(settings.clients)) if (!chosen.has(gid)) clientsPatch[gid] = null
     for (const c of watched) {
-      const row = rows[c.id]
+      const row = rowFor(c)
       const stored = settings.clients[c.id]
       clientsPatch[c.id] = {
         batch_id: row.batch_id,
@@ -283,7 +288,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
             <tbody>
               {clients.map((c) => {
                 const on = chosen.has(c.id)
-                const row = rows[c.id]
+                const row = rowFor(c)
                 const message = on ? serverRowErrors[c.id] || problems[c.id] : null
                 const sym = currencySymbol(c.currency)
                 return (
