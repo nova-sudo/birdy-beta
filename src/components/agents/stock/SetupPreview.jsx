@@ -13,6 +13,7 @@ import { activateAgent, historySettled, useAgentHistory } from "@/lib/agents-api
 import { revalidateStock, usePreviewRun, useRun } from "@/lib/stock-agent-api"
 
 const STATES_DONE = ["done", "failed"]
+const STATES_NOT_READ = ["failed", "no_data"]
 
 /**
  * Where a preview stands for the clients watched now:
@@ -72,6 +73,7 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
   const running = status === "running" || status === "waiting"
   const failedReasons = [...new Set(ids.map((g) => run?.clients?.[g]?.error).filter(Boolean))]
   const waitingOnHistory = history ? !historySettled(history) : false
+  const skipped = finished ? ids.filter((g) => STATES_NOT_READ.includes(run.clients[g].state)).map(nameOf) : []
 
   const runPreview = async () => {
     setStarting(true)
@@ -131,6 +133,11 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
           )}
         </div>
         {startError && <Notice tone="warning">{startError}</Notice>}
+        {skipped.length > 0 && (
+          <Notice tone="warning" title={`Birdy couldn't get ad data for ${skipped.length === 1 ? "1 client" : `${skipped.length} clients`}`}>
+            <p>{skipped.join(", ")}. {skipped.length === 1 ? "It isn't" : "They aren't"} in this report. You can still turn on, and Birdy keeps trying.</p>
+          </Notice>
+        )}
         {status === "stale" && <Notice tone="warning">The last preview didn&apos;t finish or didn&apos;t cover every client you watch now. Run it again.</Notice>}
         {status === "ended" && (
           <Notice tone="warning">The last preview stopped before it finished checking every client, so it can&apos;t be used to turn on. Run it again.</Notice>

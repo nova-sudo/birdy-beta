@@ -666,6 +666,32 @@ describe("Stock agent guided setup: preview and turn on", () => {
     expect(await screen.findByText(/Ad history isn't ready yet for Lumen Skin Clinic/)).toBeInTheDocument()
   })
 
+  it("shows why a preview can't start when no client can be read", async () => {
+    startHandler = () => Promise.resolve(res({ detail: "Birdy can't read ad history from Meta for any of your clients, so there's nothing to preview yet.", unreadable: ["g1"] }, 409))
+    renderPage()
+    await userEvent.click(await screen.findByRole("button", { name: /Run the preview/ }))
+    expect(await screen.findByText(/can't read ad history from Meta for any of your clients/)).toBeInTheDocument()
+  })
+
+  it("names the clients a finished preview couldn't read, and still lets it turn on", async () => {
+    agent = mkAgent({ scope: { client_group_ids: ["g1", "g2", "g4"], schedule: { time: "07:00", tz: "Europe/London" } } })
+    groups = [...GROUPS, { id: "g4", name: "Velvet Laser", meta_ad_account_id: "act_4", facebook: { currency: "GBP" } }]
+    previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" }, g2: { state: "no_data" }, g4: { state: "failed" } } }
+    report = { run: previewRun, cards: [] }
+    renderPage()
+    expect(await screen.findByText("Birdy couldn't get ad data for 2 clients")).toBeInTheDocument()
+    expect(screen.getByText(/Berlin Body Co, Velvet Laser\. They aren't in this report/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Turn on/ })).toBeEnabled()
+  })
+
+  it("doesn't mention skipped clients when the preview read everyone", async () => {
+    previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" } } }
+    report = { run: previewRun, cards: [] }
+    renderPage()
+    await screen.findByRole("button", { name: /Run the preview again/ })
+    expect(screen.queryByText(/couldn't get ad data/)).not.toBeInTheDocument()
+  })
+
   const finishedPreview = () => {
     previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "done" } } }
     report = { run: previewRun, cards: [] }
