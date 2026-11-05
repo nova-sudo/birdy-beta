@@ -22,7 +22,8 @@ export const toClient = (g) => ({
   id: g.id,
   name: g.name || "Untitled client",
   account: g.meta_ad_account_id || g.facebook?.ad_account_id || null,
-  currency: g.facebook?.currency || g.ad_account_currency || null,
+  // What the account bills in, as the server reads it. `facebook.currency` is the agency's display currency once converted.
+  currency: g.ad_account_currency || g.facebook?.currency || null,
   cpl: g.targets?.cpl ?? null,
 })
 

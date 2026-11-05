@@ -147,6 +147,7 @@ function SetupWizard() {
           flagOnly={flagOnly}
           setFlagOnly={setFlagOnly}
           onBack={() => go(5)}
+          onEditClients={() => go(2)}
           onActivated={async () => {
             await mutateAgent()
             router.push(STOCK_AGENT_PATH)

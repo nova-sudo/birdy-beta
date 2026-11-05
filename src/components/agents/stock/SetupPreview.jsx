@@ -33,6 +33,11 @@ export function previewStatus(run, ids) {
   return states.every((st) => st === "failed") ? "unread" : "finished"
 }
 
+const hasOwnZones = (agent, gid) => {
+  const own = agent.settings?.clients?.[gid]?.zones
+  return own?.green_under != null && own?.red_over != null
+}
+
 function PreviewReport({ agentId, runId, clients, actions }) {
   const { report, error, isLoading } = useRun(agentId, runId)
   if (report) {
@@ -55,7 +60,7 @@ function PreviewReport({ agentId, runId, clients, actions }) {
  * Step 6: the first report on real data, written to nothing, then Turn on. Turn on waits for a preview that
  * finished and covered every watched client.
  */
-export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onActivated }) {
+export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onActivated, onEditClients }) {
   const { mutate } = useSWRConfig()
   const ids = useMemo(() => agent.scope?.client_group_ids ?? [], [agent.scope])
   const { history } = useAgentHistory(agent.id)
@@ -74,6 +79,8 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
   const failedReasons = [...new Set(ids.map((g) => run?.clients?.[g]?.error).filter(Boolean))]
   const waitingOnHistory = history ? !historySettled(history) : false
   const skipped = finished ? ids.filter((g) => STATES_NOT_READ.includes(run.clients[g].state)).map(nameOf) : []
+  // The server won't turn on while these have no zones, so say it here. Limits saved since this preview clear the client.
+  const noZones = finished ? ids.filter((g) => run.clients[g].state === "no_zones" && !hasOwnZones(agent, g)) : []
 
   const runPreview = async () => {
     setStarting(true)
@@ -111,7 +118,8 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
+      <div className="flex max-w-3xl flex-col gap-6">
       <HistoryProgress history={history} />
 
       <Frame title="Preview your first report" description="Runs on your real data with Birdy writing the cards. It changes nothing in Meta and posts nothing to Slack." padded contentClassName="flex flex-col gap-3">
@@ -148,6 +156,17 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
           </Notice>
         )}
       </Frame>
+      </div>
+
+      {noZones.length > 0 && (
+        <Notice
+          tone="warning"
+          title={`${noZones.length === 1 ? "1 client needs" : `${noZones.length} clients need`} targets before you can turn on`}
+        >
+          <p>{noZones.map(nameOf).join(", ")}: the account bills in a different currency from your zones, so {noZones.length === 1 ? "it needs its" : "each needs its"} own targets.</p>
+          {onEditClients && <Button size="sm" className="mt-2" onClick={onEditClients}>Fix in Clients and targets</Button>}
+        </Notice>
+      )}
 
       {finished && <PreviewReport agentId={agent.id} runId={run.id} clients={clients} actions={actions} />}
 
@@ -178,10 +197,11 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
       )}
       <SetupFooter onBack={onBack}>
         <div className="flex flex-col items-end gap-1">
-          <Button variant="primary" size="lg" loading={activating} disabled={!finished} onClick={() => turnOn()}>
+          <Button variant="primary" size="lg" loading={activating} disabled={!finished || noZones.length > 0} onClick={() => turnOn()}>
             <Zap aria-hidden />
             Turn on
           </Button>
+          {finished && noZones.length > 0 && <span className="text-xs text-muted-foreground">Turn on after every client has targets.</span>}
           {!finished && (
             <span className="text-xs text-muted-foreground">
               {status === "unread" ? "Turn on needs a preview that checked at least one client." : "Turn on after the preview has finished."}
