@@ -18,6 +18,13 @@ const nextConfig = {
       },
     ];
   },
+  // Dashboards moved under BirdyHub.
+  async redirects() {
+    return [
+      { source: "/dashboards", destination: "/hub/dashboards", permanent: true },
+      { source: "/dashboards/:id", destination: "/hub/dashboards/:id", permanent: true },
+    ];
+  },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
 };

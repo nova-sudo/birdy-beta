@@ -393,6 +393,15 @@ export default function ClientDetailsPage() {
     return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
   }, [clientData])
 
+  // ?settings=integrations (the agent setup's Connect link) opens the settings dialog on that tab.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("settings")
+    if (requested === "integrations") {
+      setSettingsTab(requested)
+      setIntegrationsOpen(true)
+    }
+  }, [])
+
   // Identity and filters belong in the global top bar, where the design puts
   // them — in place of the Birdy wordmark, and beside the bell. Declared above
   // the early return below, because a hook after a conditional return breaks

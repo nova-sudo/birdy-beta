@@ -28,6 +28,11 @@ export const queryKeys = {
 
   alerts: () => "/api/alerts",
 
+  // Hub → Reports: the account's Slack reports, and what the report form needs.
+  slackReports: () => "/api/slack-reports",
+  slackStatus: () => "/api/integrations/slack/status",
+  slackChannels: () => "/api/integrations/slack/channels",
+
   dashboardSummary: () => "/api/dashboard/summary",
 
   creditsStatus: () => "/api/credits/status",
@@ -44,4 +49,34 @@ export const queryKeys = {
   dashboardCatalog: () => "/api/dashboards/catalog",
 
   callCenter: (params) => `/api/hotprospector/call-center?${params}`,
+
+  // BirdyHub agents. Mutations through lib/agents-api revalidate these.
+  agents: () => "/api/agents",
+  agent: (id) => `/api/agents/${id}`,
+  agentRules: (id) => `/api/agents/${id}/rules`,
+  agentWork: (id) => `/api/agents/${id}/work`,
+  agentActivity: (id) => `/api/agents/${id}/activity`,
+  agentImpact: (id) => `/api/agents/${id}/impact`,
+  agentConfidence: (id) => `/api/agents/${id}/confidence`,
+  agentClaims: (id) => `/api/agents/${id}/claims`,
+  agentPractice: (id) => `/api/agents/${id}/practice`,
+  agentHistory: (id) => `/api/agents/${id}/history`,
+  agentMemory: (id) => `/api/agents/${id}/memory`,
+  agentOffers: (id) => `/api/agents/${id}/offers`,
+  agentProposals: (id) => `/api/agents/${id}/proposals`,
+  agentJob: (id, jobId) => `/api/agents/${id}/jobs/${jobId}`,
+  // The Birdy Media Buying Agent (stock): reports, scoreboard, lessons, Slack templates.
+  stockSettings: (id) => `/api/agents/${id}/settings`,
+  stockPreview: (id) => `/api/agents/${id}/preview`,
+  stockLatestRun: (id) => `/api/agents/${id}/runs/latest`,
+  stockRuns: (id) => `/api/agents/${id}/runs`,
+  stockRun: (id, runId) => `/api/agents/${id}/runs/${encodeURIComponent(runId)}`,
+  stockCard: (id, cardId) => `/api/agents/${id}/cards/${cardId}`,
+  stockOutcomes: (id) => `/api/agents/${id}/outcomes`,
+  stockLessons: (id) => `/api/agents/${id}/lessons`,
+  stockSlackTemplate: (id, kind) => `/api/agents/${id}/slack-templates/${kind}`,
+
+  // Creative tests. Mutations through lib/creatives-api revalidate these.
+  creatives: () => "/api/creatives",
+  creative: (id) => `/api/creatives/${id}`,
 }

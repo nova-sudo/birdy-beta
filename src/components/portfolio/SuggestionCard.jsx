@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Trash2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,9 @@ const SEVERITY = {
  */
 export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "Do it" }) {
   const severity = SEVERITY[suggestion.severity] ?? SEVERITY.MEDIUM;
+  // An agent rule set to "flag" only reports; there is nothing to do for it.
+  const flagOnly =
+    Boolean(suggestion.agent_id) && suggestion.rule_mode === "flag" && Boolean(suggestion.has_action);
 
   return (
     <article className="mb-2 rounded-xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-sm">
@@ -27,10 +31,24 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
           {suggestion.severity}
         </span>
         <span className="truncate text-[11px] text-pd-faint">{suggestion.client}</span>
+        {suggestion.agent_id && (
+          <span className="ml-auto shrink-0 text-[10.5px] font-semibold text-pd-primary">
+            Media Buying Agent
+          </span>
+        )}
       </div>
 
       <h3 className="mt-[5px] font-pd-display text-[13px] font-semibold leading-[1.3] text-pd-ink">
-        {suggestion.title}
+        {suggestion.creative_test_id ? (
+          <Link
+            href={`/campaigns?tab=creatives&creative=${encodeURIComponent(suggestion.creative_test_id)}`}
+            className="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          >
+            {suggestion.title}
+          </Link>
+        ) : (
+          suggestion.title
+        )}
       </h3>
 
       <div className="mt-[5px] flex items-end gap-2.5">
@@ -39,6 +57,7 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
         <div className="flex shrink-0 items-center gap-[5px]">
           {/* "Do it" alone is ambiguous once there are four cards in the rail;
               the accessible name carries which suggestion it acts on. */}
+          {!flagOnly && (
           <Button
             size="xs"
             title="Do it for me"
@@ -49,6 +68,7 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
             <Zap className="shrink-0" aria-hidden="true" />
             {applyLabel}
           </Button>
+          )}
           <button
             type="button"
             title="Dismiss"

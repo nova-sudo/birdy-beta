@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 import {
   ActivityRow,
   DiagnosticBanner,
@@ -35,6 +37,7 @@ import {
 } from "@/components/callcenter/CallCentreUnavailable";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { pdFontClass } from "@/lib/pd-fonts";
+import { revalidateAgentWork } from "@/lib/agents-api";
 import {
   applySuggestionRequest,
   dismissSuggestionRequest,
@@ -125,6 +128,10 @@ export default function PortfolioDashboardPage() {
   );
   const visibleActivity = useMemo(() => [...applied, ...activity], [applied, activity]);
 
+  const { mutate: mutateCache } = useSWRConfig();
+
+  const router = useRouter();
+
   const handleApply = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
     const entry = {
@@ -137,10 +144,23 @@ export default function PortfolioDashboardPage() {
     setApplied((prev) => [entry, ...prev]);
 
     const result = await applySuggestionRequest(suggestion.id);
+    if (suggestion.agent_id) revalidateAgentWork(mutateCache);
     if (!result) {
       setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
       setApplied((prev) => prev.filter((a) => a.id !== entry.id));
       toast.error("Couldn't apply that", { description: suggestion.title });
+      return;
+    }
+    if (result.ok === false) {
+      setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
+      setApplied((prev) => prev.filter((a) => a.id !== entry.id));
+      toast.warning("Not done", { description: result.blocked_reason?.message ?? suggestion.title });
+      return;
+    }
+
+    // Some suggestions finish in another screen (scale a creative test opens the wizard).
+    if (typeof result.redirect === "string" && result.redirect) {
+      router.push(result.redirect);
       return;
     }
 
@@ -148,18 +168,19 @@ export default function PortfolioDashboardPage() {
     toast.success(count ? `Applied to ${count} ad${count === 1 ? "" : "s"}` : "Applied", {
       description: suggestion.title,
     });
-  }, []);
+  }, [mutateCache, router]);
 
   const handleDismiss = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
     const ok = await dismissSuggestionRequest(suggestion.id);
+    if (suggestion.agent_id) revalidateAgentWork(mutateCache);
     if (!ok) {
       setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
       toast.error("Couldn't dismiss that", { description: suggestion.title });
       return;
     }
     toast("Suggestion dismissed", { description: suggestion.title });
-  }, []);
+  }, [mutateCache]);
 
   // The title block lives in the top bar, which is above this page in the
   // tree and has no other way to learn the count.

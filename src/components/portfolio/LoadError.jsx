@@ -12,10 +12,11 @@ import { PdCard } from "./PdCard";
  * reader has no way to tell that apart from a genuinely quiet week. Say the
  * numbers are missing, and offer the retry.
  *
+ * @param {string} [title] heading copy
  * @param {string} error message from useClientGroups
  * @param {() => void} [onRetry] the hook's `refresh`
  */
-export function LoadError({ error, onRetry, className }) {
+export function LoadError({ error, onRetry, className, title = "Couldn\u2019t load your client data" }) {
   return (
     <PdCard className={className}>
       <div className="flex flex-wrap items-center gap-3">
@@ -24,7 +25,7 @@ export function LoadError({ error, onRetry, className }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13.5px] font-semibold text-pd-ink">
-            Couldn&rsquo;t load your client data
+            {title}
           </p>
           <p className="mt-0.5 text-[12.5px] text-pd-subtle">
             {/* The figures below are missing, not zero. */}

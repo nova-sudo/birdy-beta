@@ -9,7 +9,7 @@ import {
 } from "@/components/dashboard-controls";
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }));

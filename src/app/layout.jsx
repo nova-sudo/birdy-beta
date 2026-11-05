@@ -34,6 +34,8 @@ import BirdyDefs from "@/components/birdy/BirdyDefs";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmHost } from "@/components/ds";
+import { AgentRunBanner } from "@/components/agents/AgentRunBanner";
 import { CreditsProvider } from "@/hooks/useCredits";
 import {
   DashboardControlsProvider,
@@ -170,6 +172,8 @@ export default function RootLayout({ children }) {
                 <div className="flex flex-col flex-1 min-w-0">
                   {/* Impersonation banner (shows only while an admin is impersonating) */}
                   <ImpersonationBar />
+                  {/* An agent that couldn't run because Meta needs reconnecting */}
+                  <AgentRunBanner />
                   {/* Top Header */}
                   <header className="bg-background border-b border-pd-border w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
@@ -264,6 +268,7 @@ export default function RootLayout({ children }) {
         </SWRProvider>
         </MotionConfig>
         <Toaster />
+        <ConfirmHost />
       </body>
     </html>
   );

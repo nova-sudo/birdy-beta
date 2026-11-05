@@ -20,7 +20,10 @@ const TONES = {
  */
 export default function BirdyAvatar({ size = 40, tone = "tint", className, ...birdyProps }) {
   return (
+    // Decorative: the mascot's face glyphs (? ! z) are SVG text and must not
+    // reach the accessible name of whatever heading or link frames it.
     <span
+      aria-hidden="true"
       className={cn(
         "flex shrink-0 items-end justify-center overflow-hidden rounded-full border",
         TONES[tone] ?? TONES.tint,

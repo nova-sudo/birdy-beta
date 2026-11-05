@@ -39,6 +39,10 @@ export default function ReportDesigner({
   // Onboarding runs before billing and the server lets this page through
   // while onboarding is incomplete; everywhere else the usual gate applies.
   ignoreCreditsGate = false,
+  // Hub → Reports: the report being edited ({frequency, blocks}) to start the
+  // draft from instead of the brief, and its own schedule line for the preview.
+  seedTemplate = null,
+  scheduleText = null,
 }) {
   const [ready, setReady] = useState(false)
   const [chatGen, setChatGen] = useState(0)
@@ -81,13 +85,14 @@ export default function ReportDesigner({
       getChat(sessionKey).messages.length > 0
     ;(async () => {
       if (!resumed) {
-        try { await reportApi.seedDraft() } catch { /* preview falls back to the default */ }
+        try { await reportApi.seedDraft(seedTemplate) } catch { /* preview falls back to the default */ }
       }
       if (cancelled) return
       setReady(true)
       refreshPreview()
     })()
     return () => { cancelled = true }
+    // seedTemplate is read once per conversation: re-seeding on every render would wipe the draft.
   }, [sessionKey, refreshPreview])
 
   const onToolUsed = useCallback((tool) => {
@@ -98,11 +103,11 @@ export default function ReportDesigner({
     resetChat(sessionKey)
     if (typeof window !== "undefined") sessionStorage.removeItem(sessionKey)
     setReady(false)
-    try { await reportApi.seedDraft() } catch { /* ignore */ }
+    try { await reportApi.seedDraft(seedTemplate) } catch { /* ignore */ }
     setChatGen((g) => g + 1)
     setReady(true)
     refreshPreview()
-  }, [sessionKey, refreshPreview])
+  }, [sessionKey, refreshPreview, seedTemplate])
 
   const use = useCallback(() => {
     if (!preview?.template) return
@@ -159,7 +164,7 @@ export default function ReportDesigner({
           {template && (
             <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-pd-subtle">
               <CalendarClock className="size-3.5" aria-hidden="true" />
-              {scheduleLabel(template)}
+              {scheduleText ?? scheduleLabel(template)}
             </span>
           )}
         </div>

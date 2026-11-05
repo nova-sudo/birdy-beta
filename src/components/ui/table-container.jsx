@@ -91,6 +91,8 @@ const StyledTable = ({
   onColumnOrderChange,
   emptyMessage,
   initialPageSize = 15,
+  // Off for tables whose rows belong together (a parent and its expanded children).
+  paginate = true,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -402,10 +404,11 @@ const StyledTable = ({
   /* ---------- PAGINATION ---------- */
   const totalPages = Math.ceil(sortedData.length / pageSize);
   const paginatedData = useMemo(() => {
+    if (!paginate) return sortedData;
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return sortedData.slice(startIndex, endIndex);
-  }, [sortedData, currentPage, pageSize]);
+  }, [sortedData, currentPage, pageSize, paginate]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -740,7 +743,7 @@ const StyledTable = ({
                         ? "fixed-header"
                         : isEmptyState
                           ? ""
-                          : "min-w-[135px] whitespace-nowrap"
+                          : `${col.minWidthClass ?? "min-w-[135px]"} whitespace-nowrap`
                     } ${draggedColumn === col.id ? "bg-pd-primary-tint" : ""}`}
                     // Straight-edged dashed line on the live drop target, per
                     // the handoff. Reserved as transparent so hovering doesn't
@@ -929,6 +932,17 @@ const StyledTable = ({
                     key={`${row.id ?? 'row'}-${idx}`}
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
+                    // A clickable row has to open from the keyboard too, or
+                    // keyboard users can't reach what it links to. Enter and
+                    // Space on the row itself only — a key pressed inside a
+                    // link, button or input belongs to that control.
+                    tabIndex={onRowClick && !(row._isCreating || row._isPending) ? 0 : undefined}
+                    onKeyDown={onRowClick && !(row._isCreating || row._isPending) ? (e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      onRowClick(row.original || row);
+                    } : undefined}
                     className={`border-b border-pd-row-border transition-colors ${
                       (row._isCreating || row._isPending)
                         // Not clickable yet — the document isn't there to open.
@@ -936,7 +950,7 @@ const StyledTable = ({
                         // shimmer: dimming on top of that read as "disabled",
                         // which is the wrong idea. It is working, not inert.
                         ? "w-fit cursor-wait"
-                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60"
+                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary"
                     } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
                     {/* Checkbox cell */}
@@ -1070,6 +1084,8 @@ const StyledTable = ({
                                 screenful of them breathing in unison looked
                                 like a stalled page rather than work in
                                 progress. A wheel only ever turns. */}
+                            {/* A control before the name (an expand toggle), kept out of its tooltip. */}
+                            {colIdx === 0 && col.lead?.(row)}
                             {colIdx === 0 && isClientMode && row._isSyncing && (
                               <Spinner
                                 // Heavier than the icon's default hairline: at
@@ -1145,7 +1161,7 @@ const StyledTable = ({
       </div>
 
       {/* Pagination Controls */}
-      {!isLoading && sortedData.length > 0 && totalPages > 1 && (
+      {paginate && !isLoading && sortedData.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <Pagination>
             <PaginationContent>

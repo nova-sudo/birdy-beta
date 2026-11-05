@@ -9,6 +9,25 @@
 
 export const RELEASES = [
   {
+    version: "Beta 1.8",
+    date: "2026-11-04",
+    summary:
+      "Meet the Birdy Media Buying Agent, ready to set up in BirdyHub. It checks your clients every morning and drafts a change card for each one.",
+    changes: {
+      added: [
+        "The Birdy Media Buying Agent: set a schedule, clients, zones and creative rules, preview your first report on real data, then turn it on.",
+        "A morning report with alerts, cost per lead for each client, follow-ups from last round and a card for each client.",
+        "Flag, Ask me or Auto for each kind of change, with an override for any client. Posting new ads stays on Flag for now.",
+        "Cards and a daily summary in Slack, with Apply, Edit and Dismiss, and message templates you can change.",
+        "A scoreboard of what each moved ad went on to do, lessons you can keep or overrule, and a weekly message.",
+      ],
+      improved: [
+        "Agents you built yourself are now called custom agents, and they keep all of their history.",
+      ],
+      fixed: [],
+    },
+  },
+  {
     version: "Beta 1.7",
     date: "2026-07-27",
     summary:

@@ -1,8 +1,10 @@
 "use client"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +58,7 @@ export function LeadsContent({
   selectedClientGroup: controlledClientGroup,
   onSelectClientGroup,
 }) {
+  const router = useRouter()
   const [contacts, setContacts] = useState([])
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -185,6 +188,7 @@ export function LeadsContent({
     })),
     [contactColumns]
   )
+  useRememberViewCatalogue("contacts", { label: "Leads Hub", path: "/contacts", columns: columnCatalogue })
 
   const defaultColumnIds = useMemo(
     () => baseContactColumns.filter(c => c.defaultVisible).map(c => c.id),
@@ -459,6 +463,7 @@ export function LeadsContent({
               searchQuery=""
               clickableFirstColumn={false}
               isLoading={loading}
+              onRowClick={(row) => row.contactId && router.push(`/contacts/${encodeURIComponent(row.contactId)}`)}
               initialColumnOrder={visibleColumns}
               onColumnOrderChange={(newOrder) => {
                 setVisibleColumns(newOrder)

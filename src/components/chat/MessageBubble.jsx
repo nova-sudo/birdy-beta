@@ -3,22 +3,27 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { AlertTriangle, Check, Copy, LayoutDashboard, Undo2 } from "lucide-react"
+import Link from "next/link"
+import { AlertTriangle, Check, Columns3, Copy, LayoutDashboard, Undo2 } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
+import { delatex } from "@/lib/chat-math"
+import { removeBirdyView } from "@/lib/view-catalogues"
 import ChatUIBlock from "@/components/chat/ChatUIBlock"
 import ToolPill from "@/components/chat/ToolPill"
 import MetricCard from "@/components/chat/blocks/MetricCard"
 import InlineChart from "@/components/chat/blocks/InlineChart"
 import StatusBadge from "@/components/chat/blocks/StatusBadge"
 import StatsGrid from "@/components/chat/blocks/StatsGrid"
+import CreativeTestCard from "@/components/chat/blocks/CreativeTestCard"
 
 export default function MessageBubble({
   message,
   messageIndex,
   onUISubmit,
+  onSend,
   submittedUIs,
   widthClass = "max-w-[80%]",
   onUndoDashboardOps = null,
@@ -42,7 +47,14 @@ export default function MessageBubble({
         transition={{ duration: 0.5, ease: EASE_SPRING }}
       >
         <div className={`${widthClass} rounded-[22px] bg-pd-divider px-4 py-2.5 text-pd-ink`}>
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
+          {message.attachments?.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {message.attachments.map((a, i) => (
+                <SentThumb key={`${a.blob_url}-${i}`} attachment={a} />
+              ))}
+            </div>
+          )}
+          {message.content && <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>}
         </div>
       </motion.div>
     )
@@ -84,7 +96,7 @@ export default function MessageBubble({
                 case "text":
                   return (
                     <ReactMarkdown key={key} remarkPlugins={[remarkGfm]} components={mdComponents}>
-                      {seg.content}
+                      {delatex(seg.content)}
                     </ReactMarkdown>
                   )
                 case "ui":
@@ -104,6 +116,8 @@ export default function MessageBubble({
                   return <StatusBadge key={key} payload={seg.payload} />
                 case "stats":
                   return <StatsGrid key={key} payload={seg.payload} />
+                case "creative":
+                  return <CreativeTestCard key={key} data={seg.payload} onSend={onSend} />
                 default:
                   return null
               }
@@ -116,6 +130,12 @@ export default function MessageBubble({
           <DashboardChanges message={message} onUndo={onUndoDashboardOps} />
         </div>
       )}
+
+      {message.page_view_ops?.map((op) => (
+        <div key={op.view.id} className="pl-[34px]">
+          <SavedViewReceipt op={op} />
+        </div>
+      ))}
 
       <div className="pl-[34px]">
         <CopyButton text={message.content} />
@@ -183,6 +203,60 @@ function DashboardChanges({ message, onUndo }) {
   )
 }
 
+/**
+ * A table view Birdy saved: where it lives, a link there when that isn't the
+ * table on screen, and Undo, which deletes the view again (the table keeps its
+ * current columns). Same quiet receipt style as DashboardChanges.
+ */
+function SavedViewReceipt({ op }) {
+  const [state, setState] = useState(null) // null | "busy" | "done" | "failed"
+  // Set by the table that applied it (usePageViews), if one was open.
+  const onPage = Boolean(op.applied)
+  const count = op.view.state?.visibleColumns?.length ?? 0
+  const title = `Saved "${op.view.name}" on ${op.page_label}`
+
+  const undo = async () => {
+    setState("busy")
+    setState((await removeBirdyView(op).catch(() => false)) ? "done" : "failed")
+  }
+
+  return (
+    <div role="status" aria-label={title} className="rounded-2xl border border-pd-border bg-pd-surface px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-pd-body">
+        <Columns3 className="size-3 text-pd-primary" aria-hidden="true" />
+        <span className="min-w-0 truncate">{title}</span>
+        {state === "done" ? (
+          <span className="ml-auto text-[11.5px] font-medium text-pd-faint">Undone</span>
+        ) : (
+          <button
+            type="button"
+            disabled={state === "busy"}
+            onClick={undo}
+            className="ml-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          >
+            <Undo2 className="size-3" aria-hidden="true" />
+            Undo
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">
+        {state === "done"
+          ? "View deleted."
+          : state === "failed"
+            ? "Couldn't delete it. Remove it from the Views menu instead."
+            : `${count} column${count === 1 ? "" : "s"}${op.made_default ? " · opens by default" : ""}. `}
+        {state === null && (onPage
+          ? "Applied to the table."
+          : op.path && (
+            <Link href={op.path} className="font-semibold text-pd-primary hover:underline">
+              Open {op.page_label.split(" · ")[0]}
+            </Link>
+          ))}
+      </p>
+    </div>
+  )
+}
+
 /** Copies the raw answer; sits under each reply, quiet until hovered. */
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
@@ -205,4 +279,14 @@ function CopyButton({ text }) {
       {copied ? "Copied" : "Copy"}
     </button>
   )
+}
+
+/** A sent attachment: the image itself, or a video's thumbnail / first frame. */
+function SentThumb({ attachment }) {
+  const isVideo = attachment.mime?.startsWith("video/")
+  const box = "size-16 rounded-xl bg-pd-surface object-cover"
+  if (isVideo && !attachment.thumbnail_url) {
+    return <video src={`${attachment.blob_url}#t=0.1`} preload="metadata" muted playsInline className={box} aria-label="Attached video" />
+  }
+  return <img src={isVideo ? attachment.thumbnail_url : attachment.blob_url} alt="Attached image" className={box} />
 }

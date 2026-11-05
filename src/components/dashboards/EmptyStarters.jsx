@@ -11,11 +11,11 @@ import { WidgetIcon } from "./WidgetIcon"
  */
 export function EmptyStarters({ onStart }) {
   return (
-    <section aria-labelledby="dashboard-starters-title" className="rounded-2xl border border-dashed border-pd-border bg-pd-surface px-6 py-7">
-      <h2 id="dashboard-starters-title" className="font-pd-display text-[15px] font-semibold text-pd-ink">
+    <section aria-labelledby="dashboard-starters-title" className="rounded-surface border border-dashed border-border bg-background px-6 py-7">
+      <h2 id="dashboard-starters-title" className="text-base font-semibold text-foreground">
         Start with
       </h2>
-      <p className="mt-1 text-[13px] text-pd-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Add a ready-made widget, use Add widget above, or ask Birdy for what you want to see.
       </p>
       <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -24,9 +24,9 @@ export function EmptyStarters({ onStart }) {
             key={starter.kind}
             type="button"
             onClick={() => onStart(starter.kind)}
-            className="flex min-w-0 cursor-pointer items-start gap-2.5 rounded-xl border border-pd-border bg-pd-canvas px-3.5 py-3 text-left text-[13px] font-medium text-pd-ink transition-colors hover:border-pd-primary hover:bg-pd-primary-tint/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="flex min-w-0 cursor-pointer items-start gap-2.5 rounded-control border border-border bg-muted px-3.5 py-3 text-left text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary-soft focus-visible:shadow-control-focus focus-visible:outline-none"
           >
-            <WidgetIcon name={starter.icon} className="mt-px size-4 shrink-0 text-pd-primary" />
+            <WidgetIcon name={starter.icon} className="mt-px size-4 shrink-0 text-primary" />
             <span className="min-w-0">{starter.label}</span>
           </button>
         ))}

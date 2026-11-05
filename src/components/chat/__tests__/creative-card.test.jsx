@@ -1,0 +1,137 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+
+const push = vi.fn()
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
+
+import CreativeTestCard from "@/components/chat/blocks/CreativeTestCard"
+import MessageBubble from "@/components/chat/MessageBubble"
+
+const data = {
+  test_id: "t1", code: "CT-0048", name: "Spring promo", thumbnail: "https://cdn.test/a.jpg",
+  origin: "new", accounts: [{ name: "Acme", adset_name: "Set 1" }, { name: "Bolt", adset_name: "Set 2" }],
+  targets_text: "CPL under $25", destination_text: "Website: https://a.test",
+  warnings: ["No metric targets set"], posts_as: "Paused, then live together once all 2 accept",
+  n_accounts: 2, ready: true,
+}
+
+beforeEach(() => push.mockClear())
+
+describe("CreativeTestCard", () => {
+  it("renders details and warnings", () => {
+    render(<CreativeTestCard data={data} onSend={vi.fn()} />)
+    expect(screen.getByText("CT-0048")).toBeInTheDocument()
+    expect(screen.getByText("Spring promo")).toBeInTheDocument()
+    expect(screen.getByText("No metric targets set")).toBeInTheDocument()
+    expect(screen.getByText(/Acme/)).toBeInTheDocument()
+  })
+
+  it("lays out header, a definition table, accounts and warnings as a Notice", () => {
+    render(<CreativeTestCard data={{ ...data, winner_text: "At least 60% of scored accounts pass" }} onSend={vi.fn()} />)
+    const header = screen.getByText("CT-0048").parentElement
+    expect(header).toHaveTextContent("Spring promo")
+    const table = screen.getByRole("table")
+    const rows = Object.fromEntries(
+      [...table.querySelectorAll("tr")].map((tr) => [tr.querySelector("th").textContent, tr.querySelector("td").textContent])
+    )
+    expect(rows).toEqual({
+      Targets: "CPL under $25",
+      "Winner when": "At least 60% of scored accounts pass",
+      Destination: "Website: https://a.test",
+      "Posts as": "Paused, then live together once all 2 accept",
+    })
+    const warn = screen.getByText("No metric targets set").closest('[data-slot="notice"]')
+    expect(warn).toHaveClass("bg-warning-soft")
+  })
+
+  it("omits definition rows it has no data for", () => {
+    render(<CreativeTestCard data={{ ...data, targets_text: undefined, posts_as: undefined }} onSend={vi.fn()} />)
+    const heads = [...screen.getByRole("table").querySelectorAll("th")].map((th) => th.textContent)
+    expect(heads).toEqual(["Destination"])
+  })
+
+  it("Post sends the exact text once and disables", async () => {
+    const onSend = vi.fn()
+    render(<CreativeTestCard data={data} onSend={onSend} />)
+    const btn = screen.getByRole("button", { name: "Post to 2 accounts" })
+    await userEvent.click(btn)
+    await userEvent.click(btn)
+    expect(onSend).toHaveBeenCalledTimes(1)
+    expect(onSend).toHaveBeenCalledWith("Yes, post CT-0048 to 2 accounts.")
+    expect(btn).toBeDisabled()
+  })
+
+  it("falls back to accounts.length when n_accounts is missing", async () => {
+    const onSend = vi.fn()
+    render(<CreativeTestCard data={{ ...data, n_accounts: undefined }} onSend={onSend} />)
+    await userEvent.click(screen.getByRole("button", { name: "Post to 2 accounts" }))
+    expect(onSend).toHaveBeenCalledWith("Yes, post CT-0048 to 2 accounts.")
+  })
+
+  it("disables Post with a hint when ready is false, but a missing ready counts as ready", () => {
+    const { unmount } = render(<CreativeTestCard data={{ ...data, ready: false }} onSend={vi.fn()} />)
+    expect(screen.getByRole("button", { name: /Post to 2 accounts/ })).toBeDisabled()
+    expect(screen.getByText(/still needs/i)).toBeInTheDocument()
+    unmount()
+    const { ready, ...old } = data
+    render(<CreativeTestCard data={old} onSend={vi.fn()} />)
+    expect(screen.getByRole("button", { name: "Post to 2 accounts" })).toBeEnabled()
+  })
+
+  it("Open in wizard routes to the edit page", async () => {
+    render(<CreativeTestCard data={data} onSend={vi.fn()} />)
+    await userEvent.click(screen.getByRole("button", { name: "Open in wizard" }))
+    expect(push).toHaveBeenCalledWith("/campaigns/creatives/t1/edit")
+  })
+
+  it("Change targets sends once", async () => {
+    const onSend = vi.fn()
+    render(<CreativeTestCard data={data} onSend={onSend} />)
+    const btn = screen.getByRole("button", { name: "Change targets" })
+    await userEvent.click(btn)
+    await userEvent.click(btn)
+    expect(onSend).toHaveBeenCalledTimes(1)
+    expect(onSend).toHaveBeenCalledWith("Change the targets for CT-0048.")
+  })
+
+  it("disables Post and Change targets without onSend, keeps the wizard enabled", () => {
+    render(<CreativeTestCard data={data} />)
+    expect(screen.getByRole("button", { name: /Post to/ })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Change targets" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Open in wizard" })).toBeEnabled()
+  })
+
+  it("uses singular wording for one account", async () => {
+    const onSend = vi.fn()
+    render(<CreativeTestCard data={{ ...data, n_accounts: 1, accounts: [data.accounts[0]] }} onSend={onSend} />)
+    await userEvent.click(screen.getByRole("button", { name: "Post to 1 account" }))
+    expect(onSend).toHaveBeenCalledWith("Yes, post CT-0048 to 1 account.")
+  })
+
+  it("hides the thumbnail when it fails to load", () => {
+    const { container } = render(<CreativeTestCard data={data} onSend={vi.fn()} />)
+    fireEvent.error(container.querySelector("img"))
+    expect(container.querySelector("img")).toBeNull()
+  })
+
+  it("renders nothing for a payload without a code or test_id", () => {
+    const { container } = render(<CreativeTestCard data={{ foo: 1 }} onSend={vi.fn()} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe("MessageBubble creative block", () => {
+  it("passes onSend through to the card", async () => {
+    const onSend = vi.fn()
+    render(
+      <MessageBubble
+        message={{ role: "assistant", content: `Draft:\n:::creative ${JSON.stringify(data)}:::`, tools_used: [] }}
+        messageIndex={1}
+        onSend={onSend}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Post to 2 accounts" }))
+    expect(onSend).toHaveBeenCalledWith("Yes, post CT-0048 to 2 accounts.")
+  })
+})

@@ -8,6 +8,7 @@
 // here" — because none of it had anywhere to save. The endpoints exist now
 // (GET/PATCH /api/user/profile, POST /api/user/password); this is the form.
 
+import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -393,7 +394,10 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {BRIEF_TIMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {/* A time picked to the minute in Hub → Reports stays selectable here. */}
+                      {(briefTime && !BRIEF_TIMES.includes(briefTime) ? [briefTime, ...BRIEF_TIMES] : BRIEF_TIMES).map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -408,6 +412,13 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               </Button>
 
               <SavedReportCard brief={brief} onSaved={onBriefSaved} />
+
+              <p className="mt-4 text-sm text-pd-subtle">
+                Want more than one report, a time to the minute, or a report when an alert fires?{" "}
+                <Link href="/hub" className="font-semibold text-pd-primary underline-offset-2 hover:underline">
+                  Manage all reports in BirdyHub
+                </Link>
+              </p>
             </>
           )}
         </CardContent>

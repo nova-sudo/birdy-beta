@@ -20,7 +20,7 @@
  * dropped the closing fence.
  */
 
-const BLOCK_TYPES = ["ui", "metric", "chart", "status", "stats"]
+const BLOCK_TYPES = ["ui", "metric", "chart", "status", "stats", "creative"]
 
 /**
  * Starting at `str[from]`, advance past whitespace. Return the new index.
@@ -69,7 +69,7 @@ function _findJsonEnd(str, start) {
 function _tryExtractBlock(content, fenceIdx) {
   // Match `:::<type>\b`
   const remaining = content.slice(fenceIdx + 3)
-  const typeMatch = /^(ui|metric|chart|status|stats)\b/.exec(remaining)
+  const typeMatch = /^(ui|metric|chart|status|stats|creative)\b/.exec(remaining)
   if (!typeMatch) return null
   const blockType = typeMatch[1]
 

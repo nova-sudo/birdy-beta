@@ -65,6 +65,7 @@ import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { HealthPill } from "@/components/clients/HealthPill"
 import { metricTone } from "@/lib/metric-tone"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import getSymbolFromCurrency from "currency-symbol-map"
 
 import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
@@ -397,6 +398,7 @@ export default function ClientsPage() {
       })),
     [columns]
   )
+  useRememberViewCatalogue("clients", { label: "Clients Hub", path: "/clients", columns: columnCatalogue })
 
   useEffect(() => {
     if (wizardOpen && wizardStep > 1) {

@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Agent Mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#5B3FD6;--primary-soft:#EFECFB;--primary-ink:#4A2FB5;--primary-edge:#4A30BC;
+  --ink:#18181B;--body:#52525B;--muted:#6B6B72;--subtle:#85858C;--faint:#98989E;
+  --bg:#fff;--canvas:#F6F6F4;--frame:#f7f7f8;--hairline:#18181b14;--ring:#18181b12;--divider:#f0f0f1;--border:#E7E6E3;--thead:#FAFAF8;
+  --success:#16794C;--success-soft:#F0FDF4;--success-ink:#166534;
+  --warning:#F59E0B;--warning-soft:#FFFBEB;--warning-ink:#92400E;
+  --danger:#EF4444;--danger-soft:#FEF2F2;--danger-ink:#991B1B;
+  --info-soft:#EFF6FF;--info-ink:#1E40AF;
+  --neutral-soft:#F4F4F5;--neutral-ink:#3F3F46;
+  --r-control:12px;--r-frame:16px;
+  --sh-control:0 0 0 1px #00000014,0 1px 2px #0000000f,0 2px 4px -2px #0000000d;
+  --sh-primary:0 1px 0 #ffffff33 inset,0 0 0 1px var(--primary-edge),0 1px 2px #0000001f,0 2px 6px -2px rgba(91,63,214,.35);
+  --sh-frame:0 0 0 1px var(--hairline);--sh-surface:0 0 0 1px var(--ring);
+  --sh-overlay:0 0 0 1px #0000000F,0 24px 64px -12px #0000003D;
+  --font-display:"Bricolage Grotesque",system-ui,sans-serif;--font-body:Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--canvas);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.display{font-family:var(--font-display);letter-spacing:-.01em}
+a{color:var(--primary);text-decoration:none}
+.num{font-variant-numeric:tabular-nums}
+.mocknav{position:sticky;top:0;z-index:50;background:#18181B;color:#fff;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mocknav b{font-family:var(--font-display);font-size:15px;margin-right:12px}
+.mocknav button{background:none;border:0;color:#d4d4d8;font:500 13px var(--font-body);padding:6px 10px;border-radius:8px;cursor:pointer}
+.mocknav button:hover{background:#27272a;color:#fff}
+.mocknav button.on{background:#fff;color:#18181B}
+.screen{display:none}.screen.on{display:block}
+.option{padding:36px 24px 12px;max-width:1240px;margin:0 auto}
+.opthead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.opthead h1{font-size:24px;font-weight:600}
+.tag{font-size:11px;font-weight:600;color:var(--primary-ink);background:var(--primary-soft);padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.tag.rec{background:var(--success-soft);color:var(--success-ink)}
+.optnote{color:var(--muted);max-width:820px;margin-bottom:18px}
+.optnote b{color:var(--ink)}
+.app{background:var(--canvas);border-radius:20px;box-shadow:var(--sh-overlay);overflow:hidden}
+.topbar{min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.topbar h2{font-size:19px;font-weight:600}
+.sub{color:var(--muted);font-size:13px}
+.content{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.btn{height:36px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 14px;border-radius:var(--r-control);font:500 13px var(--font-body);cursor:pointer;border:0;white-space:nowrap}
+.btn.primary{background:var(--primary);color:#fff;box-shadow:var(--sh-primary)}
+.btn.ghost{background:var(--bg);color:var(--ink);box-shadow:var(--sh-control)}
+.btn.sm{height:30px;padding:0 10px;font-size:12px;border-radius:10px}
+.btn.lg{height:42px;width:100%}
+.frame{background:var(--frame);border-radius:var(--r-frame);box-shadow:var(--sh-frame);min-width:0}
+.frame>header{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;flex-wrap:wrap}
+.frame>header h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.surface{background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden}
+.pad{padding:16px}
+.av{width:36px;height:36px;border-radius:50%;border:1px solid #D7CFF6;background:#EFECFB;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none}
+.av img{width:82%;display:block}
+.badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap}
+.b-success{background:var(--success-soft);color:var(--success-ink)}
+.b-warning{background:var(--warning-soft);color:var(--warning-ink)}
+.b-danger{background:var(--danger-soft);color:var(--danger-ink)}
+.b-info{background:var(--info-soft);color:var(--info-ink)}
+.b-primary{background:var(--primary-soft);color:var(--primary-ink)}
+.b-neutral{background:var(--neutral-soft);color:var(--neutral-ink)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.d-s{background:var(--success)}.d-w{background:var(--warning)}.d-d{background:var(--danger)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--thead);text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:10px 14px;border-bottom:1px solid var(--divider);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--divider);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.between{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:10px}
+.field{height:34px;display:inline-flex;align-items:center;padding:0 10px;border-radius:10px;background:#fff;box-shadow:var(--sh-control);font-size:13px;white-space:nowrap}
+.field.w{min-width:64px;justify-content:flex-end;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:var(--neutral-soft);border-radius:10px;padding:2px}
+.seg button{border:0;background:none;padding:5px 10px;font:500 12px var(--font-body);color:var(--muted);border-radius:8px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:var(--sh-control)}
+.muted{color:var(--muted)}.small{font-size:12px}.b{font-weight:600}
+.answer{background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);padding:16px;display:flex;gap:12px}
+.answer h3{font-size:17px;font-weight:600;margin-bottom:3px}
+.alertrow{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--divider);align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.alertrow:last-child{border-bottom:0}
+.bar{height:22px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#fff;min-width:48px}
+.barrow{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin-bottom:8px;font-size:13px}
+.barrow:last-child{margin-bottom:0}
+.tick{font-weight:700;width:16px;display:inline-block}.yes{color:var(--success)}.no{color:var(--danger)}
+.cardrow{border-bottom:1px solid var(--divider)}
+.cardrow:last-child{border-bottom:0}
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;cursor:pointer;flex-wrap:wrap}
+.cardbody{display:none;padding:0 16px 16px}
+.cardrow.open .cardbody{display:block}
+.copy{background:var(--canvas);border-radius:12px;padding:14px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+.wizard{display:grid;grid-template-columns:220px minmax(0,1fr)}
+.steps{background:var(--bg);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px}
+.step{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;font-size:13px;color:var(--muted)}
+.step i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--neutral-soft);flex:none}
+.step.done i{background:var(--success-soft);color:var(--success-ink)}
+.step.on{background:var(--primary-soft);color:var(--primary-ink);font-weight:500}
+.step.on i{background:var(--primary);color:#fff}
+.check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--divider);flex-wrap:wrap}
+.check:last-child{border-bottom:0}
+.chat{display:flex;flex-direction:column;gap:12px}
+.bubble{max-width:82%;padding:10px 14px;border-radius:14px;font-size:13px}
+.bubble.b1{background:var(--canvas)}
+.bubble.b2{background:var(--primary);color:#fff;align-self:flex-end}
+.inbox{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:520px}
+.acctlist{background:var(--bg);border-right:1px solid var(--border)}
+.acct{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--divider);cursor:pointer}
+.acct.on{background:var(--primary-soft)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto}
+.tabs span{padding:10px 14px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs span.on{color:var(--ink);border-color:var(--primary)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.metric{padding:14px 18px;border-right:1px solid var(--divider)}
+.metric:last-child{border-right:0}
+.metric.on{box-shadow:inset 0 -2px 0 var(--primary)}
+.metric .val{font-family:var(--font-display);font-size:22px;font-weight:600}
+.slack{background:#fff;border-radius:14px;box-shadow:var(--sh-overlay);max-width:780px;font-family:Lato,Inter,system-ui,sans-serif;overflow:hidden}
+.slackhead{padding:12px 18px;border-bottom:1px solid #e8e8e8;font-weight:700;font-size:15px}
+.msg{display:flex;gap:10px;padding:12px 18px}
+.msg+.msg{border-top:1px solid #f4f4f4}
+.msgbody{min-width:0;flex:1}
+.who{font-weight:700;font-size:14px}
+.who span{font-weight:400;color:#616061;font-size:12px;margin-left:6px}
+.sk{margin-top:8px;font-size:14px;color:#1d1c1d;white-space:pre-wrap;overflow-wrap:anywhere}
+.sk-h{font-weight:700;font-size:16px;margin-top:6px}
+.sk-btn{display:inline-block;height:30px;line-height:28px;padding:0 12px;border:1px solid #bbb;border-radius:6px;font-size:13px;font-weight:600;background:#fff;color:#1d1c1d;margin-right:6px;margin-top:4px}
+.sk-btn.go{background:#007a5a;border-color:#007a5a;color:#fff}
+.sk-alert{margin-top:8px;font-size:14px}
+.sk-table{margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;font-size:13px}
+.sk-table td,.sk-table th{padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:left;font-weight:400}
+.sk-table th{font-weight:700;background:#fafafa}
+.sk-thread{font-size:13px;color:#1264a3;font-weight:700;margin-top:8px}
+.threadbox{margin-left:46px;border-left:2px solid #e8e8e8}
+.block-note{font-size:12px;color:var(--muted);margin-top:8px}
+.foot{height:40px}
+@media(max-width:820px){
+  .grid2,.wizard,.inbox{grid-template-columns:minmax(0,1fr)}
+  .steps{border-right:0;border-bottom:1px solid var(--border)}
+  .acctlist{border-right:0}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .option{padding-left:16px;padding-right:16px}
+  .content{padding:16px}
+  .barrow{grid-template-columns:110px 1fr}
+  .threadbox{margin-left:0}
+}
+</style>
+</head>
+<body>
+<nav class="mocknav">
+  <b>Stock agent mocks</b>
+  <button data-s="hub" class="on">1 BirdyHub</button>
+  <button data-s="setup">2 Setup (pick one)</button>
+  <button data-s="report">3 Morning report (pick one)</button>
+  <button data-s="slack">4 Slack (pick one)</button>
+  <button data-s="settings">5 Agent settings</button>
+</nav>
+
+<!-- ========== HUB ========== -->
+<section class="screen on" id="hub">
+<div class="option">
+  <div class="opthead"><h1>BirdyHub: agents section</h1><span class="tag">One design</span></div>
+  <p class="optnote">The stock card opens the new playbook setup. <b>Create your own agent</b> opens today's process (scope, training, practice, dry run). An agency that already had an agent sees it here as a custom agent, with its history intact.</p>
+  <div class="app"><div class="content">
+    <div><h2 style="font-size:18px;font-weight:600">Agents</h2><p class="sub">Birdy teammates that work your ad accounts</p></div>
+    <div class="grid2">
+      <div class="frame">
+        <header><h3>Birdy Media Buying Agent</h3><span class="badge b-primary">Default</span></header>
+        <div class="surface pad stack">
+          <p style="color:var(--body)">Checks your accounts on your schedule, drafts a change card for each one, and learns from what actually worked.</p>
+          <div class="stack small" style="gap:6px">
+            <div class="row"><span class="dot d-d"></span>Catches what stops spend first: payment, rejections, £0 days</div>
+            <div class="row"><span class="dot d-w"></span>Zones each client against the targets you set</div>
+            <div class="row"><span class="dot d-s"></span>Moves proven winners between matching accounts</div>
+          </div>
+          <button class="btn primary lg">Set up agent →</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="frame">
+          <header><h3>Custom agents</h3><span class="badge b-neutral">1</span></header>
+          <div class="surface">
+            <div class="alertrow"><div><div class="b">Pause and revive rules</div><div class="small muted">Live · 6 clients · 4 items waiting</div></div><button class="btn ghost sm">Open</button></div>
+          </div>
+        </div>
+        <div class="surface pad stack" style="border:1px dashed var(--border);box-shadow:none;background:transparent">
+          <div class="b display" style="font-size:15px">Create your own agent</div>
+          <p class="small muted">Choose its clients, teach it your rules in a chat, practise on real past cases and see what it would have done before you switch it on.</p>
+          <div><button class="btn ghost">+ Create custom agent</button></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+</section>
+
+<!-- ========== SETUP ========== -->
+<section class="screen" id="setup">
+<div class="option">
+  <div class="opthead"><h1>A. Guided steps</h1><span class="tag rec">Recommended</span></div>
+  <p class="optnote">A full-page wizard, like Creatives. The client table is the centre: batch, zones and treatment in one place. <b>Good:</b> hard to miss anything, and a preview report before switching on. <b>Less good:</b> slower to go back and change one thing.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Set up your Media Buying Agent</h2><div class="sub">You can change all of this later</div></div><button class="btn ghost sm">Save and exit</button></div>
+    <div class="wizard">
+      <div class="steps">
+        <div class="step done"><i>✓</i>Schedule</div>
+        <div class="step on"><i>2</i>Clients and targets</div>
+        <div class="step"><i>3</i>Creative rules</div>
+        <div class="step"><i>4</i>Slack</div>
+        <div class="step"><i>5</i>Flag, Ask me or Auto</div>
+        <div class="step"><i>6</i>Preview first report</div>
+      </div>
+      <div class="content">
+        <div class="frame">
+          <header><h3>Your zones</h3><span class="sub">Default for every client. Override any client below.</span></header>
+          <div class="surface pad row">
+            <span class="dot d-s"></span>Green under <span class="field w">£8.00</span>
+            <span class="dot d-d" style="margin-left:16px"></span>Red over <span class="field w">£10.00</span>
+            <span class="dot d-w" style="margin-left:16px"></span><span class="muted">Yellow is anything in between</span>
+          </div>
+        </div>
+        <div class="frame">
+          <header><h3>Clients</h3><button class="btn ghost sm">+ Add a treatment</button></header>
+          <div class="surface tablewrap"><table>
+            <thead><tr><th>Client</th><th>Batch</th><th>Treatment</th><th class="n">Green under</th><th class="n">Red over</th><th>Prepaid</th></tr></thead>
+            <tbody>
+              <tr><td class="b">Lumen Skin Clinic</td><td><span class="seg"><button>A</button><button class="on">B</button></span></td><td><span class="field">Skin</span></td><td class="n muted">Default</td><td class="n muted">Default</td><td class="muted">No</td></tr>
+              <tr><td class="b">Harbour Body Co</td><td><span class="seg"><button>A</button><button class="on">B</button></span></td><td><span class="field">Body sculpting</span></td><td class="n muted">Default</td><td class="n muted">Default</td><td class="muted">No</td></tr>
+              <tr><td class="b">Velvet Laser</td><td><span class="seg"><button class="on">A</button><button>B</button></span></td><td><span class="field">Laser</span></td><td class="n">£6.00</td><td class="n">£8.00</td><td class="muted">No</td></tr>
+              <tr><td class="b">Coastline Med Spa</td><td><span class="seg"><button class="on">A</button><button>B</button></span></td><td><span class="field">Body sculpting</span></td><td class="n muted">Default</td><td class="n muted">Default</td><td><span class="badge b-info">Yes</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="row between"><button class="btn ghost">Back</button><button class="btn primary">Continue</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>B. One-page checklist</h1></div>
+  <p class="optnote">Everything on one page, each section opening in place. <b>Good:</b> quick to fill in and doubles as the settings page. <b>Less good:</b> a lot to take in for a first-time user.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Set up your Media Buying Agent</h2><div class="sub">3 of 6 done</div></div><button class="btn primary" style="opacity:.5">Turn on</button></div>
+    <div class="content"><div class="surface">
+      <div class="check"><div class="row"><span class="tick yes">✓</span><div><div class="b">Schedule</div><div class="small muted">Batch A Mon, Thu · Batch B Tue, Fri · 07:00 London</div></div></div><button class="btn ghost sm">Edit</button></div>
+      <div class="check"><div class="row"><span class="tick yes">✓</span><div><div class="b">Clients and targets</div><div class="small muted">4 clients · green under £8, red over £10 · 1 override</div></div></div><button class="btn ghost sm">Edit</button></div>
+      <div class="check"><div class="row"><span class="tick yes">✓</span><div><div class="b">Creative rules</div><div class="small muted">Using defaults: max 4 ads live, winners need 8+ leads over 14 days</div></div></div><button class="btn ghost sm">Edit</button></div>
+      <div class="check"><div class="row"><span class="tick no">○</span><div><div class="b">Slack</div><div class="small muted">Pick the channel for reports and cards</div></div></div><button class="btn primary sm">Set up</button></div>
+      <div class="check"><div class="row"><span class="tick no">○</span><div><div class="b">Flag, Ask me or Auto</div><div class="small muted">Every change type starts on Ask me</div></div></div><button class="btn ghost sm">Review</button></div>
+      <div class="check"><div class="row"><span class="tick no">○</span><div><div class="b">Preview first report</div><div class="small muted">Runs on your real data and changes nothing</div></div></div><button class="btn ghost sm" disabled style="opacity:.5">Run</button></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>C. Set up by chatting</h1></div>
+  <p class="optnote">Birdy interviews the agency and fills in the setup alongside. <b>Good:</b> feels like briefing a new hire, and it reuses the training chat. <b>Less good:</b> entering many client targets by chat is slow, and it looks like the custom agent's process.</p>
+  <div class="app">
+    <div class="topbar"><h2>Set up your Media Buying Agent</h2></div>
+    <div class="content"><div class="grid2">
+      <div class="surface pad chat">
+        <div class="row"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="bubble b1">What cost per lead counts as green for most of your clients?</div></div>
+        <div class="bubble b2">Under £8. Over £10 is red.</div>
+        <div class="row"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="bubble b1">Done. Does any client need different numbers? Velvet Laser has run at around £6 for 90 days.</div></div>
+        <div class="bubble b2">Yes, Velvet green under 6, red over 8.</div>
+        <div class="field" style="height:42px;color:var(--faint)">Reply to Birdy…</div>
+      </div>
+      <div class="frame"><header><h3>Your setup so far</h3></header><div class="surface pad stack small">
+        <div class="row between"><span class="muted">Schedule</span><span>Mon, Tue, Thu, Fri at 07:00</span></div>
+        <div class="row between"><span class="muted">Zones</span><span>Green under £8, red over £10</span></div>
+        <div class="row between"><span class="muted">Velvet Laser</span><span>Green under £6, red over £8</span></div>
+        <div class="row between"><span class="muted">Treatments</span><span class="muted">Not answered yet</span></div>
+        <div class="row between"><span class="muted">Slack channel</span><span class="muted">Not answered yet</span></div>
+      </div></div>
+    </div></div>
+  </div>
+</div>
+</section>
+
+<!-- ========== REPORT ========== -->
+<section class="screen" id="report">
+<div class="option">
+  <div class="opthead"><h1>A. One long report</h1><span class="tag rec">Recommended</span></div>
+  <p class="optnote">The playbook's report, in its order, as a page in Birdy. Click a card row to open it. <b>Good:</b> it's the process you asked to keep, read top to bottom. <b>Less good:</b> long on a large batch, so cards start collapsed.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Morning report</h2><div class="sub">Tue 3 Nov · Batch B · 27 Oct to 2 Nov compared with the 7 days before</div></div><button class="btn primary">Apply 2 cards</button></div>
+    <div class="content">
+      <div class="answer"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div><h3>1 green, 1 yellow, 2 red or stopped. Look at Coastline first.</h3><p class="muted">Its payment failed on Sunday and it has spent £0 since. Then 2 cards need your OK: Harbour and Velvet.</p></div></div>
+
+      <div class="frame"><header><h3>Alerts</h3><span class="badge b-danger">1</span></header><div class="surface">
+        <div class="alertrow"><div><div class="b">Coastline Med Spa: payment failed</div><div class="small muted">£0 spend since Sun 1 Nov. Ask the clinic to update their card.</div></div><span class="badge b-danger">Spend stopped</span></div>
+        <div class="alertrow"><div class="small muted">Clean: no rejected ads, no ads in review, no disabled accounts. Prepaid balance is fine on all other clients.</div></div>
+      </div></div>
+
+      <div class="frame"><header><h3>Cost per lead</h3></header><div class="surface pad">
+        <div class="barrow"><span>Harbour Body Co</span><div class="bar" style="width:97%;background:#DB2777">£11.62</div></div>
+        <div class="barrow"><span>Velvet Laser</span><div class="bar" style="width:76%;background:#D97706">£9.10</div></div>
+        <div class="barrow"><span>Coastline Med Spa</span><div class="bar" style="width:65%;background:#16794C">£7.80</div></div>
+        <div class="barrow"><span>Lumen Skin Clinic</span><div class="bar" style="width:58%;background:#16794C">£6.90</div></div>
+      </div>
+      <div class="surface tablewrap" style="margin-top:8px"><table>
+        <thead><tr><th>Client</th><th class="n">Last week</th><th class="n">This week</th><th class="n">Change</th><th class="n">Leads</th><th>Zone</th><th class="n">Ads live</th></tr></thead>
+        <tbody>
+          <tr><td class="b">Harbour Body Co</td><td class="n">£9.85</td><td class="n">£11.62</td><td class="n">+18%</td><td class="n">31</td><td><span class="badge b-danger">Red</span></td><td class="n">4</td></tr>
+          <tr><td class="b">Velvet Laser</td><td class="n">£8.40</td><td class="n">£9.10</td><td class="n">+8%</td><td class="n">42</td><td><span class="badge b-warning">Yellow</span></td><td class="n">3</td></tr>
+          <tr><td class="b">Coastline Med Spa</td><td class="n">£7.60</td><td class="n">£7.80</td><td class="n">+3%</td><td class="n">18</td><td><span class="badge b-success">Green</span> <span class="badge b-danger">Stopped</span></td><td class="n">4</td></tr>
+          <tr><td class="b">Lumen Skin Clinic</td><td class="n">£7.40</td><td class="n">£6.90</td><td class="n">−7%</td><td class="n">64</td><td><span class="badge b-success">Green</span></td><td class="n">4</td></tr>
+        </tbody>
+      </table></div></div>
+
+      <div class="grid2">
+        <div class="frame"><header><h3>Follow-ups from last round</h3></header><div class="surface pad stack small">
+          <div class="b">Harbour Body Co, 30 Oct card</div>
+          <div><span class="tick yes">✓</span>Add BS - Timelapse - 103026 - Win: live, £41 spent</div>
+          <div><span class="tick no">✗</span>Remove BS - Static Offer - 082526 - Win: still on, £12 since</div>
+        </div></div>
+        <div class="frame"><header><h3>Before After keeps working wherever we move it</h3></header><div class="surface pad stack small">
+          <div class="row between"><span>BS - Before After</span><span class="b">worked 3 of 3</span></div>
+          <div class="row between"><span>BS - Timelapse</span><span class="b">worked 2 of 3</span></div>
+          <div class="row between"><span>Plans Concept</span><span class="b">worked 1 of 2</span></div>
+          <div class="row between" style="background:var(--primary-soft);padding:8px 10px;border-radius:10px"><span>Make "prefer Before After in body sculpting" a rule?</span><span class="row"><button class="btn primary sm">Yes</button><button class="btn ghost sm">No</button></span></div>
+        </div></div>
+      </div>
+
+      <div class="frame"><header><h3>What I learned since last time</h3><span class="sub">Lessons are yours to overrule</span></header><div class="surface"><div class="alertrow"><div class="small">"Wait 3 days before judging new laser ads." From a comment on the Velvet Laser card, 30 Oct.</div><span class="row"><button class="btn ghost sm">Keep</button><button class="btn ghost sm">Overrule</button></span></div></div></div>
+
+      <div class="frame"><header><h3>Cards</h3><span class="sub">Ask me is on for all of these</span></header><div class="surface" id="cards">
+        <div class="cardrow open">
+          <div class="cardhead"><div class="row"><span class="b">Harbour Body Co</span><span class="badge b-danger">Changes</span><span class="small muted">BS - Before After (worked 3 of 3)</span></div><span class="row"><button class="btn ghost sm">Edit</button><button class="btn ghost sm">Dismiss</button><button class="btn primary sm">Apply</button></span></div>
+          <div class="cardbody"><div class="copy">📢 ACCOUNT UPDATE - GENERAL UPDATE
+
+🎯 Account Breakdown
+🏥 Client Name: Harbour Body Co
+📅 Data Window: 10/27/26 - 11/02/26
+📜 Previous CPL: £9.85
+📈 Current CPL: £11.62
+
+🎨 Creative Changes
+- Add - BS - Before After - 110326 - Win
+- Remove - BS - Static Offer - 082526 - Win
+
+⚙️ Additional Changes
+n/a
+
+💭 The Thought Process
+CPL moved from £9.85 to £11.62, into red. Static Offer took 38% of spend at £19 per lead, and last round's card to remove it never happened. Before After has won in all 3 body sculpting accounts it moved to, at £6.40 over 14 days in Coastline.
+
+⏳ The Next Steps
+Let the new ads run and evaluate on Friday 6 Nov</div></div>
+        </div>
+        <div class="cardrow"><div class="cardhead"><div class="row"><span class="b">Velvet Laser</span><span class="badge b-warning">Changes</span><span class="small muted">Plans Concept (worked 1 of 2)</span></div><span class="row"><button class="btn ghost sm">Edit</button><button class="btn primary sm">Apply</button></span></div><div class="cardbody"><div class="copy">Same format as above.</div></div></div>
+        <div class="cardrow"><div class="cardhead"><div class="row"><span class="b">Coastline Med Spa</span><span class="badge b-neutral">No changes</span><span class="small muted">Spend stopped: fix payment first</span></div></div><div class="cardbody"><div class="copy">Same format, with the reason in the Thought Process.</div></div></div>
+        <div class="cardrow"><div class="cardhead"><div class="row"><span class="b">Lumen Skin Clinic</span><span class="badge b-success">Green</span><span class="small muted">No changes are needed</span></div></div><div class="cardbody"><div class="copy">Same format, green version.</div></div></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>B. Account inbox</h1></div>
+  <p class="optnote">Accounts on the left, worst first, with one account's card and follow-ups on the right. <b>Good:</b> fast to work through card by card. <b>Less good:</b> the scoreboard and overall picture sit behind buttons, so the playbook's top-down read is lost.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Morning report</h2><div class="sub">Tue 3 Nov · Batch B · 1 alert · 2 cards to approve</div></div><div class="row"><button class="btn ghost sm">Scoreboard</button><button class="btn ghost sm">Lessons</button></div></div>
+    <div class="inbox">
+      <div class="acctlist">
+        <div class="acct"><div><div class="b">Coastline Med Spa</div><div class="small muted">Payment failed</div></div><span class="badge b-danger">Stopped</span></div>
+        <div class="acct on"><div><div class="b">Harbour Body Co</div><div class="small muted">£11.62, up 18%</div></div><span class="badge b-danger">Red</span></div>
+        <div class="acct"><div><div class="b">Velvet Laser</div><div class="small muted">£9.10, up 8%</div></div><span class="badge b-warning">Yellow</span></div>
+        <div class="acct"><div><div class="b">Lumen Skin Clinic</div><div class="small muted">£6.90, down 7%</div></div><span class="badge b-success">Green</span></div>
+      </div>
+      <div class="content">
+        <div class="row between"><h3 style="font-size:17px">Harbour Body Co</h3><span class="row"><button class="btn ghost sm">Edit</button><button class="btn ghost sm">Dismiss</button><button class="btn primary sm">Apply</button></span></div>
+        <div class="frame"><header><h3>Proposed changes</h3></header><div class="surface pad stack small">
+          <div class="row between"><span>Add BS - Before After - 110326 - Win</span><span class="badge b-success">worked 3 of 3</span></div>
+          <div>Remove BS - Static Offer - 082526 - Win</div>
+          <p class="muted">Static Offer took 38% of spend at £19 per lead, and last round's card to remove it never happened.</p>
+        </div></div>
+        <div class="frame"><header><h3>Follow-ups from 30 Oct</h3></header><div class="surface pad stack small">
+          <div><span class="tick yes">✓</span>Add BS - Timelapse - 103026 - Win: live, £41 spent</div>
+          <div><span class="tick no">✗</span>Remove BS - Static Offer - 082526 - Win: still on, £12 since</div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>C. Hub layout with tabs</h1></div>
+  <p class="optnote">The BirdyHub template: metric tabs on top, Birdy's briefing, then tabbed sections. <b>Good:</b> looks like every other hub. <b>Less good:</b> the most clicks to reach cards, and the chart adds little to a batch read.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Morning report</h2><div class="sub">Tue 3 Nov · Batch B</div></div></div>
+    <div class="content">
+      <div class="surface metrics">
+        <div class="metric on"><div class="small muted">Green</div><div class="val">2</div></div>
+        <div class="metric"><div class="small muted">Yellow</div><div class="val">1</div></div>
+        <div class="metric"><div class="small muted">Red</div><div class="val">1</div></div>
+        <div class="metric"><div class="small muted">Alerts</div><div class="val">1</div></div>
+      </div>
+      <div class="answer"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div><h3 style="font-size:15px">Look at Coastline first. Its payment failed on Sunday.</h3><p class="small muted">Harbour moved into red, and last round's change there never happened.</p></div></div>
+      <div class="tabs"><span class="on">Cards 4</span><span>Alerts 1</span><span>Follow-ups 2</span><span>Scoreboard</span><span>Learned 1</span></div>
+      <div class="surface">
+        <div class="alertrow"><div><div class="b">Harbour Body Co</div><div class="small muted">Add BS - Before After · Remove BS - Static Offer</div></div><button class="btn primary sm">Apply</button></div>
+        <div class="alertrow"><div><div class="b">Velvet Laser</div><div class="small muted">Add Plans Concept</div></div><button class="btn primary sm">Apply</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ========== SLACK ========== -->
+<section class="screen" id="slack">
+<div class="option">
+  <div class="opthead"><h1>A. Summary with cards in its thread</h1><span class="tag rec">Recommended</span></div>
+  <p class="optnote">One message in the channel, with each card as a thread reply. <b>Good:</b> the channel stays clean, and each card's discussion stays together for the lessons log. <b>Less good:</b> cards take one more click to see.</p>
+  <div class="slack">
+    <div class="slackhead"># media-buying</div>
+    <div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody">
+      <div class="who">Birdy <span>7:02 AM</span></div>
+      <div class="sk-h">Morning report: Batch B, Tue 3 Nov</div>
+      <div class="sk">1 green, 1 yellow, 2 red or stopped. 2 cards need your OK.</div>
+      <div class="sk-alert">🔴 <b>Coastline Med Spa:</b> payment failed, £0 spend since Sun 1 Nov.</div>
+      <table class="sk-table"><tr><th>Client</th><th>Last</th><th>This</th><th>Zone</th></tr><tr><td>Harbour Body Co</td><td>£9.85</td><td>£11.62</td><td>🔴</td></tr><tr><td>Velvet Laser</td><td>£8.40</td><td>£9.10</td><td>🟡</td></tr><tr><td>Coastline Med Spa</td><td>£7.60</td><td>£7.80</td><td>🟢</td></tr><tr><td>Lumen Skin Clinic</td><td>£7.40</td><td>£6.90</td><td>🟢</td></tr></table>
+      <div style="margin-top:6px"><span class="sk-btn go">Apply all 2</span><span class="sk-btn">Open report</span></div>
+      <div class="sk-thread">4 replies</div>
+    </div></div>
+    <div class="threadbox"><div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody">
+      <div class="who">Birdy <span>7:02 AM</span></div>
+      <div class="sk"><b>📈 Harbour Body Co:</b> £9.85 → £11.62
+<b>Changes</b>
+• Add - BS - Before After - 110326 - Win <i>(worked 3 of 3)</i>
+• Remove - BS - Static Offer - 082526 - Win
+<b>Why:</b> Static Offer took 38% of spend at £19 per lead, and last round's card to remove it never happened.
+<b>Next:</b> evaluate on Friday 6 Nov</div>
+      <div style="margin-top:4px"><span class="sk-btn go">Apply</span><span class="sk-btn">Edit</span><span class="sk-btn">Dismiss</span></div>
+    </div></div></div>
+  </div>
+  <p class="block-note">Built with Slack's header, section, table and actions blocks. Edit opens a Slack form. <b>@Birdy</b> in the thread adds a lesson without Slack needing a new permission.</p>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>B. One channel message per card</h1></div>
+  <p class="optnote">Works like today's Slack suggestions. <b>Good:</b> every card is visible at once. <b>Less good:</b> a batch of 9 clients adds 9 messages to the channel, twice or more a week.</p>
+  <div class="slack">
+    <div class="slackhead"># media-buying</div>
+    <div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody"><div class="who">Birdy <span>7:02 AM</span></div><div class="sk"><b>📈 Harbour Body Co:</b> £9.85 → £11.62, red
+• Add - BS - Before After - 110326 - Win
+• Remove - BS - Static Offer - 082526 - Win</div><div><span class="sk-btn go">Apply</span><span class="sk-btn">Edit</span></div></div></div>
+    <div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody"><div class="who">Birdy <span>7:02 AM</span></div><div class="sk"><b>📈 Velvet Laser:</b> £8.40 → £9.10, yellow
+• Add - Plans Concept - 110326 - Win</div><div><span class="sk-btn go">Apply</span><span class="sk-btn">Edit</span></div></div></div>
+    <div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody"><div class="who">Birdy <span>7:02 AM</span></div><div class="sk"><b>🟢 Lumen Skin Clinic:</b> £7.40 → £6.90. No changes are needed.</div></div></div>
+  </div>
+</div>
+
+<div class="option">
+  <div class="opthead"><h1>C. Digest only, decide in Birdy</h1></div>
+  <p class="optnote">A short summary with a link. <b>Good:</b> simplest, and all decisions happen in one place. <b>Less good:</b> this drops most of what the ClickUp card did, and nobody can act from Slack.</p>
+  <div class="slack">
+    <div class="slackhead"># media-buying</div>
+    <div class="msg"><span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt="Birdy"></span><div class="msgbody"><div class="who">Birdy <span>7:02 AM</span></div><div class="sk"><b>Morning report: Batch B.</b> 1 green, 1 yellow, 2 red or stopped. Coastline's payment failed on Sunday. 2 cards need your OK.</div><div><span class="sk-btn go">Open report</span></div></div></div>
+  </div>
+</div>
+<div class="foot"></div>
+</section>
+
+<!-- ========== SETTINGS ========== -->
+<section class="screen" id="settings">
+<div class="option">
+  <div class="opthead"><h1>Agent settings: Flag, Ask me or Auto</h1><span class="tag">One design</span></div>
+  <p class="optnote">Your decision as a screen: a mode per change type, with per-client overrides. Alerts are always Flag. The buttons here switch.</p>
+  <div class="app">
+    <div class="topbar"><div><h2>Birdy Media Buying Agent</h2><div class="sub">Settings</div></div><span class="badge b-success">Live</span></div>
+    <div class="content">
+      <div class="frame"><header><h3>What Birdy does with each change</h3></header><div class="surface tablewrap"><table>
+        <thead><tr><th></th><th>Remove ad</th><th>Add ad</th><th>Bring back a winner</th></tr></thead>
+        <tbody>
+          <tr><td class="b">All clients</td><td><span class="seg"><button>Flag</button><button>Ask me</button><button class="on">Auto</button></span></td><td><span class="seg"><button>Flag</button><button class="on">Ask me</button><button>Auto</button></span></td><td><span class="seg"><button>Flag</button><button class="on">Ask me</button><button>Auto</button></span></td></tr>
+          <tr><td>Velvet Laser <div class="small muted">Override</div></td><td><span class="seg"><button>Flag</button><button class="on">Ask me</button><button>Auto</button></span></td><td><span class="seg"><button class="on">Flag</button><button>Ask me</button><button>Auto</button></span></td><td class="muted">Same as all clients</td></tr>
+        </tbody>
+      </table></div><footer style="padding:10px 16px"><button class="btn ghost sm">+ Override for a client</button></footer></div>
+      <div class="grid2">
+        <div class="frame"><header><h3>What each mode means</h3></header><div class="surface pad stack small">
+          <div><b>Flag:</b> posts the card. People make the change, and Birdy checks it on the next run.</div>
+          <div><b>Ask me:</b> posts the card with Apply. Nothing changes until someone approves it.</div>
+          <div><b>Auto:</b> makes the change within your guardrails, then posts what it did.</div>
+        </div></div>
+        <div class="frame"><header><h3>Lessons</h3><span class="badge b-neutral">0</span></header><div class="surface pad stack small">
+          <p class="muted">Nothing yet. When you edit a card, overrule Birdy or comment on a card in Slack, the lesson shows up here, dated and yours to remove.</p>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="foot"></div>
+</section>
+
+<script>
+const show=(s)=>{document.querySelectorAll('.screen').forEach(e=>e.classList.toggle('on',e.id===s));document.querySelectorAll('.mocknav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));window.scrollTo(0,0);try{location.hash=s}catch(e){}};
+document.querySelectorAll('.mocknav button').forEach(b=>b.onclick=()=>show(b.dataset.s));
+if(location.hash&&document.getElementById(location.hash.slice(1)))show(location.hash.slice(1));
+window.addEventListener('hashchange',()=>{const s=location.hash.slice(1);if(document.getElementById(s)&&!document.getElementById(s).classList.contains('on'))show(s)});
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')});
+document.querySelectorAll('#cards .cardhead').forEach(h=>h.onclick=(e)=>{if(e.target.closest('button'))return;h.parentElement.classList.toggle('open')});
+</script>
+</body>
+</html>

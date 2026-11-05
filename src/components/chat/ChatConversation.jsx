@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import Link from "next/link"
 import { apiRequest } from "@/lib/api"
 import { useChat, sendChatMessage, seedSessionId, markUISubmitted } from "@/lib/chat-store"
+import { announceViewOps, readViewCatalogues } from "@/lib/view-catalogues"
 import { useAiCredentials } from "@/hooks/useAiCredentials"
 import { useCredits } from "@/hooks/useCredits"
 import AiCredentialsEmptyState from "@/components/chat/AiCredentialsEmptyState"
@@ -47,6 +48,10 @@ import { startersFor } from "@/lib/chat-starters"
  *   onDashboardOps?         (ops, data) => { applied, diff, error } — applies the reply's ops
  *   onUndoDashboardOps?     () => boolean — takes back the latest applied reply's ops; offered
  *                           as an Undo on that reply only (true when it undid them)
+ *   renderAfterMessage?     (message, index) => node — extra content under one of Birdy's
+ *                           replies (the agent training chat's "rule updated" chips)
+ *   sendRef?                ref the surface's send(text) is written to, so the page can post
+ *                           a message through the same gates as the composer
  *
  * The three dashboard props only reach the store-owned (uncontrolled) send;
  * the dashboards page is uncontrolled, and /ask-birdy has no dashboard.
@@ -58,6 +63,7 @@ export default function ChatConversation({
   sessionId: controlledSessionId,
   onSessionId,
   page = null,
+  agentId = null,
   clientGroupId = null,
   clientName = null,
   onMessagesChange,
@@ -82,6 +88,8 @@ export default function ChatConversation({
   getDashboardSummary = null,
   onDashboardOps = null,
   onUndoDashboardOps = null,
+  renderAfterMessage = null,
+  sendRef = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -171,13 +179,14 @@ export default function ChatConversation({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, loading])
 
-  const sendMessage = useCallback(async (text) => {
-    if (!text?.trim() || loading || !configured) return
+  const sendMessage = useCallback(async (text, attachments) => {
+    // Resolves false when the message was not sent (the surface's sendRef callers use it).
+    if ((!text?.trim() && !attachments?.length) || loading || !configured) return false
     if (outOfCredits) {
       toast.error("You're out of Birdy Credits", {
         description: "Top up to keep using Birdy AI.",
       })
-      return
+      return false
     }
     setInput("")
 
@@ -186,10 +195,12 @@ export default function ChatConversation({
       await sendChatMessage(
         sessionKey,
         {
-          text, page,
-          clientGroupId: showScopePicker ? scope.id : null,
-          clientName: showScopePicker && scope.id ? scope.name : null,
+          text, page, agentId,
+          // Without the picker the surface's own client (if any) still goes.
+          clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
+          clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
           dashboardId,
+          attachments,
           getSummary: () => getDashboardSummaryRef.current?.(),
         },
         {
@@ -213,15 +224,21 @@ export default function ChatConversation({
           onSettled: () => refreshCredits?.(),
         },
       )
-      return
+      return true
     }
 
-    setLocalMessages(prev => [...prev, { role: "user", content: text }])
+    setLocalMessages(prev => [...prev, { role: "user", content: text, ...(attachments?.length ? { attachments } : {}) }])
     setLocalLoading(true)
     try {
       const res = await apiRequest("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: scope.id, client_name: scope.id ? scope.name : null }),
+        body: JSON.stringify({
+          message: text, session_id: sessionId, page,
+          ...(agentId ? { agent_id: agentId } : {}),
+          client_group_id: scope.id, client_name: scope.id ? scope.name : null,
+          view_catalogues: readViewCatalogues(),
+          ...(attachments?.length ? { attachments } : {}),
+        }),
       })
       if (res.status === 412) {
         // Credentials were removed (e.g. in another tab) since this component last checked.
@@ -251,7 +268,11 @@ export default function ChatConversation({
         onSessionIdRef.current?.(data.session_id)
       }
       const toolsUsed = data.tools_used || []
-      setLocalMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
+      announceViewOps(data.page_view_ops)
+      setLocalMessages(prev => [...prev, {
+        role: "assistant", content: data.reply, tools_used: toolsUsed,
+        ...(data.page_view_ops?.length ? { page_view_ops: data.page_view_ops } : {}),
+      }])
       toolsUsed.forEach(t => onToolUsedRef.current?.(t))
       // Refresh the credit balance so the indicator reflects this question's spend.
       refreshCredits?.()
@@ -260,7 +281,17 @@ export default function ChatConversation({
     } finally {
       setLocalLoading(false)
     }
-  }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+    return true
+  }, [loading, sessionId, sessionKey, isControlled, page, agentId, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+
+  // Expose send to the surface (the agent training page posts practice follow-ups).
+  useEffect(() => {
+    if (!sendRef) return
+    sendRef.current = sendMessage
+    return () => {
+      if (sendRef.current === sendMessage) sendRef.current = null
+    }
+  }, [sendRef, sendMessage])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
@@ -321,17 +352,28 @@ export default function ChatConversation({
           />
         ) : (
           <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
-            {messages.map((m, i) => isHidden(m, i) ? null : (
-              <MessageBubble
-                key={i}
-                message={m}
-                messageIndex={i}
-                onUISubmit={handleUISubmit}
-                submittedUIs={submittedUIs}
-                widthClass={bubbleWidthClass}
-                onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}
-              />
-            ))}
+            {messages.map((m, i) => {
+              if (isHidden(m, i)) return null
+              const bubble = (
+                <MessageBubble
+                  key={i}
+                  message={m}
+                  messageIndex={i}
+                  onUISubmit={handleUISubmit}
+                  onSend={sendMessage}
+                  submittedUIs={submittedUIs}
+                  widthClass={bubbleWidthClass}
+                  onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}
+                />
+              )
+              const after = m.role !== "user" && renderAfterMessage ? renderAfterMessage(m, i) : null
+              return after ? (
+                <div key={i} className="space-y-2">
+                  {bubble}
+                  {after}
+                </div>
+              ) : bubble
+            })}
             {loading && <TypingIndicator />}
             {loading && slowNotice && showSlowNotice && (
               <p className="pl-[34px] text-[12px] text-pd-faint">
@@ -357,7 +399,12 @@ export default function ChatConversation({
           <ChatComposer
             value={input}
             onChange={setInput}
-            onSend={() => sendMessage(input)}
+            onSend={(attachments) => {
+              // Sync verdict for the composer: false keeps its chips.
+              if ((!input.trim() && !attachments.length) || loading || outOfCredits) return false
+              sendMessage(input, attachments)
+              return true
+            }}
             disabled={loading || outOfCredits}
             compact={composerCompact}
             placeholder={composerPlaceholder}

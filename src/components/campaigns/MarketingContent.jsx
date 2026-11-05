@@ -11,9 +11,11 @@ import {
   Grid3X3,
   FileBarChart,
   Users,
+  Sparkles,
   X,
   Info,
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
@@ -21,6 +23,7 @@ import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
@@ -41,6 +44,8 @@ import { usePageHeader } from "@/components/page-header"
 // root layout; pdFontClass only sets Inter as the base.
 import { pdFontClass } from "@/lib/pd-fonts"
 import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart, PageTabPanel, PageTabs } from "@/components/portfolio"
+import { CreativesHero } from "@/components/creatives/CreativesHero"
+import { CreativesTab } from "@/components/creatives/CreativesTab"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
@@ -85,6 +90,7 @@ const SECTION_TABS = [
   { key: "adsets", label: "Ad Sets", icon: Grid3X3 },
   { key: "ads", label: "Ads", icon: FileBarChart },
   { key: "leads", label: "Leads", icon: Users },
+  { key: "creatives", label: "Creatives", icon: Sparkles },
 ]
 
 // Ties the tablist to the panel it swaps, for anyone navigating by role.
@@ -99,6 +105,8 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   // GoHighLevel's own attribution rather than a Meta form, where it came from
   // matters more than whether it was Facebook or Instagram. platform is still
   // one click away in the Columns menu.
+  // The Creatives tab has its own table (CreativesTab); this keeps the shared lookups total.
+  creatives: [],
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "lead_source", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
 
@@ -124,6 +132,11 @@ export function MarketingContent({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState("campaigns")
+  // ?tab=creatives (or a ?creative= deep link) lands on the Creatives section.
+  const urlParams = useSearchParams()
+  useEffect(() => {
+    if (urlParams?.get("tab") === "creatives" || urlParams?.get("creative")) setActiveTab("creatives")
+  }, [urlParams])
   // Ads-tab-only layout switch: the same rows and column order drawn either as
   // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
   const [adsView, setAdsView] = useState("table")
@@ -572,10 +585,14 @@ export function MarketingContent({
     [datePreset]
   )
 
+  // A single-group page (/clients/[id]) has no picker, so its one group scopes the tests.
+  const creativesGroup = selectedClientGroup ?? (clientGroups.length === 1 ? clientGroups[0].id : undefined)
+
   // ── Saved column views ─────────────────────────────────────────────────
   // Scoped per tab: each of the four tables has its own column catalogue, so
   // its own set of views. Switching tabs reloads the hook against that key.
-  const tabViewKey = `mktg_${activeTab}`
+  // The Creatives tab keeps its own views and catalogue (CreativesTab), so none here.
+  const tabViewKey = activeTab === "creatives" ? null : `mktg_${activeTab}`
   const tabViewsLoaded = {
     campaigns: loadedCampaigns,
     adsets: loadedAdsets,
@@ -585,7 +602,12 @@ export function MarketingContent({
 
   const applyColumnView = useCallback((s) => {
     if (!Array.isArray(s.visibleColumns)) return
-    setVisibleColumns(prev => ({ ...prev, [activeTab]: s.visibleColumns }))
+    // Same rule as setTabColumns: "name" stays outside the Leads tab, so a
+    // view Birdy saved without it can't hide the row labels.
+    const ids = activeTab === "leads" || s.visibleColumns.includes("name")
+      ? s.visibleColumns
+      : ["name", ...s.visibleColumns]
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: ids }))
   }, [activeTab])
 
   const pageViews = usePageViews(tabViewKey, {
@@ -874,6 +896,12 @@ export function MarketingContent({
     label: c.label,
     source: c.type,
   }))
+
+  useRememberViewCatalogue(tabViewKey, {
+    label: `Marketing Hub · ${SECTION_TABS.find(t => t.key === activeTab)?.label ?? activeTab}`,
+    path: "/campaigns",
+    columns: columnCatalogue,
+  })
 
   // "name" is not user-toggleable outside the Leads tab, so it survives every
   // write — matching what clearAll has always done.
@@ -1283,7 +1311,10 @@ export function MarketingContent({
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <StaggerItem className={`${pdFontClass} grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]`}>
+        <StaggerItem className={`${pdFontClass} min-w-0 ${activeTab === "creatives" ? "" : "grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
+          {activeTab === "creatives" ? (
+            <CreativesHero clientGroupId={creativesGroup} />
+          ) : (<>
           <MetricTabsChart
             tabs={heroTabs}
             activeKey={activeChartMetric}
@@ -1310,6 +1341,7 @@ export function MarketingContent({
           ) : (
             <BirdyBriefing parts={BRIEFING_WAITING} />
           )}
+          </>)}
         </StaggerItem>
 
         {/* ── Landing page funnel ──────────────────────────────────────────
@@ -1319,6 +1351,7 @@ export function MarketingContent({
             produced. What happened on the page in between has never been on
             this screen, and for a client running their own landing page it is
             usually where the money goes. */}
+        {activeTab !== "creatives" && (
         <StaggerItem>
           <LandingFunnel
             funnel={landingFunnel}
@@ -1327,6 +1360,7 @@ export function MarketingContent({
             groupId={funnelGroupId}
           />
         </StaggerItem>
+        )}
 
         {/* Tabs */}
         <StaggerItem className="flex w-full flex-col">
@@ -1350,6 +1384,7 @@ export function MarketingContent({
               {activeTab === "ads" && (
                 <AdsViewSwitch value={adsView} onChange={setAdsView} />
               )}
+              {activeTab !== "creatives" && (<>
               <Input
                 type="search"
                 placeholder={`Search ${activeTab}…`}
@@ -1365,12 +1400,14 @@ export function MarketingContent({
                 views={pageViews}
                 onSaveDefault={saveDefaultColumns}
               />
+              </>)}
             </div>
           </div>
 
           <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
 
             {/* Drill-down breadcrumb */}
+            {activeTab !== "creatives" && (
             <DrillDownBreadcrumb
               selectedCampaign={selectedCampaign}
               selectedAdSet={selectedAdSet}
@@ -1380,9 +1417,10 @@ export function MarketingContent({
               onClearAd={clearAd}
               onTabChange={setActiveTab}
             />
+            )}
 
             {/* Advanced filter conditions */}
-            {filterConditions.length > 0 && (
+            {activeTab !== "creatives" && filterConditions.length > 0 && (
               <div className="border border-pd-border rounded-xl my-3 text-left">
                 <div className="flex items-center justify-between">
                   <h3 className="font-pd-display text-sm px-4 mt-2 font-semibold text-pd-ink">Active Filters</h3>
@@ -1438,7 +1476,7 @@ export function MarketingContent({
             )}
 
             <div className="flex justify-end items-center gap-3 flex-1">
-              {(filterConditions.length > 0 || searchTerm) && (
+              {activeTab !== "creatives" && (filterConditions.length > 0 || searchTerm) && (
                 <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
                   <X className="h-4 w-4" /> Clear
                 </Button>
@@ -1446,7 +1484,9 @@ export function MarketingContent({
             </div>
 
             {/* Table */}
-            {error ? (
+            {activeTab === "creatives" ? (
+              <CreativesTab clientGroupId={creativesGroup} />
+            ) : error ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface p-16">
                 <div className="rounded-full bg-pd-danger-bg p-3 mb-4">
                   <X className="h-6 w-6 text-pd-danger" />

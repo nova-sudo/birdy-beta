@@ -1,0 +1,272 @@
+"use client"
+
+import * as React from "react"
+import { ChevronRight } from "lucide-react"
+import { Badge, Button, ProgressBar } from "@/components/ds"
+import StyledTable from "@/components/ui/table-container"
+import { currencySymbol } from "@/lib/chat-viz"
+import { adCurrency, adFloorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
+import { AccountDotStrip } from "./AccountDotStrip"
+import { VerdictBadge } from "./VerdictBadge"
+
+const num = (v) => (Number.isFinite(Number(v)) && v != null ? Number(v) : null)
+const pct = (v) => (num(v) == null ? "—" : `${Number(v).toFixed(1).replace(/\.0$/, "")}%`)
+const money = (v, cur) => `${currencySymbol(cur)}${Math.round(num(v) ?? 0).toLocaleString("en-US")}`
+const fmtDate = (iso) => {
+  const d = iso ? new Date(iso) : null
+  return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null
+}
+
+const SCORE_LABEL = { pass: "Pass", fail: "Fail", scoring: "Scoring", removed: "Removed in Meta" }
+const BAR_TONE = { success: "success", danger: "danger", warning: "warning", muted: "primary" }
+
+function childBadge(ad) {
+  if (ad.post_state === "failed") return { label: "Failed", tone: "danger" }
+  if (ad.post_state === "removed" || ad.score?.state === "removed") return { label: "Removed in Meta", tone: "muted" }
+  if (ad.post_state === "pending" || ad.post_state === "uploading") return { label: "Posting", tone: "neutral" }
+  const state = ad.score?.state
+  return { label: SCORE_LABEL[state] ?? "Scoring", tone: scoreTone(state ?? "scoring") }
+}
+
+// Which row action a child offers (null hides the cell in the mobile card list).
+function childAction(ad) {
+  if (ad.post_state === "failed") return "retry"
+  if (ad.score?.state === "fail" && ad.post_state !== "removed") return "pause"
+  return null
+}
+
+// Short numeric columns, so all nine fit a laptop without sideways scrolling.
+const NARROW = "min-w-[96px]"
+
+const DEFAULT_CURRENCY = "GBP"
+// Parent rows show their test's currency, children the ad's own; both fall back to a sibling test's.
+const rowCurrency = (r) => (r.__child ? adCurrency(r, r.__test, r.__cur) : testCurrency(r, r.__cur))
+
+function Progress({ value, label, tone }) {
+  return (
+    <div className="flex min-w-24 flex-col gap-1">
+      <ProgressBar value={value} tone={tone} label="Progress to verdict" />
+      <span className="text-[11px] text-pd-faint">{label}</span>
+    </div>
+  )
+}
+
+/** Rows: one parent per test, followed by its ads (flagged `__child`) when expanded. */
+function toRows(tests, expanded) {
+  const cur = tests.map((t) => testCurrency(t)).find(Boolean) ?? DEFAULT_CURRENCY
+  return tests.flatMap((t) => [
+    { ...t, __cur: cur },
+    ...(expanded.has(t.id) ? (t.ads ?? []).map((ad) => ({ ...ad, __child: true, __test: t, __cur: cur })) : []),
+  ])
+}
+
+/** The columns a viewer can switch on and off; Creative stays on. */
+export const CREATIVE_COLUMNS = [
+  { id: "creative", label: "Creative" },
+  { id: "accounts", label: "Accounts" },
+  { id: "spend", label: "Spend" },
+  { id: "leads", label: "Leads" },
+  { id: "cpl", label: "CPL vs target" },
+  { id: "ctr", label: "CTR" },
+  { id: "hook", label: "Hook rate" },
+  { id: "progress", label: "Progress to verdict" },
+  { id: "verdict", label: "Verdict" },
+]
+
+export function CreativesTable({ tests = [], loading = false, visibleColumns, onOpen, onAccountAction }) {
+  const [expanded, setExpanded] = React.useState(() => new Set())
+  const rows = React.useMemo(() => toRows(tests, expanded), [tests, expanded])
+  const toggle = React.useCallback((id) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  }, [])
+
+  const columns = React.useMemo(
+    () => [
+      {
+        id: "creative",
+        header: "Creative",
+        // The name column's first line, second line and expand toggle (see StyledTable).
+        cell: (_, r) => (r.__child ? (r.account_name ?? r.ad_account_id) : r.name),
+        sub: (r) => {
+          if (r.__child) return r.adset_name
+          const date = fmtDate(r.created_at)
+          return [r.code, date && `posted ${date}`].filter(Boolean).join(" · ")
+        },
+        lead: (r) => {
+          if (r.__child) return <span className="w-8 shrink-0" aria-hidden />
+          if (!r.ads?.length) return <span className="size-6 shrink-0" aria-hidden />
+          const open = expanded.has(r.id)
+          return (
+            <button
+              type="button"
+              aria-label={`${open ? "Collapse" : "Expand"} ${r.name}`}
+              aria-expanded={open}
+              className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-md text-pd-subtle hover:bg-pd-divider"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggle(r.id)
+              }}
+            >
+              <ChevronRight className={`size-4 transition-transform ${open ? "rotate-90" : ""}`} />
+            </button>
+          )
+        },
+      },
+      {
+        id: "accounts",
+        header: "Accounts",
+        cell: (_, r) => {
+          if (!r.__child) return <AccountDotStrip ads={r.ads ?? []} status={r.status} />
+          const b = childBadge(r)
+          return (
+            <Badge tone={b.tone} size="sm">
+              {b.label}
+            </Badge>
+          )
+        },
+      },
+      {
+        id: "spend",
+        header: "Spend",
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => money(r.__child ? r.score?.spend : r.summary?.spend, rowCurrency(r)),
+      },
+      {
+        id: "leads",
+        header: "Leads",
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => num(r.__child ? r.score?.leads : r.summary?.leads) ?? 0,
+      },
+      {
+        id: "cpl",
+        header: "CPL vs target",
+        align: "right",
+        cell: (_, r) => {
+          const cur = rowCurrency(r)
+          const score = r.__child ? r.score : r.summary
+          const target = num((r.__child ? r.__test : r).targets?.metrics?.cpl?.value)
+          return (
+            <>
+              {formatCpl(score, cur)}
+              {!r.__child && target != null && (
+                <span className="ml-1 text-[11px] text-pd-faint">
+                  ≤ {currencySymbol(cur)}
+                  {target}
+                </span>
+              )}
+            </>
+          )
+        },
+      },
+      {
+        id: "ctr",
+        header: "CTR",
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => pct(r.__child ? r.score?.ctr : r.summary?.ctr),
+      },
+      {
+        id: "hook",
+        header: "Hook",
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => {
+          const isImage = !r.__child && r.creative?.format === "image"
+          return isImage ? "—" : pct(r.__child ? r.score?.hook_rate : r.summary?.hook_rate)
+        },
+      },
+      {
+        id: "progress",
+        header: "Progress to verdict",
+        cell: (_, r) => {
+          if (r.__child) {
+            const fp = adFloorProgress(r, r.__test, r.__cur)
+            return <Progress value={fp.pct * 100} label={fp.label} tone={BAR_TONE[scoreTone(r.score?.state)]} />
+          }
+          const ads = (r.ads ?? []).filter((a) => a.post_state !== "removed")
+          const done = ads.filter((a) => a.score?.state === "pass" || a.score?.state === "fail").length
+          const total = ads.length
+          const cur = rowCurrency(r)
+          if (r.status === "winner" || r.status === "loser" || r.status === "inconclusive") {
+            return <Progress value={100} label="done" tone={r.status === "winner" ? "success" : r.status === "loser" ? "danger" : undefined} />
+          }
+          if (!total || done === 0) {
+            const best = ads.reduce((m, a) => Math.max(m, adFloorProgress(a, r, cur).pct), 0)
+            return <Progress value={best * 100} label={best > 0 ? `${done}/${total} scored` : "not started"} />
+          }
+          return <Progress value={(done / total) * 100} label={`${done}/${total} scored`} />
+        },
+      },
+      {
+        id: "verdict",
+        header: "Verdict",
+        cell: (_, r) => {
+          if (!r.__child) return <VerdictBadge status={r.status} />
+          if (r.post_state === "failed") {
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                title={r.post_error?.message ?? (typeof r.post_error === "string" ? r.post_error : undefined)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAccountAction?.(r.__test, stripChild(r), "retry")
+                }}
+              >
+                Retry
+              </Button>
+            )
+          }
+          if (r.score?.state === "fail" && r.post_state !== "removed") {
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-danger-ink"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAccountAction?.(r.__test, stripChild(r), "pause")
+                }}
+              >
+                Pause here
+              </Button>
+            )
+          }
+          return null
+        },
+      },
+    ],
+    [expanded, toggle, onAccountAction]
+  )
+
+  const columnVisibility = React.useMemo(
+    () =>
+      Object.fromEntries(
+        CREATIVE_COLUMNS.map((c) => [c.id, !visibleColumns || c.id === "creative" || visibleColumns.includes(c.id)])
+      ),
+    [visibleColumns]
+  )
+
+  return (
+    <StyledTable
+      columns={columns}
+      data={rows}
+      isLoading={loading}
+      columnVisibility={columnVisibility}
+      onRowClick={(r) => onOpen?.(r.__child ? r.__test.id : r.id)}
+      emptyMessage={{ title: "No creative tests here", subtitle: "Try another filter or search" }}
+      paginate={false}
+    />
+  )
+}
+
+// Hand callers the original ad object, not the render wrapper.
+function stripChild({ __child, __test, __cur, ...ad }) {
+  return ad
+}

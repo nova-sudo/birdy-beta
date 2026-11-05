@@ -18,6 +18,7 @@
 
 import { useSyncExternalStore } from "react"
 import { toast } from "sonner"
+import { announceViewOps, readViewCatalogues } from "@/lib/view-catalogues"
 import { apiRequest } from "@/lib/api"
 import { startJob, finishJob } from "@/lib/jobs-store"
 import { openBirdyChat } from "@/lib/ask-birdy"
@@ -103,9 +104,12 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   if (chat().loading) return
   const generation = generations.get(sessionKey) ?? 0
   const stale = () => (generations.get(sessionKey) ?? 0) !== generation
-  const { text, page, clientGroupId, clientName, dashboardId, getSummary } = payload
+  const { text, page, agentId, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
 
-  chat().messages = [...chat().messages, { role: "user", content: text }]
+  chat().messages = [
+    ...chat().messages,
+    { role: "user", content: text, ...(attachments?.length ? { attachments } : {}) },
+  ]
   chat().loading = true
   emit(sessionKey)
 
@@ -125,11 +129,15 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         message: text,
         session_id: chat().sessionId,
         page,
+        // undefined drops out of the JSON, so other pages' bodies are unchanged.
+        agent_id: agentId || undefined,
         client_group_id: clientGroupId,
         client_name: clientName,
         // undefined drops out of the JSON, so other pages' bodies are unchanged.
         dashboard_id: dashboardId ?? undefined,
         summary: dashboardId ? getSummary?.() : undefined,
+        view_catalogues: readViewCatalogues(),
+        attachments: attachments?.length ? attachments : undefined,
       }),
     })
 
@@ -170,6 +178,13 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       assistant.dashboard_applied = result?.applied ?? false
       assistant.dashboard_error = result?.error
     }
+    // Saved views Birdy made: the open table applies them, the bubble shows a receipt.
+    if (data.page_view_ops?.length) {
+      announceViewOps(data.page_view_ops)
+      assistant.page_view_ops = data.page_view_ops
+    }
+    // The agent training tools echo what they changed; kept for the "rule updated" chips.
+    if (data.agent_changes?.length) assistant.agent_changes = data.agent_changes
     chat().messages = [...chat().messages, assistant]
     toolsUsed.forEach((t) => handlers.onToolUsed?.(t))
 

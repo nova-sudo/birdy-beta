@@ -11,7 +11,7 @@ import {
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
 // The header controls only render on the dashboard route.
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // next/font hits the network at module load, which a unit test has no business
