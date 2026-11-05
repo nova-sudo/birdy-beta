@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ChevronDown, Upload } from "lucide-react"
+import { Upload } from "lucide-react"
 
 import {
   Badge,
@@ -20,8 +20,8 @@ import {
 } from "@/components/ds"
 import { cn } from "@/lib/utils"
 import { IMAGE_ACCEPT, VIDEO_ACCEPT, uploadCreativeMedia, validateCreativeFile } from "@/lib/creative-upload"
-import { LINE_BUSY, creativeName, openLines, reasonCopy, undoOpen } from "@/lib/stock-agent-api"
-import { ZONES, cplText } from "./CplBars"
+import { LINE_BUSY, openLines, reasonCopy, shortDay, undoOpen } from "@/lib/stock-agent-api"
+import { count, cplText } from "./cpl"
 import { MODE_LABELS } from "./ModesTable"
 import { usePress } from "./usePress"
 
@@ -31,7 +31,7 @@ const STATUS = {
   partly_applied: { tone: "warning", text: "Partly applied" },
   dismissed: { tone: "neutral", text: "Dismissed" },
   flagged: { tone: "info", text: "Flag only" },
-  superseded: { tone: "neutral", text: "Replaced by a newer card" },
+  superseded: { tone: "neutral", text: "Replaced by a newer card", short: "Replaced" },
 }
 const LINE_STATES = {
   queued: { tone: "info", text: "Queued" },
@@ -53,27 +53,17 @@ const OUTCOME_WORDS = {
 }
 const FALLBACK = "That didn't work. Try again."
 
-const usDate = (iso) => {
-  const [y, m, d] = String(iso ?? "").slice(0, 10).split("-")
-  return d ? `${m}/${d}/${y.slice(2)}` : ""
-}
-const windowText = (w) => (w?.start && w?.end ? `${usDate(w.start)} - ${usDate(w.end)}` : "n/a")
-const firstSentence = (text) => String(text ?? "").split(/(?<=\.)\s/)[0]
+/** A card's status, once it has one worth showing over its count of changes. */
+export const cardStatus = (card) => (card.has_newer ? STATUS.superseded : STATUS[card.status])
 
-/** The short line beside the client's name. */
-function headline(card) {
-  const lines = card.lines ?? []
-  if (lines.length === 0) return card.tag === "green" ? "No changes are needed" : firstSentence(card.thought_process)
-  const proven = lines.find((ln) => ln.kind === "add" && ln.record?.moves > 0)
-  if (proven) return `${creativeName(proven.ad_name)} (worked ${proven.record.won} of ${proven.record.moves})`
-  return lines.map((ln) => creativeName(ln.ad_name)).join(", ")
-}
+const isReplaced = (card) => card.status === "superseded" || card.has_newer
+const canChangeLines = (card, readOnly) => !readOnly && !isReplaced(card) && ACTIONABLE.includes(card.status)
 
-function TagBadge({ card }) {
-  if (card.tag === "changes") return <Badge tone={ZONES[card.zone]?.tone ?? "primary"} size="sm">Changes</Badge>
-  if (card.tag === "green") return <Badge tone="success" size="sm">Green</Badge>
-  return <Badge tone="neutral" size="sm">No changes</Badge>
-}
+/** How many of a card's lines are stuck until someone acts. */
+export const linesNeedingYou = (card, readOnly = false) =>
+  canChangeLines(card, readOnly) ? (card.lines ?? []).filter((ln) => NEEDS_A_PERSON.includes(ln.state)).length : 0
+
+export const cardWorking = (card) => (card.lines ?? []).some((ln) => LINE_BUSY.includes(ln.state))
 
 /** The file an Add needs, by the backend's own rule (`add._is_video`): a video when the source has a video id, else an image. */
 function fileFor(line) {
@@ -268,35 +258,51 @@ function DismissDialog({ card, actions, onClose }) {
   )
 }
 
+function Section({ title, children }) {
+  return (
+    <section className="flex flex-col gap-1.5">
+      <h4 className="text-xs font-semibold text-muted-foreground">{title}</h4>
+      {children}
+    </section>
+  )
+}
+
+function Stat({ label, children }) {
+  return (
+    <div className="min-w-0 rounded-control bg-frame px-3 py-2">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="num truncate text-sm font-semibold">{children}</div>
+    </div>
+  )
+}
+
+const Prose = ({ children }) => <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{children}</p>
+
 /**
- * One client's card: a collapsed row with its decisions, opening to the playbook's format and each line's state.
+ * One client's card in the report's side panel: its numbers, then what Birdy would change and why.
+ * `problems` sits between the two, as what's wrong comes before what to do about it.
  * A read-only (preview) card offers nothing to press. One a newer card replaced offers only Undo, where the server allows it.
  */
-export function CardRow({ card, actions, readOnly = false, disabled = false }) {
-  const [open, setOpen] = useState(false)
+export function CardPanel({ card, actions, readOnly = false, disabled = false, problems = null }) {
   const { busy, error, press: run } = usePress(FALLBACK)
   const [message, setMessage] = useState(null)
   const [dialog, setDialog] = useState(null)
   const [progress, setProgress] = useState(0)
 
   const lines = card.lines ?? []
-  const status = card.has_newer ? STATUS.superseded : STATUS[card.status]
-  const replaced = card.status === "superseded" || card.has_newer
+  const replaced = isReplaced(card)
   const off = disabled || Boolean(busy)
   const canApply = !readOnly && openLines(card).length > 0
   // Only a card proposing changes has anything to edit or decline: green and no-changes cards never have lines.
   const decidable = !readOnly && !replaced && card.tag === "changes"
   const canEdit = decidable && EDITABLE.includes(card.status)
   const canDismiss = decidable && [...EDITABLE, "partly_applied"].includes(card.status)
-  const canChange = !readOnly && !replaced && ACTIONABLE.includes(card.status)
-  const needsYou = canChange ? lines.filter((ln) => NEEDS_A_PERSON.includes(ln.state)).length : 0
-  const working = lines.some((ln) => LINE_BUSY.includes(ln.state))
+  const canChange = canChangeLines(card, readOnly)
 
-  // Whatever comes back, the card opens: a line's note or error is the rest of the answer.
+  // A line's note or error is the rest of the answer, so the words here only add what it doesn't say.
   const press = async (key, fn, done) => {
     setMessage(null)
     const res = await run(key, fn)
-    setOpen(true)
     if (res?.reason) setMessage({ tone: res.ok === false ? "warning" : "info", text: res.reason })
     else if (OUTCOME_WORDS[res?.outcome]) setMessage({ tone: "info", text: OUTCOME_WORDS[res.outcome] })
     else if (res && done) setMessage({ tone: "success", text: done(res) })
@@ -317,25 +323,19 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
   }
   // A line already showing the same words doesn't need them twice.
   const showMessage = message && !lines.some((ln) => ln.error === message.text || ln.note === message.text)
+  const w = card.window
+  const status = cardStatus(card)
+  const needsYou = linesNeedingYou(card, readOnly)
+  const hasState = Boolean(status) || needsYou > 0 || cardWorking(card)
 
   return (
-    <article aria-label={card.client_name} className="border-b last:border-b-0">
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-3">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-[1_1_16rem] flex-wrap items-center gap-2.5 rounded-control text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <ChevronDown aria-hidden className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
-          <span className="text-sm font-semibold">{card.client_name}</span>
-          <TagBadge card={card} />
+    <div className="flex flex-col gap-4">
+      {(hasState || canEdit || canDismiss || canApply) && (
+        <div className="flex flex-wrap items-center gap-2">
           {status && <Badge tone={status.tone} size="sm">{status.text}</Badge>}
           {needsYou > 0 && <Badge tone="danger" size="sm">{needsYou} {needsYou === 1 ? "needs" : "need"} you</Badge>}
-          {working && <Badge tone="info" size="sm">Working</Badge>}
-          <span className="min-w-0 text-xs text-muted-foreground">{headline(card)}</span>
-        </button>
-        <span className="flex gap-2">
+          {cardWorking(card) && <Badge tone="info" size="sm">Working</Badge>}
+          <span className="ml-auto flex flex-wrap gap-2">
           {canEdit && <Button size="sm" disabled={off} onClick={() => setDialog("edit")}>Edit</Button>}
           {canDismiss && <Button size="sm" disabled={off} onClick={() => setDialog("dismiss")}>Dismiss</Button>}
           {canApply && (
@@ -343,66 +343,53 @@ export function CardRow({ card, actions, readOnly = false, disabled = false }) {
               Apply
             </Button>
           )}
-        </span>
-      </div>
-
-      {open && (
-        <div className="flex flex-col gap-2 px-4 pb-4">
-          {error && <Notice tone="danger">{error}</Notice>}
-          {showMessage && <Notice tone={message.tone}>{message.text}</Notice>}
-          {card.press_note && <Notice tone="warning">{card.press_note}</Notice>}
-          {card.stale && <Notice tone="warning">Some of this client&apos;s ad statuses couldn&apos;t be refreshed, so changes wait for you rather than running by themselves.</Notice>}
-          {card.ai_failed && <Notice tone="warning">Birdy couldn&apos;t write this card, so it proposes no changes.</Notice>}
-          <div className="flex flex-col gap-3 rounded-control bg-frame p-3.5 text-sm [overflow-wrap:anywhere]">
-            <p>📢 ACCOUNT UPDATE - GENERAL UPDATE</p>
-            <div>
-              <p className="font-medium">🎯 Account Breakdown</p>
-              <p>🏥 Client Name: {card.client_name}</p>
-              <p>📅 Data Window: {windowText(card.window)}</p>
-              <p>📜 Previous CPL: <span className="num">{cplText(card, "previous_cpl")}</span></p>
-              <p>📈 Current CPL: <span className="num">{cplText(card)}</span></p>
-            </div>
-            <div>
-              <p className="mb-1 font-medium">🎨 Creative Changes</p>
-              {lines.length === 0 ? (
-                <p>n/a</p>
-              ) : (
-                <ul>
-                  {lines.map((line) => (
-                    <Line
-                      key={line.id}
-                      line={line}
-                      canChange={canChange}
-                      canUndo={!readOnly}
-                      disabled={disabled}
-                      busy={busy}
-                      progress={progress}
-                      onRetry={(ln) => press(`retry-${ln.id}`, () => actions.applyCard(card.id, [ln.id]))}
-                      onUndo={(ln) => press(`undo-${ln.id}`, () => actions.undoCardLine(card.id, ln.id))}
-                      onFile={upload}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className="font-medium">⚙️ Additional Changes</p>
-              <p className="whitespace-pre-wrap">{card.additional_changes || "n/a"}</p>
-            </div>
-            <div>
-              <p className="font-medium">💭 The Thought Process</p>
-              <p className="whitespace-pre-wrap">{card.thought_process || "n/a"}</p>
-            </div>
-            <div>
-              <p className="font-medium">⏳ The Next Steps</p>
-              <p className="whitespace-pre-wrap">{card.next_steps || "n/a"}</p>
-            </div>
-          </div>
+          </span>
         </div>
       )}
+      {error && <Notice tone="danger">{error}</Notice>}
+      {showMessage && <Notice tone={message.tone}>{message.text}</Notice>}
+      {card.press_note && <Notice tone="warning">{card.press_note}</Notice>}
+      {card.stale && <Notice tone="warning">Some of this client&apos;s ad statuses couldn&apos;t be refreshed, so changes wait for you rather than running by themselves.</Notice>}
+      {card.ai_failed && <Notice tone="warning">Birdy couldn&apos;t write this card, so it proposes no changes.</Notice>}
+
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="Last week">{cplText(card, "previous_cpl")}</Stat>
+        <Stat label="This week">{cplText(card)}</Stat>
+        <Stat label="Leads">{count(card.leads)}</Stat>
+        <Stat label="Ads live">{count(card.ads_live)}</Stat>
+      </div>
+
+      {problems}
+
+      <Section title={canApply || readOnly ? "What Birdy would change" : "Changes"}>
+        {lines.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No changes suggested.</p>
+        ) : (
+          <ul className="text-sm">
+            {lines.map((line) => (
+              <Line
+                key={line.id}
+                line={line}
+                canChange={canChange}
+                canUndo={!readOnly}
+                disabled={disabled}
+                busy={busy}
+                progress={progress}
+                onRetry={(ln) => press(`retry-${ln.id}`, () => actions.applyCard(card.id, [ln.id]))}
+                onUndo={(ln) => press(`undo-${ln.id}`, () => actions.undoCardLine(card.id, ln.id))}
+                onFile={upload}
+              />
+            ))}
+          </ul>
+        )}
+      </Section>
+      {card.additional_changes && <Section title="Also worth doing"><Prose>{card.additional_changes}</Prose></Section>}
+      {card.thought_process && <Section title="Why"><Prose>{card.thought_process}</Prose></Section>}
+      {card.next_steps && <Section title="Next"><Prose>{card.next_steps}</Prose></Section>}
+      {w?.start && w?.end && <p className="text-xs text-muted-foreground">Data from {shortDay(w.start)} to {shortDay(w.end)}</p>}
 
       {dialog === "edit" && <EditDialog card={card} actions={actions} onClose={() => setDialog(null)} />}
       {dialog === "dismiss" && <DismissDialog card={card} actions={actions} onClose={() => setDialog(null)} />}
-    </article>
+    </div>
   )
 }

@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import SetupPage from "../page"
 import { modesPatches } from "@/components/agents/stock/ModesTable"
+import { toClient } from "@/components/agents/AgentTraining"
 
 const res = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body })
 
@@ -101,6 +102,7 @@ const bodies = (path, method) => calls(path, method).map(([, init]) => JSON.pars
 const cont = () => screen.getByRole("button", { name: /Continue/ })
 
 beforeEach(() => {
+  window.innerWidth = 1360
   agent = mkAgent()
   groups = GROUPS
   slackStatus = { installed: false }
@@ -616,6 +618,36 @@ describe("Stock agent guided setup: preview and turn on", () => {
     expect(screen.getByRole("button", { name: /Turn on/ })).toBeDisabled()
   })
 
+  it("toClient uses the currency the account bills in, not the agency's display currency", () => {
+    expect(toClient({ id: "g", ad_account_currency: "USD", facebook: { currency: "GBP" } }).currency).toBe("USD")
+    expect(toClient({ id: "g", facebook: { currency: "GBP" } }).currency).toBe("GBP")
+  })
+
+  describe("a client the preview found has no zones", () => {
+    const noZones = () => {
+      previewRun = { id: "r1", kind: "preview", phase: "done", clients: { g1: { state: "no_zones", reason: "It needs zones." } } }
+      report = { run: previewRun, cards: [] }
+    }
+
+    it("holds Turn on and points to Clients and targets", async () => {
+      noZones()
+      renderPage()
+      expect(await screen.findByText(/1 client needs targets before you can turn on/)).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /Turn on/ })).toBeDisabled()
+      expect(screen.getByText("Turn on after every client has targets.")).toBeInTheDocument()
+      await userEvent.click(screen.getByRole("button", { name: "Fix in Clients and targets" }))
+      expect(push).toHaveBeenCalledWith(expect.stringContaining("step=2"))
+    })
+
+    it("lets go once the client has its own limits saved", async () => {
+      noZones()
+      agent = mkAgent({ scope: agent.scope, settings: { ...BASE_SETTINGS, clients: { g1: { zones: { green_under: 1, red_over: 2 } } } } })
+      renderPage()
+      await waitFor(() => expect(screen.getByRole("button", { name: /Turn on/ })).toBeEnabled())
+      expect(screen.queryByText(/needs targets/)).not.toBeInTheDocument()
+    })
+  })
+
   it("runs the preview, shows the report, and only then enables Turn on", async () => {
     renderPage()
     const turnOn = await screen.findByRole("button", { name: /Turn on/ })
@@ -628,9 +660,8 @@ describe("Stock agent guided setup: preview and turn on", () => {
       ],
     }
     await userEvent.click(screen.getByRole("button", { name: /Run the preview/ }))
-    // The real report component, collapsed and with nothing to press: a preview writes nothing.
+    // The real report component, with nothing to press: a preview writes nothing.
     const row = await screen.findByRole("article", { name: "Lumen Skin Clinic" })
-    await userEvent.click(within(row).getByRole("button", { name: /Lumen Skin Clinic/ }))
     expect(row).toHaveTextContent("Remove - Static 4")
     for (const name of ["Apply", "Edit", "Dismiss"]) expect(within(row).queryByRole("button", { name })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /^Apply \d/ })).not.toBeInTheDocument()

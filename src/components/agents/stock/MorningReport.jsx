@@ -2,26 +2,25 @@
 
 import { useState } from "react"
 
-import { Button, Frame, Notice, ProgressBar, Spinner, Surface } from "@/components/ds"
+import { Button, Notice, ProgressBar, Spinner, Surface } from "@/components/ds"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { dayLabel, openLines, reportBusy, runLabel, shortDay } from "@/lib/stock-agent-api"
 import { AlertsFrame, clientProblems } from "./AlertsFrame"
-import { CardRow } from "./CardRow"
-import { CplBars, stoppedClients, worstClient } from "./CplBars"
+import { stoppedClients, worstClient } from "./cpl"
 import { FollowUps } from "./FollowUps"
 import { LearnedFrame } from "./LearnedFrame"
+import { ReportClients } from "./ReportClients"
 import { ScoreboardFrame } from "./Scoreboard"
 import { WeeklyMessage } from "./WeeklyMessage"
 
 const UNFINISHED = ["pending", "healthy", "waiting", "alerted", "needs_writing"]
 const DAY_MS = 24 * 60 * 60 * 1000
-const CARD_ORDER = ["changes", "no_changes", "green"]
-const cardRank = (card) => {
-  const rank = CARD_ORDER.indexOf(card.tag)
-  return rank < 0 ? CARD_ORDER.length : rank
+const NAMES_SHOWN = 3
+/** Names a few and counts the rest: a report can have dozens of clients. */
+const listed = (names) => {
+  const shown = names.length > NAMES_SHOWN + 1 ? [...names.slice(0, NAMES_SHOWN), `${names.length - NAMES_SHOWN} more`] : names
+  return new Intl.ListFormat("en-GB", { type: "conjunction" }).format(shown)
 }
-
-const listed = (names) => new Intl.ListFormat("en-GB", { type: "conjunction" }).format(names)
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const sentence = (text) => (/[.!?]$/.test(text) ? text : `${text}.`)
 
@@ -134,8 +133,8 @@ function ApplyAllResult({ result, busy }) {
 }
 
 /**
- * One report, top to bottom in the playbook's order: answer box, Alerts, cost per lead, Follow-ups, Scoreboard,
- * What I learned, Cards (collapsed), Weekly message when due. `preview` is the setup step's read-only version.
+ * One report, top to bottom: answer box, agency-wide alerts, the clients with their details beside them, Follow-ups,
+ * Scoreboard, What I learned, Weekly message when due. `preview` is the setup step's read-only version.
  *
  * @param {object} props
  * @param {object} props.report The run view from `useRun`
@@ -151,8 +150,7 @@ export function MorningReport({ report, clients = [], batches = [], actions, sla
   const [result, setResult] = useState(null)
 
   const { run } = report
-  // Decisions first, as the mock has it. Within a tag the server's order stands, so currencies are never compared.
-  const cards = [...(report.cards ?? [])].sort((a, b) => cardRank(a) - cardRank(b))
+  const cards = report.cards ?? []
   const alerts = (run.alerts ?? []).filter((a) => a && typeof a === "object")
   const learned = report.learned ?? []
   const proposals = report.proposals ?? []
@@ -163,6 +161,7 @@ export function MorningReport({ report, clients = [], batches = [], actions, sla
   const problems = clientProblems(run, nameOf)
   const summary = run.summary ?? {}
   const openAlerts = alerts.filter((a) => a.severity !== "info")
+  const general = alerts.filter((a) => !a.client_group_id)
   const allClear = !inProgress && run.kind === "alert_only" && cards.length === 0 && openAlerts.length === 0 && problems.length === 0 && !summary.stale && !summary.reconnect && !run.reconnect
   const open = preview ? 0 : cards.reduce((n, c) => n + openLines(c).length, 0)
   const n = Object.keys(run.clients ?? {}).length
@@ -216,8 +215,19 @@ export function MorningReport({ report, clients = [], batches = [], actions, sla
         <AnswerBox title={said.title}>{said.body && <p className="text-sm text-muted-foreground">{said.body}</p>}</AnswerBox>
       )}
 
-      {!allClear && <AlertsFrame alerts={alerts} problems={problems} nameOf={nameOf} inProgress={inProgress} />}
-      {cards.length > 0 && <CplBars cards={cards} alerts={alerts} />}
+      {!allClear && general.length > 0 && <AlertsFrame alerts={general} />}
+      {!allClear && (
+        <ReportClients
+          cards={cards}
+          alerts={alerts}
+          problems={problems}
+          nameOf={nameOf}
+          actions={actions}
+          preview={preview}
+          disabled={applying}
+          description={hasLines && allAsk ? "Ask me is on for all of these" : undefined}
+        />
+      )}
 
       {!allClear && !preview ? (
         <div className={followUps.length ? "grid grid-cols-1 gap-4 md:grid-cols-2" : "grid grid-cols-1 gap-4"}>
@@ -232,14 +242,6 @@ export function MorningReport({ report, clients = [], batches = [], actions, sla
       )}
 
       {!preview && learned.length > 0 && <LearnedFrame lessons={learned} actions={actions} nameOf={nameOf} />}
-
-      {cards.length > 0 && (
-        <Frame title="Cards" description={hasLines && allAsk ? "Ask me is on for all of these" : undefined} descriptionInline>
-          {cards.map((card) => (
-            <CardRow key={card.id} card={card} actions={actions} readOnly={preview} disabled={applying} />
-          ))}
-        </Frame>
-      )}
 
       {!preview && <WeeklyMessage weekly={report.weekly} run={run} actions={actions} />}
     </div>

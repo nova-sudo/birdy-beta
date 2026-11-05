@@ -122,6 +122,10 @@ const page = () => (
 const renderPage = () => render(page())
 const calls = (path, method) => vi.mocked(apiRequest).mock.calls.filter(([p, init]) => p === path && (init?.method ?? "GET") === method)
 const heading = (name) => screen.findByRole("heading", { name })
+const rowFor = (name) => screen.findByRole("row", { name })
+const openRow = async (name) => userEvent.click(await rowFor(name))
+const clientNames = () => within(screen.getByRole("table")).getAllByRole("row").slice(1).map((r) => within(r).getAllByRole("cell")[0].textContent)
+const cellsOf = async (name) => within(await rowFor(name)).getAllByRole("cell").map((c) => c.textContent)
 
 const use = (rep) => {
   latest = rep.run
@@ -129,6 +133,7 @@ const use = (rep) => {
 }
 
 beforeEach(() => {
+  window.innerWidth = 1360
   agent = AGENT()
   use(report())
   runsPages = { "": { runs: [run()], next_before: null } }
@@ -176,30 +181,33 @@ describe("Agent page: the top bar", () => {
 })
 
 describe("Morning report: the page", () => {
-  it("lists a card with a tag it doesn't know last", async () => {
-    const rep = FULL()
-    rep.cards = [{ ...rep.cards[0], tag: "something_new" }, ...rep.cards.slice(1)]
-    use(rep)
+  it("lists the clients worst first: at risk, then changes, then red, yellow, no data, green, then not checked", async () => {
+    use(report({
+      run: run({
+        clients: { n: { state: "no_zones", reason: "Needs zones." } },
+        alerts: [{ client_group_id: "g3", code: "payment_issue", severity: "critical", title: "Payment problem", detail: "x" }],
+      }),
+      cards: [
+        card({ id: "c4", client_group_id: "g4", client_name: "Green Co", zone: "green", tag: "green", lines: [] }),
+        card({ id: "c5", client_group_id: "g5", client_name: "No Data Co", zone: "no_data", tag: "no_changes", current_cpl: null, previous_cpl: null, lines: [] }),
+        card({ id: "c6", client_group_id: "g6", client_name: "Yellow Co", zone: "yellow", tag: "no_changes", lines: [] }),
+        card({ id: "c7", client_group_id: "g7", client_name: "Red Co", zone: "red", tag: "no_changes", lines: [] }),
+        card({ id: "c8", client_group_id: "g8", client_name: "No Leads Co", zone: "red", tag: "no_changes", current_cpl: null, lines: [] }),
+        card({ id: "c1", client_name: "Changes Co", zone: "yellow" }),
+        card({ id: "c3", client_group_id: "g3", client_name: "At Risk Co", zone: "green", tag: "green", lines: [] }),
+      ],
+    }))
     renderPage()
-    await heading("Morning report")
-    const names = (await screen.findAllByRole("article")).map((a) => a.getAttribute("aria-label"))
-    expect(names[names.length - 1]).toBe(rep.cards[0].client_name)
+    await heading("Clients")
+    expect(clientNames()).toEqual(["At Risk Co", "Changes Co", "No Leads Co", "Red Co", "Yellow Co", "No Data Co", "Green Co", "A client"])
   })
 
-  it("lists cards with a decision first, then no changes, then green", async () => {
+  it("renders the sections in order, with an agency-wide alert above the clients", async () => {
     const rep = FULL()
-    rep.cards = [rep.cards[3], rep.cards[2], rep.cards[0], rep.cards[1]]
+    rep.run.alerts.push({ client_group_id: null, code: "meta_reconnect", severity: "critical", title: "Meta needs reconnecting", detail: "Reconnect it." })
     use(rep)
     renderPage()
-    await heading("Morning report")
-    const names = (await screen.findAllByRole("article")).map((a) => a.getAttribute("aria-label"))
-    expect(names).toEqual(["Harbour Body Co", "Velvet Laser", "Coastline Med Spa", "Lumen Skin Clinic"])
-  })
-
-  it("renders the sections in the spec's order", async () => {
-    use(FULL())
-    renderPage()
-    const names = ["Alerts", "Cost per lead", "Follow-ups from last round", /keeps working/, "What I learned since last time", "Cards", "Weekly message"]
+    const names = ["Alerts", "Clients", "Follow-ups from last round", /keeps working/, "What I learned since last time", "Weekly message"]
     const found = await Promise.all(names.map((n) => heading(n)))
     const answer = screen.getByRole("heading", { name: /1 green, 1 yellow, 2 red or stopped/ })
     ;[answer, ...found].reduce((prev, next) => {
@@ -213,6 +221,13 @@ describe("Morning report: the page", () => {
     renderPage()
     expect(await screen.findByRole("heading", { name: "1 green, 1 yellow, 2 red or stopped. Look at Coastline Med Spa first." })).toBeInTheDocument()
     expect(screen.getByText(/2 cards need your OK: Harbour Body Co and Velvet Laser/)).toBeInTheDocument()
+  })
+
+  it("the answer box names a few clients waiting and counts the rest", async () => {
+    const names = ["One", "Two", "Three", "Four", "Five", "Six"]
+    use(report({ cards: names.map((n, i) => card({ id: `c${i}`, client_group_id: `g${i}`, client_name: n })) }))
+    renderPage()
+    expect(await screen.findByText(/6 cards need your OK: One, Two, Three and 3 more/)).toBeInTheDocument()
   })
 
   it("heads the page with the date, batch and window", async () => {
@@ -240,7 +255,7 @@ describe("Morning report: the page", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     use(report({ cards: [card({ lines: [line({ state: "applying" })] })] }))
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     const before = calls("/api/agents/ag1/runs/r1", "GET").length
     await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
     await waitFor(() => expect(calls("/api/agents/ag1/runs/r1", "GET").length).toBeGreaterThan(before))
@@ -255,6 +270,7 @@ describe("Morning report: the page", () => {
   it("a client that failed shows couldn't be checked with the reason", async () => {
     use(report({ run: run({ clients: { g1: { state: "done" }, g2: { state: "failed", error: "Meta needs reconnecting." } } }) }))
     renderPage()
+    await openRow(/Velvet Laser/)
     expect(await screen.findByText("Velvet Laser couldn't be checked")).toBeInTheDocument()
     expect(screen.getByText("Meta needs reconnecting.")).toBeInTheDocument()
   })
@@ -262,8 +278,10 @@ describe("Morning report: the page", () => {
   it("names what an early end left unfinished, and stale data", async () => {
     use(report({ run: run({ ended_early: true, summary: { missing: ["g2"], stale: true, stale_clients: ["g1"], health_unread: ["g4"] } }) }))
     renderPage()
+    await openRow(/Velvet Laser/)
     expect(await screen.findByText("Velvet Laser wasn't finished")).toBeInTheDocument()
-    expect(screen.getByText(/Lumen Skin Clinic.* health couldn't be read/)).toBeInTheDocument()
+    await openRow(/Lumen Skin Clinic/)
+    expect(await screen.findByText(/Lumen Skin Clinic.* health couldn't be read/)).toBeInTheDocument()
     expect(screen.getByText(/stopped before it finished/)).toBeInTheDocument()
     expect(screen.getByText(/couldn't be refreshed/)).toBeInTheDocument()
   })
@@ -271,116 +289,150 @@ describe("Morning report: the page", () => {
   it("a client with no card says why", async () => {
     use(report({ run: run({ clients: { g1: { state: "done" }, g2: { state: "no_zones", reason: "Velvet needs zones." } } }) }))
     renderPage()
+    await openRow(/Velvet Laser/)
     expect(await screen.findByText("Velvet needs zones.")).toBeInTheDocument()
   })
 
-  it("alerts show each severity and don't repeat a name already in the title", async () => {
+  it("a client's alerts are in its panel, and only agency-wide ones stay above the table", async () => {
     use(report({
       run: run({ alerts: [
-        { client_group_id: "g2", code: "payment_issue", severity: "critical", title: "Payment problem on the ad account", detail: "Update the card." },
         { client_group_id: "g1", code: "check_failed", severity: "warning", title: "Couldn't check Harbour Body Co", detail: "Timed out." },
+        { client_group_id: "g2", code: "payment_issue", severity: "critical", title: "Payment problem on the ad account", detail: "Update the card." },
         { client_group_id: null, code: "meta_reconnect", severity: "critical", title: "Meta needs reconnecting", detail: "Reconnect it." },
       ] }),
+      cards: [card(), card({ id: "c2", client_group_id: "g2", client_name: "Velvet Laser" })],
     }))
     renderPage()
-    expect(await screen.findByText("Velvet Laser: Payment problem on the ad account")).toBeInTheDocument()
-    expect(screen.getByText("Couldn't check Harbour Body Co")).toBeInTheDocument()
-    expect(screen.getByText("Meta needs reconnecting")).toBeInTheDocument()
+    const frame = (await heading("Alerts")).closest("section")
+    expect(within(frame).getByText("Meta needs reconnecting")).toBeInTheDocument()
+    expect(within(frame).queryByText(/Payment problem/)).not.toBeInTheDocument()
+    // The client at risk comes first, so its panel is the one open.
+    const panel = screen.getByRole("article", { name: "Velvet Laser" })
+    expect(within(panel).getByText("Payment problem on the ad account")).toBeInTheDocument()
+    expect(within(panel).getByText("Needs you")).toBeInTheDocument()
+    expect(within(await rowFor(/Velvet Laser/)).getAllByRole("cell")[6]).toHaveTextContent("1")
+    await openRow(/Harbour/)
+    expect(screen.getByRole("article", { name: "Harbour Body Co" })).toHaveTextContent("Couldn't check Harbour Body Co")
+    expect(screen.queryByRole("article", { name: "Velvet Laser" })).not.toBeInTheDocument()
   })
 
-  it("No data shows when CPL is null, with no bar", async () => {
+  it.each([
+    ["Meta Graph error on act_1/ads: (#200) Ad account owner has NOT granted ads_read", /Meta hasn't given Birdy access/],
+    ["Meta Graph error on act_1/ads: (#17) rate limited", /Meta returned an error/],
+  ])("doesn't show Meta's own error text: %s", async (detail, copy) => {
+    use(report({ run: run({ alerts: [{ client_group_id: "g1", code: "check_failed", severity: "warning", title: "Couldn't check", detail }] }) }))
+    renderPage()
+    expect(await screen.findByText(copy)).toBeInTheDocument()
+    expect(screen.queryByText(/Graph error/)).not.toBeInTheDocument()
+  })
+
+  it("the tiles count the clients and filter the table", async () => {
+    use(report({
+      run: run({
+        clients: { g9: { state: "failed", error: "Timed out." } },
+        alerts: [
+          { client_group_id: "g2", code: "payment_issue", severity: "critical", title: "Payment problem", detail: "x" },
+          { client_group_id: "g3", code: "ad_rejected", severity: "warning", title: "Ad rejected", detail: "x" },
+        ],
+      }),
+      cards: [
+        card({ client_name: "Red Changes" }),
+        card({ id: "c2", client_group_id: "g2", client_name: "At Risk", zone: "green", tag: "green", lines: [] }),
+        card({ id: "c3", client_group_id: "g3", client_name: "Ad Issue", zone: "yellow", tag: "no_changes", lines: [] }),
+      ],
+    }))
+    renderPage()
+    await heading("Clients")
+    const tile = (name) => screen.getByRole("button", { name })
+    expect(tile(/^4\s*All clients/)).toHaveAttribute("aria-pressed", "true")
+    expect(clientNames()).toHaveLength(4)
+    const cases = [[/^1\s*Spend at risk/, ["At Risk"]], [/^1\s*Red$/, ["Red Changes"]], [/^1\s*Suggested changes/, ["Red Changes"]], [/^1\s*With ad issues/, ["Ad Issue"]], [/^1\s*Not checked/, ["A client"]]]
+    for (const [name, names] of cases) {
+      await userEvent.click(tile(name))
+      expect(tile(name)).toHaveAttribute("aria-pressed", "true")
+      expect(clientNames()).toEqual(names)
+      // The panel never describes a row the filter hid.
+      expect(screen.getByRole("article", { name: names[0] })).toBeInTheDocument()
+    }
+  })
+
+  it("a tile with no clients says so", async () => {
+    use(report({ cards: [card({ zone: "green", tag: "green", lines: [] })] }))
+    renderPage()
+    await heading("Clients")
+    await userEvent.click(screen.getByRole("button", { name: /^0\s*Red$/ }))
+    expect(await screen.findByText("No clients here.")).toBeInTheDocument()
+    expect(screen.queryByRole("article")).not.toBeInTheDocument()
+  })
+
+  it("marks the row whose details are open", async () => {
+    use(FULL())
+    renderPage()
+    expect(await rowFor(/Coastline/)).toHaveAttribute("aria-current", "true")
+    await openRow(/Velvet Laser/)
+    expect(await rowFor(/Velvet Laser/)).toHaveAttribute("aria-current", "true")
+    expect(await rowFor(/Coastline/)).not.toHaveAttribute("aria-current")
+  })
+
+  it("below 1200px the details open in a sheet from the row, not beside the table", async () => {
+    window.innerWidth = 390
+    use(FULL())
+    renderPage()
+    await heading("Clients")
+    expect(screen.queryByRole("article")).not.toBeInTheDocument()
+    await openRow(/Velvet Laser/)
+    const sheet = await screen.findByRole("dialog", { name: "Velvet Laser" })
+    expect(within(sheet).getByText("Remove - Plans")).toBeInTheDocument()
+  })
+
+  it("No data shows when CPL is null", async () => {
     use(report({ cards: [card({ current_cpl: null, previous_cpl: null, zone: "no_data", tag: "no_changes", lines: [] })] }))
     renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    expect(within(frame).getAllByText("No data").length).toBeGreaterThan(1)
-    expect(frame.querySelector("[data-zone-bar]")).toBeNull()
+    expect((await cellsOf(/Harbour/)).filter((t) => t === "No data").length).toBeGreaterThan(2)
   })
 
-  it("each currency has its own symbol and its own bar scale", async () => {
+  it("each client shows its own currency, and the change as a signed percent", async () => {
     use(report({
       cards: [
         card({ currency: "GBP", current_cpl: 10, previous_cpl: 8 }),
         card({ id: "c2", client_group_id: "g2", client_name: "Velvet Laser", currency: "EUR", current_cpl: 100, previous_cpl: 200 }),
-        card({ id: "c3", client_group_id: "g3", client_name: "Coastline Med Spa", currency: "GBP", current_cpl: 5, previous_cpl: 5 }),
       ],
     }))
     renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    const bars = [...frame.querySelectorAll("[data-zone-bar]")]
-    const width = (text) => bars.find((b) => b.textContent === text).style.width
-    // £10 is the biggest pound figure, so it fills its scale though €100 is a bigger number.
-    expect(width("£10.00")).toBe("100%")
-    expect(width("€100.00")).toBe("100%")
-    expect(width("£5.00")).toBe("50%")
-    const table = within(frame).getByRole("table")
-    expect(within(table).getByText("€200.00")).toBeInTheDocument()
-    expect(within(table).getByText("+25%")).toBeInTheDocument()
-    expect(within(table).getByText("−50%")).toBeInTheDocument()
-    expect(screen.getByText(/Each currency is scaled on its own/)).toBeInTheDocument()
-  })
-
-  it("bars take the zone's colour from the ds tokens", async () => {
-    use(report({
-      cards: [
-        card({ zone: "red", current_cpl: 12 }),
-        card({ id: "c2", client_name: "Velvet Laser", zone: "yellow", current_cpl: 11 }),
-        card({ id: "c3", client_name: "Lumen", zone: "green", current_cpl: 10 }),
-      ],
-    }))
-    renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    const cls = [...frame.querySelectorAll("[data-zone-bar]")].map((b) => b.className)
-    expect(cls[0]).toContain("bg-danger")
-    expect(cls[1]).toContain("bg-warning")
-    expect(cls[2]).toContain("bg-success")
+    const harbour = await cellsOf(/Harbour/)
+    expect(harbour).toEqual(expect.arrayContaining(["£8.00", "£10.00", "+25%"]))
+    expect(await cellsOf(/Velvet/)).toEqual(expect.arrayContaining(["€200.00", "€100.00", "−50%"]))
   })
 
   it("a client whose spend stopped shows Stopped beside its zone", async () => {
     use(FULL())
     renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    const row = within(frame).getByRole("row", { name: /Coastline Med Spa/ })
+    const row = await rowFor(/Coastline Med Spa/)
     expect(within(row).getByText("Stopped")).toBeInTheDocument()
     expect(within(row).getByText("Green")).toBeInTheDocument()
   })
 
-  it("shows leads and ads live; zero is a count, and an older card with neither shows a dash", async () => {
+  it("shows leads in the table and ads live in the panel; zero is a count, and an older card with neither shows a dash", async () => {
     const older = card({ id: "c2", client_group_id: "g2", client_name: "Older Card" })
     delete older.leads
     delete older.ads_live
     use(report({ cards: [card(), card({ id: "c3", client_group_id: "g3", client_name: "Zero Card", leads: 0, ads_live: 0, current_cpl: 1 }), older] }))
     renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    expect(within(frame).getByRole("columnheader", { name: "Leads" })).toBeInTheDocument()
-    expect(within(frame).getByRole("columnheader", { name: "Ads live" })).toBeInTheDocument()
-    const cells = (name) => within(within(frame).getByRole("row", { name })).getAllByRole("cell").map((c) => c.textContent)
-    expect(cells(/Harbour/)).toEqual(expect.arrayContaining(["31", "4"]))
-    expect(cells(/Zero Card/).filter((t) => t === "0")).toHaveLength(2)
-    expect(cells(/Older Card/).filter((t) => t === "–")).toHaveLength(2)
+    const leads = 5
+    expect((await cellsOf(/Harbour/))[leads]).toBe("31")
+    expect((await cellsOf(/Zero Card/))[leads]).toBe("0")
+    expect((await cellsOf(/Older Card/))[leads]).toBe("–")
+    expect(screen.getByRole("article", { name: "Harbour Body Co" })).toHaveTextContent("Ads live4")
+    await openRow(/Zero Card/)
+    expect(screen.getByRole("article", { name: "Zero Card" })).toHaveTextContent("Ads live0")
+    await openRow(/Older Card/)
+    expect(screen.getByRole("article", { name: "Older Card" })).toHaveTextContent("Ads live–")
   })
 
-  it("the red bar is dark enough for white text and grows to fit its figure", async () => {
+  it("spend with no leads reads No leads", async () => {
+    use(report({ cards: [card({ current_cpl: null, previous_cpl: 9, zone: "red", leads: 0 })] }))
     renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    const bar = frame.querySelector("[data-zone-bar]")
-    expect(bar.className).toContain("bg-danger-ink")
-    expect(bar.className).toContain("min-w-max")
-  })
-
-  it("spend with no leads is the worst: red, on top, and reads No leads", async () => {
-    use(report({
-      cards: [
-        card({ client_name: "Spending" , current_cpl: 12, zone: "red" }),
-        card({ id: "c2", client_group_id: "g2", client_name: "No Leads Co", current_cpl: null, previous_cpl: 9, zone: "red", leads: 0 }),
-      ],
-    }))
-    renderPage()
-    const frame = (await heading("Cost per lead")).closest("section")
-    const bars = [...frame.querySelectorAll("[data-zone-bar]")]
-    expect(bars[0]).toHaveTextContent("No leads")
-    expect(bars[0].className).toContain("bg-danger-ink")
-    expect(bars[0].style.width).toBe("100%")
-    expect(within(within(frame).getByRole("row", { name: /No Leads Co/ })).getByText("No leads")).toBeInTheDocument()
+    expect(await cellsOf(/Harbour/)).toContain("No leads")
   })
 
   it("Apply all waits, with a reason, until the run finishes; a single card can still be applied", async () => {
@@ -490,7 +542,7 @@ describe("Morning report: the page", () => {
   it("no Apply all when nothing is open", async () => {
     use(report({ cards: [card({ status: "applied", can_apply: false, lines: [line({ state: "applied" })] })] }))
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     expect(screen.queryByRole("button", { name: /^Apply \d/ })).not.toBeInTheDocument()
   })
 
@@ -522,7 +574,7 @@ describe("Morning report: the page", () => {
   ])("shows Slack delivery state %o", async (fields, copies) => {
     use(report({ run: run(fields) }))
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     const notice = [...document.querySelectorAll("[data-slot=notice]")].find((n) => /Slack/.test(n.textContent))
     for (const copy of copies) expect(notice).toHaveTextContent(copy)
   })
@@ -530,7 +582,7 @@ describe("Morning report: the page", () => {
   it("a Slack failure doesn't say it will try again when it won't", async () => {
     use(report({ run: run({ publish_error: NO_ACCESS, slack_pending: false }) }))
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     expect(screen.queryByText(/try again/)).not.toBeInTheDocument()
   })
 
@@ -538,13 +590,13 @@ describe("Morning report: the page", () => {
     agent = { ...AGENT(), settings: { batches: [] } }
     use(report({ run: run({ slack: { ts: null }, publish_error: "No Slack channel is chosen for this agent, so this didn't reach Slack. The report and its actions are in Birdy." }) }))
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     expect(screen.queryByText(/Slack/)).not.toBeInTheDocument()
   })
 
   it("no Slack notice when delivery went fine", async () => {
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     expect(screen.queryByText(/Slack/)).not.toBeInTheDocument()
   })
 
@@ -564,7 +616,7 @@ describe("Morning report: the page", () => {
     expect(push).toHaveBeenCalledWith("/hub/agents/media-buying?run=r0")
     search = "run=r0"
     rerender(page())
-    expect(await screen.findByRole("button", { name: /Past Client/ })).toBeInTheDocument()
+    expect(await screen.findByRole("row", { name: /Past Client/ })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("button", { name: "Older reports" }))
     await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([p]) => p.includes("before=2026-10-30T07%3A00%3A00"))).toBe(true))
@@ -577,7 +629,7 @@ describe("Morning report: the page", () => {
     search = "run=r9"
     reports.r9 = report({ run: run({ id: "r9", local_date: "2026-06-02" }), cards: [card({ id: "c9", client_name: "From Slack" })] })
     renderPage()
-    expect(await screen.findByRole("button", { name: /From Slack/ })).toBeInTheDocument()
+    expect(await screen.findByRole("row", { name: /From Slack/ })).toBeInTheDocument()
     expect(screen.getByRole("combobox", { name: "Report date" })).toHaveTextContent("2 Jun")
     expect(calls("/api/agents/ag1/runs/r1", "GET")).toHaveLength(0)
   })
@@ -633,7 +685,7 @@ describe("Morning report: the page", () => {
     expect(await screen.findByRole("heading", { name: "All clear for Wed 4 Nov: 2 clients checked, nothing needs you." })).toBeInTheDocument()
     expect(screen.queryByRole("heading", { name: "Alerts" })).not.toBeInTheDocument()
     expect(screen.queryByRole("heading", { name: "Cost per lead" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: "Cards" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Clients" })).not.toBeInTheDocument()
   })
 
   it("an alert-only day with an open alert isn't all clear", async () => {
@@ -660,7 +712,7 @@ describe("Morning report: the page", () => {
   it("the mascot renders only through its framed component", async () => {
     use(FULL())
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     const birds = screen.getAllByTestId("birdy")
     expect(birds.length).toBeGreaterThan(0)
     for (const b of birds) expect(b.parentElement.className).toMatch(/rounded-full/)
@@ -711,13 +763,13 @@ describe("Morning report: the page", () => {
 
   it("a failed background refetch doesn't cover good data with an error", async () => {
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     answers["GET /api/agents/ag1/runs/latest"] = res({ detail: "boom" }, 500)
     answers["GET /api/agents/ag1/runs/r1"] = res({ detail: "boom" }, 500)
     answers["GET /api/agents"] = res({ detail: "boom" }, 500)
     await act(async () => { await mutateAll().catch(() => {}) })
     await waitFor(() => expect(calls("/api/agents/ag1/runs/r1", "GET").length).toBeGreaterThan(1))
-    expect(screen.getByRole("heading", { name: "Cards" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Clients" })).toBeInTheDocument()
     expect(screen.queryByText("boom")).not.toBeInTheDocument()
   })
 
@@ -850,7 +902,7 @@ describe("Morning report: follow-ups, lessons, suggestions, weekly", () => {
 
   it("no weekly section on a day none is due", async () => {
     renderPage()
-    await heading("Cards")
+    await heading("Clients")
     expect(screen.queryByRole("heading", { name: "Weekly message" })).not.toBeInTheDocument()
   })
 })
