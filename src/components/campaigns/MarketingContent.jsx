@@ -705,8 +705,7 @@ export function MarketingContent({
     // Client group
     if (selectedClientGroup && selectedClientGroup !== "all") {
       if (activeTab === "leads") {
-        const grp = clientGroups.find(g => g.id === selectedClientGroup)
-        if (grp) filtered = filtered.filter(i => i.group_name === grp.name)
+        filtered = filtered.filter(i => i.client_group_id === selectedClientGroup)
       } else {
         filtered = filtered.filter(i => i._groupId === selectedClientGroup)
       }
