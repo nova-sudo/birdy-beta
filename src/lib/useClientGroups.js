@@ -94,6 +94,25 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     [mutateAny]
   )
 
+  /**
+   * Take one group out of every cached window now, then confirm with the server.
+   *
+   * For a delete, where invalidate() would blank the list and spin until the
+   * slow refetch lands. The rest of the list stays on screen, minus the row.
+   */
+  const removeGroup = useCallback(
+    (id) =>
+      mutateAny(
+        (k) => typeof k === "string" && k.startsWith(CLIENT_GROUPS_PREFIX),
+        (current) =>
+          current?.client_groups
+            ? { ...current, client_groups: current.client_groups.filter((g) => g.id !== id) }
+            : current,
+        { revalidate: true }
+      ),
+    [mutateAny]
+  )
+
   /** Refetch this preset now, keeping what's on screen until it lands. */
   const refresh = useCallback(() => mutate(), [mutate])
 
@@ -110,6 +129,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     datePreset,
     setDatePreset,
     invalidate,
+    removeGroup,
     refresh,
   }
 }
