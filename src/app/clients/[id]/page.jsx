@@ -30,6 +30,7 @@ import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPi
 import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { GoalsStrip } from "@/components/clients/GoalsStrip"
+import { ClientNameCard } from "@/components/clients/ClientNameCard"
 import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
@@ -105,8 +106,14 @@ export default function ClientDetailsPage() {
   const { activity, loading: activityLoading } = useDashboardData()
   const groupNameForActivity = clientData?.group_info?.name
   const clientActivity = useMemo(
-    () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
-    [activity, groupNameForActivity]
+    () =>
+      activity.filter(
+        (a) =>
+          // Older rows carry only a name, which is why it's still checked.
+          (a.client_group_id ? a.client_group_id === clientId : a.client === groupNameForActivity) &&
+          isFeedActivity(a)
+      ),
+    [activity, clientId, groupNameForActivity]
   )
 
   // ── History book: hand-written notes, alongside the generated activity ────
@@ -366,6 +373,10 @@ export default function ClientDetailsPage() {
   })
   const metaSyncing = metaState === "syncing"
   const metaRefreshError = clientData?.group_info?.meta_refresh_error
+  const handleRenamed = useCallback((name) => {
+    setClientData((prev) => (prev ? { ...prev, group_info: { ...prev.group_info, name } } : prev))
+    invalidate()
+  }, [invalidate])
   const handleCampaignsSaved = useCallback(() => {
     invalidate()
     loadClient({ quiet: true })
@@ -727,6 +738,12 @@ export default function ClientDetailsPage() {
             </div>
 
             <TabsContent value="details" className="mt-4 space-y-6">
+            <ClientNameCard
+              clientId={clientId}
+              name={clientData?.group_info?.name}
+              onRenamed={handleRenamed}
+            />
+
             <Card>
               <CardContent >
                 <div className="flex items-center justify-between">
