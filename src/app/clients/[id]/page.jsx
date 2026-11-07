@@ -173,6 +173,7 @@ export default function ClientDetailsPage() {
     datePreset,
     setDatePreset,
     invalidate,
+    removeGroup,
   } = useClientGroupsWithSeries(DEFAULT_DATE_PRESET)
 
   // Find this specific group from the cached list
@@ -345,8 +346,8 @@ export default function ClientDetailsPage() {
     try {
       setDeleteLoading(true)
       const res = await apiRequest(`/api/client-groups/${clientId}`, { method: "DELETE" })
-      localStorage.removeItem(`clientGroups_last_7d`)
       if (res.ok) {
+        removeGroup(clientId)
         toast.success("Client group deleted")
         router.push("/clients")
       } else {

@@ -117,6 +117,9 @@ export default function ClientsPage() {
   const [clientGroupName, setClientGroupName] = useState("")
   const [ghlLocations, setGhlLocations] = useState([])
   const [metaAdAccounts, setMetaAdAccounts] = useState([])
+  // Start true so the first paint of a step shows skeletons, not "no results".
+  const [ghlLocationsLoading, setGhlLocationsLoading] = useState(true)
+  const [metaAdAccountsLoading, setMetaAdAccountsLoading] = useState(true)
   const [hotProspectorGroups, setHotProspectorGroups] = useState([])
   const [selectedGhlLocation, setSelectedGhlLocation] = useState(null)
   const [newGhlLocationId, setNewGhlLocationId] = useState("")
@@ -409,6 +412,7 @@ export default function ClientsPage() {
 
 
   const fetchGhlLocations = async (forceRefresh = false) => {
+    setGhlLocationsLoading(true)
     try {
       if (!forceRefresh) {
         const cached = getCachedData("ghlLocations")
@@ -436,10 +440,13 @@ export default function ClientsPage() {
     } catch (err) {
       console.error("[v0] Error fetching GHL locations:", err)
       toast.error("Failed to fetch GHL locations")
+    } finally {
+      setGhlLocationsLoading(false)
     }
   }
 
   const fetchMetaAdAccounts = async (forceRefresh = false) => {
+    setMetaAdAccountsLoading(true)
     try {
       const response = await apiRequest("/api/facebook/adaccounts")
 
@@ -454,6 +461,8 @@ export default function ClientsPage() {
     } catch (err) {
       console.error("[v0] Error fetching Meta ad accounts:", err)
       toast.error("Failed to fetch Meta ad accounts")
+    } finally {
+      setMetaAdAccountsLoading(false)
     }
   }
 
@@ -894,6 +903,10 @@ export default function ClientsPage() {
                         </div>
                       </div>
                     ))
+                  ) : !ghlLocationsLoading ? (
+                    <p className="py-8 text-center text-sm text-pd-subtle">
+                      {locationSearchQuery ? "No results found" : "No GHL locations found"}
+                    </p>
                   ) : (
                     <div className="space-y-2" aria-busy="true" aria-label="Loading GHL Locations">
                       {Array.from({ length: 4 }).map((_, i) => (
@@ -985,6 +998,10 @@ export default function ClientsPage() {
                         </div>
                       </div>
                     ))
+                  ) : !metaAdAccountsLoading ? (
+                    <p className="py-8 text-center text-sm text-pd-subtle">
+                      {metaSearchQuery ? "No results found" : "No Meta ad accounts found"}
+                    </p>
                   ) : (
                     <div className="space-y-2" aria-busy="true" aria-label="Loading Meta Adaccounts">
                       {Array.from({ length: 4 }).map((_, i) => (
