@@ -97,7 +97,7 @@ beforeEach(() => {
     if (path === "/api/agents/ag1" && method === "PATCH") return Promise.resolve(patchReply(JSON.parse(init.body)))
     if (path === "/api/agents/ag1") return Promise.resolve(res(agent))
     if (path === "/api/agents/ag1/confidence") return Promise.resolve(res({ score: 0, ready: false, parts: {}, missing: [] }))
-    if (path.startsWith("/api/chat/conversations/"))
+    if (path === "/api/agents/ag1/setup/chat")
       return Promise.resolve(
         res({
           session_id: "s1",
@@ -165,7 +165,7 @@ describe("AgentSetupChat", () => {
 
   it("resumes existing draft without creating", async () => {
     agent = agentWith({ purpose: true }, { description: "Pause ads that cost too much" })
-    sessionStorage.setItem("agent_setup:ag1", "s1")
+    // A new tab: nothing in sessionStorage, the transcript comes from the agent's own setup chat.
     renderChat({ agentId: "ag1" })
 
     expect(await screen.findByText("Here's the playbook I'd start it on.")).toBeInTheDocument()
@@ -174,7 +174,7 @@ describe("AgentSetupChat", () => {
     expect(lastProps.interceptSend).toBeFalsy()
     expect(await screen.findByText("1 of 6")).toBeInTheDocument()
     expect(calls("POST", "/api/agents")).toHaveLength(0)
-    expect(calls("GET", "/api/chat/conversations/s1")).toHaveLength(1)
+    expect(calls("GET", "/api/agents/ag1/setup/chat")).toHaveLength(1)
   })
 
   it("example jobs hide after first answer", async () => {

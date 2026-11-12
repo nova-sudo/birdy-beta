@@ -53,25 +53,19 @@ export function uiBlocksOf(message) {
     .filter(Boolean)
 }
 
-/** Reads the saved transcript of a setup chat into the store, once, when this tab has its session id. */
+/** Reads the agent's saved setup chat into the store, once, so a draft opened later (another tab, another day) resumes with its blocks. */
 function useResumeTranscript(agentId) {
   useEffect(() => {
     if (!agentId) return
     const key = setupSessionKey(agentId)
-    let sid = null
-    try {
-      sid = sessionStorage.getItem(key)
-    } catch {
-      sid = null
-    }
-    if (!sid || getChat(key).messages.length > 0) return
+    if (getChat(key).messages.length > 0) return
     let live = true
-    apiRequest(`/api/chat/conversations/${encodeURIComponent(sid)}`)
+    apiRequest(`/api/agents/${encodeURIComponent(agentId)}/setup/chat`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!live || !data?.messages?.length) return
+        if (!live || !data?.session_id || !data?.messages?.length) return
         hydrateChat(key, {
-          sessionId: sid,
+          sessionId: data.session_id,
           messages: data.messages.map((m) => ({
             role: m.role,
             content: m.content,
@@ -92,7 +86,7 @@ function useResumeTranscript(agentId) {
  *
  * With no `agentId` (the /new route) nothing exists until the first message: it creates a draft
  * agent, moves to that agent's setup route, then sends the message there. With an `agentId` the
- * draft resumes: the rail from `training.steps`, the transcript from this tab's saved session.
+ * draft resumes: the rail from `training.steps`, the transcript from the agent's saved setup chat.
  * Birdy's tool results with a `ui_block` render inline pickers that save through the agents API,
  * then send a short confirmation so Birdy moves on.
  */
