@@ -70,14 +70,23 @@ export function seedSessionId(sessionKey, sessionId) {
 }
 
 /**
- * Fill an empty chat with a saved transcript (the Media Buying card chat, read back from the server).
- * A chat that already has messages, or one waiting on a reply, is left alone, so a reload never doubles them.
+ * Fill a chat with a saved transcript (a reload of the agent setup chat). Only an empty, idle
+ * chat is filled, so a transcript already on screen or a reply in flight is never overwritten.
  */
-export function seedMessages(sessionKey, messages) {
+export function hydrateChat(sessionKey, { sessionId, messages }) {
   const chat = entry(sessionKey)
   if (chat.loading || chat.messages.length > 0 || !messages?.length) return
-  chat.messages = [...messages]
+  chat.messages = messages
+  if (sessionId) chat.sessionId = sessionId
   emit(sessionKey)
+}
+
+/**
+ * Fill an empty chat with a saved transcript (the Media Buying card chat, read back from the server).
+ * Same rules as hydrateChat, with no session id to restore.
+ */
+export function seedMessages(sessionKey, messages) {
+  hydrateChat(sessionKey, { messages: messages ? [...messages] : messages })
 }
 
 /** Add a message the page wrote itself, with no AI call (the card chat's "Yes to all" result). */
