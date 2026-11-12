@@ -66,7 +66,7 @@ export const linesNeedingYou = (card, readOnly = false) =>
 export const cardWorking = (card) => (card.lines ?? []).some((ln) => LINE_BUSY.includes(ln.state))
 
 /** The file an Add needs, by the backend's own rule (`add._is_video`): a video when the source has a video id, else an image. */
-function fileFor(line) {
+export function fileFor(line) {
   return line.creative?.video_id
     ? { kind: "video", word: "Video", label: "Upload video", accept: VIDEO_ACCEPT, wrong: "This ad needs a video, not an image." }
     : { kind: "image", word: "Image", label: "Upload image", accept: IMAGE_ACCEPT, wrong: "This ad needs an image, not a video." }
@@ -96,7 +96,8 @@ function lineReason(line) {
   return line.error || null
 }
 
-function Line({ line, canChange, canUndo, disabled, onRetry, onUndo, onFile, busy, progress }) {
+/** One line of a card: its verb, ad, state and why; Retry, Undo and the file upload where they apply. Also the card chat's apply results. */
+export function Line({ line, canChange, canUndo, disabled, onRetry, onUndo, onFile, busy, progress }) {
   const input = useRef(null)
   const state = LINE_STATES[line.state]
   const reason = lineReason(line)

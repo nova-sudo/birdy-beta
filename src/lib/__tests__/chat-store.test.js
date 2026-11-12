@@ -6,7 +6,7 @@ vi.mock("@/lib/jobs-store", () => ({ startJob: vi.fn(), finishJob: vi.fn() }))
 vi.mock("@/lib/ask-birdy", () => ({ openBirdyChat: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-import { getChat, resetChat, sendChatMessage, subscribeChat } from "@/lib/chat-store"
+import { appendMessage, getChat, resetChat, seedMessages, sendChatMessage, subscribeChat } from "@/lib/chat-store"
 
 const reply = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body })
 
@@ -92,5 +92,13 @@ describe("chat-store", () => {
     expect(body).not.toHaveProperty("dashboard_id")
     expect(body).not.toHaveProperty("summary")
     expect(getChat("k4").messages.at(-1)).toEqual({ role: "assistant", content: "Hi", tools_used: [] })
+  })
+
+  it("seeds an empty chat with a saved transcript once, and appends local messages", () => {
+    seedMessages("k-seed", [{ role: "user", content: "hi" }, { role: "assistant", content: "hello" }])
+    seedMessages("k-seed", [{ role: "user", content: "again" }])
+    expect(getChat("k-seed").messages.map((m) => m.content)).toEqual(["hi", "hello"])
+    appendMessage("k-seed", { role: "assistant", content: "Done" })
+    expect(getChat("k-seed").messages.map((m) => m.content)).toEqual(["hi", "hello", "Done"])
   })
 })

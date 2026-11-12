@@ -51,6 +51,9 @@ import { startersFor } from "@/lib/chat-starters"
  *   renderAfterMessage?     (message, index) => node — extra content under one of Birdy's
  *                           replies (the agent training chat's "rule updated" chips)
  *   cardId?                 the Media Buying card the chat is about, sent as card_id (with agentId)
+ *   intro?                  node shown first in the conversation, before any message (a page-built
+ *                           opening from Birdy that costs no AI call); with it there is no empty state
+ *   composerTop?            node just above the composer (quick replies)
  *   sendRef?                ref the surface's send(text) is written to, so the page can post
  *                           a message through the same gates as the composer
  *
@@ -91,6 +94,8 @@ export default function ChatConversation({
   onDashboardOps = null,
   onUndoDashboardOps = null,
   renderAfterMessage = null,
+  intro = null,
+  composerTop = null,
   sendRef = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
@@ -321,7 +326,7 @@ export default function ChatConversation({
       (hideInitialMessage && i === 0 && m.content === initialMessage)
     )
   const visibleMessages = messages.filter((m, i) => !isHidden(m, i))
-  const isEmpty = visibleMessages.length === 0
+  const isEmpty = visibleMessages.length === 0 && !intro
 
   if (!configured) {
     return (
@@ -355,6 +360,7 @@ export default function ChatConversation({
           />
         ) : (
           <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
+            {intro}
             {messages.map((m, i) => {
               if (isHidden(m, i)) return null
               const bubble = (
@@ -399,6 +405,7 @@ export default function ChatConversation({
               </Link>
             </div>
           )}
+          {composerTop}
           <ChatComposer
             value={input}
             onChange={setInput}
