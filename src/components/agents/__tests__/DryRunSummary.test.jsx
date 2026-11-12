@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 
 vi.mock("@/lib/api", () => ({
   apiRequest: vi.fn(),
@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 import { apiRequest } from "@/lib/api"
 import { DryRunSummary } from "../DryRunSummary"
+import { PreviewBlock } from "../setup/blocks/PreviewBlock"
 
 const res = (body, status = 200) => ({
   ok: status >= 200 && status < 300,
@@ -111,5 +112,34 @@ describe("DryRunSummary", () => {
     await vi.advanceTimersByTimeAsync(2000)
     expect(await screen.findByText("£120")).toBeInTheDocument()
     expect(screen.queryByText("The dry run didn't finish")).not.toBeInTheDocument()
+  })
+
+  it("polls a given jobId instead of starting a second replay", async () => {
+    render(<DryRunSummary agentId="ag1" currency="£" jobId="j1" />)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await screen.findByText("£690")).toBeInTheDocument()
+    expect(vi.mocked(apiRequest).mock.calls.filter(([p]) => p.endsWith("/dry-run"))).toHaveLength(0)
+  })
+
+  it("a retry after a given job failed starts a new run", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path === "/api/agents/ag1/jobs/j0") return Promise.resolve(res({ status: "failed", error: "boom" }))
+      if (path.endsWith("/dry-run") && init.method === "POST") return Promise.resolve(res({ job_id: "j1" }))
+      if (path === "/api/agents/ag1/jobs/j1") return Promise.resolve(res({ status: "done", result: RESULT }))
+      return Promise.resolve(res({}, 404))
+    })
+    render(<DryRunSummary agentId="ag1" currency="£" jobId="j0" />)
+    fireEvent.click(await screen.findByRole("button", { name: /try again/i }))
+    expect(await screen.findByText("£690")).toBeInTheDocument()
+    expect(vi.mocked(apiRequest).mock.calls.filter(([p]) => p.endsWith("/dry-run"))).toHaveLength(1)
+  })
+})
+
+describe("PreviewBlock", () => {
+  it("polls the job run_preview already ran, with no second POST /dry-run", async () => {
+    render(<PreviewBlock agentId="ag1" currency="£" entry={{ ui_block: "preview", job_id: "j1", status: "done" }} />)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await screen.findByText("£690")).toBeInTheDocument()
+    expect(vi.mocked(apiRequest).mock.calls.filter(([p]) => p.endsWith("/dry-run"))).toHaveLength(0)
   })
 })

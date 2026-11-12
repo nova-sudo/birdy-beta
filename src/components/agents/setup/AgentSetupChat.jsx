@@ -204,7 +204,7 @@ export function AgentSetupChat({ agentId = null }) {
                 case "practice":
                   return <PracticeBlock key={key} agentId={agent.id} entry={entry} onSend={send} onAnswered={mutateConfidence} />
                 case "preview":
-                  return <PreviewBlock key={key} agentId={agent.id} currency={currency} />
+                  return <PreviewBlock key={key} agentId={agent.id} entry={entry} currency={currency} />
                 default:
                   return null
               }

@@ -76,30 +76,35 @@ function readOf(result, currency) {
 
 /**
  * Starts the 30-day dry run when it mounts (and again when `runKey` changes), polls the job every
- * 2 seconds, then shows the totals as metric tabs over the examples table.
+ * 2 seconds, then shows the totals as metric tabs over the examples table. With `jobId` it polls that
+ * job instead of starting one (the setup chat's run_preview already ran it); a retry or a new
+ * `runKey` still starts a fresh run.
  *
  * @param {object} props
  * @param {string} props.agentId
  * @param {string} [props.currency="$"] Symbol for the spend figure
  * @param {string|number} [props.runKey] Change it to run again (after a rule edit)
+ * @param {string} [props.jobId] A job that already exists, polled instead of starting a run
  * @param {(result: object) => void} [props.onResult]
  */
-export function DryRunSummary({ agentId, currency = "$", runKey = 0, onResult, className }) {
+export function DryRunSummary({ agentId, currency = "$", runKey = 0, jobId = null, onResult, className }) {
   const [attempt, setAttempt] = React.useState(0)
   const [state, setState] = React.useState({ phase: "running" })
   const [tab, setTab] = React.useState("actions")
   const started = React.useRef(null)
   const onResultRef = React.useRef(onResult)
   onResultRef.current = onResult
+  const firstRunKey = React.useRef(runKey)
 
   React.useEffect(() => {
     if (!agentId) return undefined
     let cancelled = false
     let timer
 
-    // One start per run, even when strict mode mounts the effect twice.
-    const key = `${agentId}:${runKey}:${attempt}`
-    if (started.current?.key !== key) started.current = { key, job: startDryRun(agentId) }
+    // One start per run, even when strict mode mounts the effect twice. A given job is polled, not rerun.
+    const given = jobId && attempt === 0 && runKey === firstRunKey.current
+    const key = `${agentId}:${runKey}:${attempt}:${given ? jobId : ""}`
+    if (started.current?.key !== key) started.current = { key, job: given ? Promise.resolve({ job_id: jobId }) : startDryRun(agentId) }
     setState((prev) => (prev.phase === "running" ? prev : { phase: "running" }))
 
     const fail = (error) => {
@@ -140,7 +145,7 @@ export function DryRunSummary({ agentId, currency = "$", runKey = 0, onResult, c
       cancelled = true
       clearTimeout(timer)
     }
-  }, [agentId, runKey, attempt])
+  }, [agentId, runKey, attempt, jobId])
 
   if (state.phase === "failed") {
     return (
