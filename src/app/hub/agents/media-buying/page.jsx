@@ -6,82 +6,48 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/hub/HubShell"
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  SegmentedTabs,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-} from "@/components/ds"
-import { MorningReport } from "@/components/agents/stock/MorningReport"
-import { ScoreboardTab } from "@/components/agents/stock/Scoreboard"
+import { Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
 import { AgentSettings } from "@/components/agents/stock/AgentSettings"
 import { LessonsList } from "@/components/agents/stock/LessonsList"
+import { clientProblems } from "@/components/agents/stock/AlertsFrame"
+import { ReportPicker } from "@/components/agents/stock/sheet/ReportPicker"
+import { SheetSummary } from "@/components/agents/stock/sheet/SheetSummary"
+import { latestCards, moves as movesOf, sheetRows, summary as summaryOf, targetsFor } from "@/components/agents/stock/sheet/rows"
 import { toClient } from "@/components/agents/AgentTraining"
 import { TurnOn } from "@/components/agents/stock/TurnOn"
 import { useAgent } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
-import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, runLabel, useLatestRun, useRun, useRuns, useStockActions, useStockAgent } from "@/lib/stock-agent-api"
+import {
+  STOCK_AGENT_PATH,
+  STOCK_SETUP_PATH,
+  shortDay,
+  useLatestRun,
+  useMonth,
+  useRun,
+  useRuns,
+  useStockActions,
+  useStockAgent,
+} from "@/lib/stock-agent-api"
 import { useClientGroups } from "@/lib/useClientGroups"
 
 const TABS = [
   { value: "report", label: "Report" },
-  { value: "scoreboard", label: "Scoreboard" },
   { value: "lessons", label: "Lessons" },
   { value: "settings", label: "Settings" },
 ]
+const PANEL = "media-buying-panel"
 
-/** Past reports by date. The open report is always listed, so a Slack link to an old one still reads right. */
-function ReportPicker({ agentId, current, batches, onPick }) {
-  const { runs, hasOlder, loadOlder, error, mutate } = useRuns(agentId)
-  const options = current && !runs.some((r) => r.id === current.id) ? [current, ...runs] : runs
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {options.length > 0 && (
-        <Select value={current?.id ?? ""} onValueChange={onPick}>
-          <SelectTrigger aria-label="Report date" className="w-64 max-w-full">
-            <SelectValue placeholder="Pick a date">{current ? runLabel(current, batches) : undefined}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((r) => (
-              <SelectItem key={r.id} value={r.id}>{runLabel(r, batches)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-      {hasOlder && <Button size="sm" variant="ghost" onClick={loadOlder}>Older reports</Button>}
-      {error && (
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          Couldn&apos;t load past reports.
-          <Button size="sm" variant="ghost" onClick={() => mutate()}>Retry</Button>
-        </span>
-      )}
-    </div>
-  )
+/** `?tab=` as one of the three tabs. The old Report and Scoreboard values land on Report. */
+const tabOf = (param) => (TABS.some((t) => t.value === param) ? param : "report")
+
+/** A run's window as "3 Nov – 9 Nov", from its cards. */
+function rangeOf(cards) {
+  const w = cards.find((c) => c.window?.start && c.window?.end)?.window
+  return w ? `${shortDay(w.start)} – ${shortDay(w.end)}` : null
 }
 
-function ReportTab({ agent, report, reportError, latest, runParam, clients, batches, actions, onRetry, onLatest, onSeeScoreboard }) {
-  // Data first: a failed background refetch must not cover a good report with an error screen.
-  if (report) {
-    return (
-      <MorningReport
-        key={report.run.id}
-        report={report}
-        clients={clients}
-        batches={batches}
-        actions={actions}
-        slackChannel={agent.settings?.slack?.channel_id}
-        preview={report.run.kind === "preview"}
-        onSeeScoreboard={onSeeScoreboard}
-      />
-    )
-  }
+/** What sits in the Report panel when there is no sheet to show: the old page's empty, error and loading states. */
+function ReportState({ agent, reportError, latest, runParam, onRetry, onLatest }) {
   const error = reportError ?? (runParam ? null : latest.error)
   if (error && runParam && error.status === 404) {
     // Trying the same address again can't help, so the way out is the latest report.
@@ -122,21 +88,27 @@ function ReportTab({ agent, report, reportError, latest, runParam, clients, batc
 function StockAgentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const runParam = searchParams?.get("run") ?? null
-  const tabParam = searchParams?.get("tab")
-  const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "report"
+  const monthParam = searchParams?.get("month") ?? null
+  // ?month= and ?run= never stand together; a month wins.
+  const runParam = monthParam ? null : (searchParams?.get("run") ?? null)
+  const tab = tabOf(searchParams?.get("tab"))
 
   const { agent: listed, listUnavailable, error: listError, isLoading: listLoading, mutate: mutateList } = useStockAgent()
   const agentId = listed?.id
   const { agent: full } = useAgent(agentId)
+  const agent = full ?? listed
   const actions = useStockActions(agentId)
   const latest = useLatestRun(agentId)
-  const runId = runParam ?? latest.run?.id
+  const runId = monthParam ? null : (runParam ?? latest.run?.id)
   const { report, error: reportError, mutate: mutateReport } = useRun(agentId, runId)
+  const month = useMonth(agentId, monthParam)
+  const { runs } = useRuns(agentId)
   const { clientGroups, loading: clientsLoading, error: clientsError, refresh: refreshClients } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
-  const batches = (full ?? listed)?.settings?.batches ?? []
+  const batches = agent?.settings?.batches ?? []
 
-  const section = tab === "report" ? "Morning report" : TABS.find((t) => t.value === tab).label
+  const view = monthParam ? "month" : runParam && runParam !== latest.run?.id ? "past" : "today"
+
+  const section = TABS.find((t) => t.value === tab).label
   const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Birdy Media Buying Agent" subtitle={section} /> }), [section])
   usePageHeader(topBar)
 
@@ -155,11 +127,61 @@ function StockAgentPage() {
     const query = params.toString()
     router.push(query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH)
   }
-  const nameOf = (gid) => clientGroups.find((c) => c.id === gid)?.name ?? "A client"
+
+  const sheet = useMemo(() => {
+    const cards = report?.cards ?? []
+    const run = report?.run
+    const alerts = (run?.alerts ?? []).filter((a) => a && typeof a === "object")
+    const nameOf = (gid) => cards.find((c) => c.client_group_id === gid)?.client_name ?? clientGroups.find((c) => c.id === gid)?.name ?? "A client"
+    const problems = run ? clientProblems(run, nameOf).map((p) => ({ ...p, name: nameOf(p.gid) })) : []
+    const settings = agent?.settings
+    const currency = settings?.zones?.currency ?? null
+    const targetsOf = (gid, cur) => targetsFor(settings, gid, cur)
+    const latestByClient = { ...latestCards(runs), ...Object.fromEntries(cards.map((c) => [c.client_group_id, { card_id: c.id, run_id: c.run_id ?? run?.id }])) }
+    const inScope = (agent?.scope?.client_group_ids ?? []).map((id) => ({ id, name: nameOf(id) }))
+    const rows =
+      view === "month"
+        ? sheetRows({ monthRows: month.rows, latestByClient, targetsOf, currency })
+        : sheetRows({
+            cards,
+            alerts,
+            problems,
+            clientsInScope: view === "today" ? inScope : [],
+            latestByClient,
+            readOnly: view !== "today" || run?.kind === "preview",
+            targetsOf,
+            currency,
+          })
+    return {
+      rows,
+      alerts,
+      summary: summaryOf(cards, alerts, problems),
+      moves: view === "month" ? null : movesOf(cards, (c) => targetsOf(c.client_group_id, c.currency)),
+      range: view === "month" ? month.range : rangeOf(cards),
+    }
+  }, [report, month.rows, month.range, runs, clientGroups, agent, view])
+
+  const hasSheet = view === "month" ? Boolean(month.month) || month.rows.length > 0 : Boolean(report)
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
-      <PageHeader backButton={{ label: "BirdyHub", href: "/hub" }} title="Birdy Media Buying Agent" />
+      <PageHeader
+        backButton={{ label: "BirdyHub", href: "/hub" }}
+        title="Birdy Media Buying Agent"
+        description="Checks your clients every morning and drafts changes for you"
+        actions={
+          agentId ? (
+            <ReportPicker
+              agentId={agentId}
+              value={monthParam ? { month: monthParam } : { run: runId ?? undefined }}
+              current={report?.run ?? (runParam ? null : latest.run)}
+              latestId={latest.run?.id}
+              batches={batches}
+              onPick={(pick) => goTo({ run: pick.run ?? null, month: pick.month ?? null, tab: null })}
+            />
+          ) : null
+        }
+      />
       {!listed ? (
         listError || listUnavailable ? (
           <ErrorState title="Couldn't load your agent" description={listError?.message ?? "Birdy couldn't read your agents. Try again in a moment."} onRetry={() => mutateList()} />
@@ -169,36 +191,41 @@ function StockAgentPage() {
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <SegmentedTabs ariaLabel="Agent sections" value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value })} items={TABS} />
-            {tab === "report" && (
-              <ReportPicker agentId={agentId} current={report?.run ?? (runParam ? null : latest.run)} batches={batches} onPick={(id) => goTo({ run: id })} />
+            <SegmentedTabs ariaLabel="Agent sections" panelId={PANEL} value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value })} items={TABS} />
+            {tab === "report" && hasSheet && (
+              <SheetSummary view={view} summary={sheet.summary} moves={sheet.moves} range={sheet.range} onToday={() => goTo({ run: null, month: null })} />
             )}
           </div>
-          {tab === "report" && (
-            <ReportTab
-              agent={full ?? listed}
-              report={report}
-              reportError={reportError}
-              latest={latest}
-              runParam={runParam}
-              clients={clientGroups}
-              batches={batches}
-              actions={actions}
-              onRetry={() => (runId ? mutateReport() : latest.mutate())}
-              onLatest={() => goTo({ run: null })}
-              onSeeScoreboard={() => goTo({ tab: "scoreboard" })}
-            />
-          )}
-          {tab === "scoreboard" && <ScoreboardTab agentId={agentId} actions={actions} nameOf={nameOf} />}
-          {tab === "lessons" && <LessonsList agentId={agentId} actions={actions} nameOf={nameOf} />}
-          {tab === "settings" &&
-            (clientsError ? (
+
+          {/* Every panel stays mounted, so an open chat survives a tab switch. */}
+          <div id={PANEL} role="tabpanel" aria-labelledby={`${PANEL}-tab-report`} hidden={tab !== "report"}>
+            {hasSheet ? (
+              <div data-testid="sheet" />
+            ) : view === "month" ? (
+              month.error ? <ErrorState title="Couldn't load this month" description={month.error.message} onRetry={() => month.mutate()} /> : <Skeleton className="h-96 w-full rounded-frame" />
+            ) : (
+              <ReportState
+                agent={agent}
+                reportError={reportError}
+                latest={latest}
+                runParam={runParam}
+                onRetry={() => (runId ? mutateReport() : latest.mutate())}
+                onLatest={() => goTo({ run: null })}
+              />
+            )}
+          </div>
+          <div role="tabpanel" aria-labelledby={`${PANEL}-tab-lessons`} hidden={tab !== "lessons"}>
+            <LessonsList agentId={agentId} actions={actions} nameOf={(gid) => clientGroups.find((c) => c.id === gid)?.name ?? "A client"} />
+          </div>
+          <div role="tabpanel" aria-labelledby={`${PANEL}-tab-settings`} hidden={tab !== "settings"}>
+            {clientsError ? (
               <ErrorState title="Couldn't load your clients" description={String(clientsError)} onRetry={() => refreshClients()} />
             ) : full && !clientsLoading ? (
               <AgentSettings key={full.id} agent={full} clients={clientGroups.map(toClient)} actions={actions} />
             ) : (
               <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
-            ))}
+            )}
+          </div>
         </>
       )}
     </div>
