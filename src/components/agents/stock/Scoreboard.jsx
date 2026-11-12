@@ -1,22 +1,9 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
-
-import { Badge, Button, DataTable, EmptyState, ErrorState, Frame, FrameAction, Notice, Skeleton, confirm } from "@/components/ds"
-import { creativeName, money, useOutcomes } from "@/lib/stock-agent-api"
+import { Button, Frame, FrameAction, Notice } from "@/components/ds"
+import { creativeName } from "@/lib/stock-agent-api"
 import { usePress } from "./usePress"
 
-const RESULTS = {
-  won: { tone: "success", label: "Won" },
-  lost: { tone: "danger", label: "Lost" },
-  no_clear_change: { tone: "neutral", label: "No clear change" },
-  never_went_live: { tone: "warning", label: "Never went live" },
-  undone: { tone: "neutral", label: "Undone" },
-  unscored: { tone: "neutral", label: "Not scored" },
-  cleared: { tone: "neutral", label: "Cleared" },
-}
-const WAITING = { tone: "info", label: "Waiting" }
-const CLEARABLE = ["won", "lost"]
 const NOT_A_MOVE = ["unscored", "cleared"]
 const REPORT_ROWS = 5
 const KEEPS_WORKING_AFTER = 2
@@ -51,7 +38,7 @@ function Suggestion({ proposal, actions }) {
   )
 }
 
-/** The report's scoreboard: how each creative has done, and the rule suggestions. Single results live in the Scoreboard tab. */
+/** The report's scoreboard: how each creative has done, and the rule suggestions. */
 export function ScoreboardFrame({ scoreboard, proposals = [], actions, onSeeAll }) {
   const rows = scoreboard?.rows ?? []
   const creatives = byCreative(rows)
@@ -75,82 +62,5 @@ export function ScoreboardFrame({ scoreboard, proposals = [], actions, onSeeAll 
         <Suggestion key={p.id} proposal={p} actions={actions} />
       ))}
     </Frame>
-  )
-}
-
-function ClearResult({ row, actions, onError }) {
-  const [busy, setBusy] = useState(false)
-  if (!CLEARABLE.includes(row.result)) return null
-  const clear = async () => {
-    const yes = await confirm({
-      title: "Clear this result?",
-      description: "It stops counting for or against this ad, and stays listed as cleared. You can't undo this.",
-      confirmLabel: "Clear result",
-    })
-    if (!yes) return
-    setBusy(true)
-    onError(null)
-    try {
-      await actions.clearOutcome(row.id)
-    } catch (err) {
-      onError(err?.message || "Couldn't clear that result. Try again.")
-    } finally {
-      setBusy(false)
-    }
-  }
-  return <Button size="sm" loading={busy} aria-label={`Clear the result for ${row.ad_name}`} onClick={clear}>Clear</Button>
-}
-
-const Num = ({ children }) => <span className="num block text-right">{children}</span>
-const number = (id, header, cell) => ({ id, header, enableSorting: false, meta: { align: "right" }, cell: ({ row }) => <Num>{cell(row.original) ?? "n/a"}</Num> })
-
-/** The Scoreboard tab: every result, each in its own currency, and a way to take back a wrong one. */
-export function ScoreboardTab({ agentId, actions, nameOf }) {
-  const { outcomes, error, mutate } = useOutcomes(agentId)
-  const [clearError, setClearError] = useState(null)
-  // DataTable mounts each `cell` as a component, so new columns would remount every row and lose a Clear's busy state.
-  // `actions` and `nameOf` change on every page render, so cells read them from here and the columns stay put.
-  const latest = useRef()
-  latest.current = { actions, nameOf }
-  const columns = useMemo(
-    () => [
-      { id: "ad", header: "Ad", enableSorting: false, cell: ({ row }) => <span className="font-medium">{row.original.ad_name}</span> },
-      { id: "client", header: "Client", enableSorting: false, cell: ({ row }) => (row.original.client_group_id ? latest.current.nameOf(row.original.client_group_id) : "n/a") },
-      {
-        id: "result",
-        header: "Result",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const result = RESULTS[String(row.original.result ?? "").toLowerCase()] ?? WAITING
-          return <Badge tone={result.tone} size="sm">{result.label}</Badge>
-        },
-      },
-      number("spend", "Spend", (r) => money(r.spend, r.currency)),
-      number("leads", "Leads", (r) => r.leads),
-      number("cpl", "Cost per lead", (r) => money(r.cpl, r.currency)),
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        enableSorting: false,
-        meta: { label: "Actions", align: "right", cardHidden: (r) => !CLEARABLE.includes(r.result) },
-        cell: ({ row }) => <ClearResult row={row.original} actions={latest.current.actions} onError={setClearError} />,
-      },
-    ],
-    []
-  )
-  if (!outcomes) {
-    return error ? <ErrorState title="Couldn't load the scoreboard" description={error.message} onRetry={() => mutate()} /> : <Skeleton className="h-64 w-full rounded-frame" />
-  }
-  const rows = outcomes.rows ?? []
-  if (rows.length === 0) {
-    return <EmptyState variant="surface" title="No results yet" description="Each ad Birdy adds or you flag is scored here after a few days." />
-  }
-  return (
-    <div className="flex flex-col gap-4">
-      {clearError && <Notice tone="danger">{clearError}</Notice>}
-      <Frame title="Every result" description={`Won ${outcomes.won ?? 0} · Lost ${outcomes.lost ?? 0} · Moves ${outcomes.moves ?? 0}`} descriptionInline>
-        <DataTable columns={columns} data={rows} paginate={false} getRowId={(r) => r.id} />
-      </Frame>
-    </div>
   )
 }

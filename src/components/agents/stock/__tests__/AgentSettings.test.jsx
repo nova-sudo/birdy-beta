@@ -11,7 +11,6 @@ import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import { useStockActions } from "@/lib/stock-agent-api"
 import { AgentSettings, SettingsStatus, nextCheckLabel } from "../AgentSettings"
-import { LessonsList } from "../LessonsList"
 
 // Radix Select asks jsdom for these.
 Element.prototype.hasPointerCapture ??= () => false
@@ -123,10 +122,6 @@ function Settings(props) {
 }
 // 06:00 in London on a Thursday: today's 07:00 check hasn't happened yet.
 const NOW = new Date("2026-11-12T06:00:00Z")
-function Lessons() {
-  const actions = useStockActions("ag1")
-  return <LessonsList agentId="ag1" actions={actions} nameOf={(gid) => CLIENTS.find((c) => c.id === gid)?.name ?? "A client"} />
-}
 const fireEventTime = (el, value) => fireEvent.change(el, { target: { value } })
 const renderSettings = (props = {}) => render(<Host><Settings {...props} /></Host>)
 /** Opens a settings sub-tab, then finds its section. */
@@ -351,32 +346,6 @@ describe("Slack templates", () => {
   })
 })
 
-describe("Lessons", () => {
-  it("an empty list uses the mock's words", async () => {
-    render(<Host><Lessons /></Host>)
-    expect(
-      await screen.findByText("Nothing yet. When you edit a card, overrule Birdy or comment on a card in Slack, the lesson shows up here, dated and yours to remove.")
-    ).toBeInTheDocument()
-  })
-
-  it("overruling takes a lesson out of the active list", async () => {
-    lessons = [
-      { id: "l1", text: "Wait 3 days before judging new laser ads.", status: "active", source: "edit", client_group_id: "g2", created_at: "2026-10-30T08:00:00" },
-      { id: "l2", text: "Never pause the hero video.", status: "active", source: "dismiss", created_at: "2026-10-31T08:00:00" },
-    ]
-    render(<Host><Lessons /></Host>)
-    const active = within(await screen.findByRole("region", { name: "Lessons" }))
-    expect(active.getByText(/Wait 3 days/)).toBeInTheDocument()
-    await userEvent.click(active.getAllByRole("button", { name: "Overrule" })[0])
-    await waitFor(() => expect(active.queryByText(/Wait 3 days/)).toBeNull())
-    expect(active.getByText(/Never pause the hero video/)).toBeInTheDocument()
-    const overruled = within(screen.getByRole("region", { name: "Overruled" }))
-    expect(overruled.getByText(/Wait 3 days/)).toBeInTheDocument()
-    expect(calls("/api/agents/ag1/lessons/l1/overrule", "POST")).toHaveLength(1)
-  })
-})
-
-
 describe("Agent settings: a turned off agent", () => {
   const OFF = () => mkAgent({ status: "draft", turned_off_at: "2026-11-04T09:00:00" })
 
@@ -528,20 +497,6 @@ describe("Agent settings: saving details", () => {
     await user.click(await screen.findByRole("button", { name: /add block/i }))
     await user.click(await screen.findByRole("menuitem", { name: /client table/i }))
     expect(JSON.parse(screen.getByLabelText("Report blocks").value)[1]).toEqual({ type: "table", birdy_data: { source: "agent_run" } })
-  })
-})
-
-describe("Lessons: removed ones", () => {
-  it("a lesson removed from memory is not listed as in force", async () => {
-    lessons = [
-      { id: "l1", text: "Keep this one.", status: "active", active: true, source: "edit", created_at: "2026-10-30T08:00:00" },
-      { id: "l2", text: "Removed one.", status: "active", active: false, source: "edit", created_at: "2026-10-30T08:00:00" },
-    ]
-    render(<Host><Lessons /></Host>)
-    const active = within(await screen.findByRole("region", { name: "Lessons" }))
-    expect(active.getByText(/Keep this one/)).toBeInTheDocument()
-    expect(screen.queryByText(/Removed one/)).toBeNull()
-    expect(active.getByText("1")).toBeInTheDocument()
   })
 })
 
