@@ -131,9 +131,26 @@ describe("ClientChatDialog", () => {
     await waitFor(() => expect(revalidateStock).toHaveBeenCalledTimes(1))
     expect(revalidateStock.mock.calls[0][1]).toBe("s1")
     expect(screen.getByText("Card skipped")).toBeInTheDocument()
+    // a lesson re-reads too, so the Lessons tab shows it
     act(() => appendMessage("stock_card:c1", { role: "assistant", content: "Saved.", agent_changes: [{ tool: "add_lesson", changed: "lesson" }] }))
     expect(await screen.findByText("Lesson saved")).toBeInTheDocument()
-    expect(revalidateStock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(revalidateStock).toHaveBeenCalledTimes(2))
+  })
+
+  it.each([
+    ["apply_failed", "Meta refused both."],
+    ["stale", "Slack already applied this card."],
+  ])("revalidates on %s, the lines moved without the sheet", async (changed, content) => {
+    renderDialog()
+    act(() => appendMessage("stock_card:c1", { role: "assistant", content, agent_changes: [{ tool: "apply_card_lines", changed }] }))
+    await waitFor(() => expect(revalidateStock).toHaveBeenCalledTimes(1))
+  })
+
+  it("doesn't revalidate on a reply that changed nothing", async () => {
+    renderDialog()
+    act(() => appendMessage("stock_card:c1", { role: "assistant", content: "It's red because CPL rose." }))
+    expect(await screen.findByText("It's red because CPL rose.")).toBeInTheDocument()
+    expect(revalidateStock).not.toHaveBeenCalled()
   })
 
   it("skip goes to next client", () => {

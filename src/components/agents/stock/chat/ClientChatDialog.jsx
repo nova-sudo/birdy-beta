@@ -29,8 +29,12 @@ import { applySummary, openingMessage, quickReplies } from "./opening"
 
 export const CARD_CHAT_PAGE = "stock_card"
 const ZONE_TONE = { grn: "success", amb: "warning", red: "danger", gry: "neutral" }
-/** Card tools whose result changes the card, so the sheet must re-read it. */
-const CARD_CHANGES = ["applied", "dismissed", "edited"]
+/**
+ * Card tool results after which the sheet must re-read: the card changed (applied, dismissed, edited), its lines
+ * moved though none got through (apply_failed), a lesson was saved (the Lessons tab), or a refusal said the card
+ * moved on without this chat (stale: the cron, Slack or another tab decided it).
+ */
+const CARD_CHANGES = ["applied", "apply_failed", "dismissed", "edited", "lesson", "stale"]
 const CHANGE_CHIPS = { applied: "Changes applied", dismissed: "Card skipped", edited: "Card edited", lesson: "Lesson saved" }
 
 /** The chips under one of Birdy's replies: what its tools did. */
