@@ -51,6 +51,8 @@ import { startersFor } from "@/lib/chat-starters"
  *   renderAfterMessage?     (message, index) => node — extra content under one of Birdy's
  *                           replies (the agent training chat's "rule updated" chips)
  *   cardId?                 the Media Buying card the chat is about, sent as card_id (with agentId)
+ *   cardReadOnly?           the card was opened read-only (a past run or month): sent as card_read_only,
+ *                           so the server's card tools refuse
  *   intro?                  node shown first in the conversation, before any message (a page-built
  *                           opening from Birdy that costs no AI call); with it there is no empty state, and
  *                           it and composerTop stay up without an AI key
@@ -76,6 +78,7 @@ export default function ChatConversation({
   page = null,
   agentId = null,
   cardId = null,
+  cardReadOnly = false,
   clientGroupId = null,
   clientName = null,
   onMessagesChange,
@@ -224,7 +227,7 @@ export default function ChatConversation({
       await sendChatMessage(
         sessionKey,
         {
-          text, page, agentId, cardId,
+          text, page, agentId, cardId, cardReadOnly,
           // Without the picker the surface's own client (if any) still goes.
           clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
           clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
@@ -265,6 +268,7 @@ export default function ChatConversation({
           message: text, session_id: sessionId, page,
           ...(agentId ? { agent_id: agentId } : {}),
           ...(cardId ? { card_id: cardId } : {}),
+          ...(cardId && cardReadOnly ? { card_read_only: true } : {}),
           client_group_id: scope.id, client_name: scope.id ? scope.name : null,
           view_catalogues: readViewCatalogues(),
           ...(attachments?.length ? { attachments } : {}),
@@ -312,7 +316,7 @@ export default function ChatConversation({
       setLocalLoading(false)
     }
     return true
-  }, [loading, sessionId, sessionKey, isControlled, page, agentId, cardId, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, agentId, cardId, cardReadOnly, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Expose send to the surface (the agent training page posts practice follow-ups).
   useEffect(() => {

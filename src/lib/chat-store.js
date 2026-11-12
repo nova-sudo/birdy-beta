@@ -131,7 +131,7 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   if (chat().loading) return
   const generation = generations.get(sessionKey) ?? 0
   const stale = () => (generations.get(sessionKey) ?? 0) !== generation
-  const { text, page, agentId, cardId, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
+  const { text, page, agentId, cardId, cardReadOnly, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
 
   chat().messages = [
     ...chat().messages,
@@ -160,6 +160,8 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         agent_id: agentId || undefined,
         // The Media Buying chat about one card (page stock_card).
         card_id: cardId || undefined,
+        // A card opened read-only (a past run or month): the server's card tools then refuse.
+        card_read_only: cardId && cardReadOnly ? true : undefined,
         client_group_id: clientGroupId,
         client_name: clientName,
         // undefined drops out of the JSON, so other pages' bodies are unchanged.

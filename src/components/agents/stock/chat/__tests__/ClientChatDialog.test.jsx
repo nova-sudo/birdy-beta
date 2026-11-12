@@ -25,7 +25,7 @@ vi.mock("@/components/chat/ChatConversation", async () => {
       const { onMessagesChange } = props
       useEffect(() => onMessagesChange?.(messages), [messages, onMessagesChange])
       return (
-        <div data-testid="chat" data-page={props.page} data-card={props.cardId} data-key={props.sessionKey}>
+        <div data-testid="chat" data-page={props.page} data-card={props.cardId} data-read-only={String(Boolean(props.cardReadOnly))} data-key={props.sessionKey}>
           {props.intro}
           {messages.map((m, i) => (
             <div key={i}>
@@ -94,6 +94,7 @@ describe("ClientChatDialog", () => {
     expect(chat).toHaveAttribute("data-page", "stock_card")
     expect(chat).toHaveAttribute("data-card", "c1")
     expect(chat).toHaveAttribute("data-key", "stock_card:c1")
+    expect(chat).toHaveAttribute("data-read-only", "false")
     expect(screen.getByText("Here's what I'd do:")).toBeInTheDocument()
     expect(screen.getByText("Want me to do all 2?")).toBeInTheDocument()
     expect(screen.getByPlaceholderText("Tell Birdy what to do…")).toBeInTheDocument()
@@ -147,6 +148,8 @@ describe("ClientChatDialog", () => {
     expect(screen.getByText(/^Read-only\./)).toBeInTheDocument()
     expect(screen.queryByText(/left to decide/)).not.toBeInTheDocument()
     expect(screen.getByPlaceholderText("Ask about this report…")).toBeInTheDocument()
+    // the server is told too, so the card tools refuse even when the card is still open
+    expect(screen.getByTestId("chat")).toHaveAttribute("data-read-only", "true")
   })
 
   it("Set targets shows without a target and hands the client to Settings", () => {

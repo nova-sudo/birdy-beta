@@ -46,6 +46,14 @@ describe("chat-store", () => {
     expect(body.agent_id).toBe("ag1")
   })
 
+  it("sends card_read_only only for a read-only card", async () => {
+    apiRequest.mockImplementation(() => reply({ reply: "ok", tools_used: [] }))
+    await sendChatMessage("k-ro", { text: "do it", page: "stock_card", agentId: "ag1", cardId: "c1", cardReadOnly: true })
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body).card_read_only).toBe(true)
+    await sendChatMessage("k-rw", { text: "do it", page: "stock_card", agentId: "ag1", cardId: "c1" })
+    expect(JSON.parse(apiRequest.mock.calls[1][1].body)).not.toHaveProperty("card_read_only")
+  })
+
   it("omits card_id otherwise", async () => {
     apiRequest.mockImplementation(() => reply({ reply: "ok", tools_used: [] }))
     await sendChatMessage("k-nocard", { text: "hi", page: "stock_lessons", agentId: "ag1" })

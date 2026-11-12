@@ -293,6 +293,7 @@ export function ClientChatDialog({ agentId, card, row, alerts = [], nextClient =
               page={CARD_CHAT_PAGE}
               agentId={agentId}
               cardId={cardId}
+              cardReadOnly={readOnly}
               clientGroupId={row.gid}
               clientName={row.name}
               showScopePicker={false}
