@@ -215,12 +215,16 @@ export default function ChatConversation({
     else if (el.scrollTop < lastTopRef.current) stickRef.current = false
     lastTopRef.current = el.scrollTop
   }, [])
-  // A callback ref, so the observer follows the message list in and out of the empty state.
+  // A callback ref, so the observer follows the message list in and out of the empty state. The
+  // scroller is read when the list resizes, not here: React attaches this (inner) ref before the
+  // scroller's own, so scrollRef is still empty on first mount.
   const contentRef = useCallback((content) => {
-    const el = scrollRef.current
-    if (!el || !content || typeof ResizeObserver === "undefined") return
+    if (!content || typeof ResizeObserver === "undefined") return
     const observer = new ResizeObserver(() => {
-      if (stickRef.current) el.scrollTop = el.scrollHeight
+      const el = scrollRef.current
+      if (!el || !stickRef.current) return
+      el.scrollTop = el.scrollHeight
+      lastTopRef.current = el.scrollTop
     })
     observer.observe(content)
     return () => observer.disconnect()
