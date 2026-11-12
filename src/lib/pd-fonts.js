@@ -1,24 +1,31 @@
-import { Bricolage_Grotesque, Inter } from "next/font/google";
+import localFont from "next/font/local";
 
 // Birdy's type: Bricolage Grotesque for headings and numerals, Inter for body
 // and meta. Both are declared as CSS variables and put on <html> by the root
 // layout, so every surface — portalled dialogs, toasts and drawers included —
 // resolves them. next/font dedupes by declaration site, so one module means
 // one load however many places import it.
-export const display = Bricolage_Grotesque({
+//
+// Self-hosted (latin subset of Google's variable files) rather than
+// next/font/google: on 2026-11-12 Google started serving font URLs with an
+// extra `skey` query parameter that Next 16.0's Turbopack font loader rejects,
+// which broke every production build. Local files also make builds offline-safe.
+export const display = localFont({
+  src: "../fonts/bricolage-grotesque-latin-var.woff2",
   variable: "--font-bricolage",
-  subsets: ["latin"],
-  // Variable font: the optical-size axis lets big headings tighten up and
-  // small labels open out, which is most of what gives Bricolage its shape.
-  axes: ["opsz"],
+  // Variable font with wght and the optical-size axis: big headings tighten
+  // up and small labels open out, which gives Bricolage its shape.
+  weight: "200 800",
   display: "swap",
+  fallback: ["system-ui", "sans-serif"],
 });
 
-export const inter = Inter({
+export const inter = localFont({
+  src: "../fonts/inter-latin-var.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
   display: "swap",
+  fallback: ["system-ui", "sans-serif"],
 });
 
 /** Both font variables, for the root element. */
