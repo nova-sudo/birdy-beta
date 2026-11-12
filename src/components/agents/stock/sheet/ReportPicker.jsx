@@ -42,7 +42,7 @@ export const pickerLabel = (run, latestId, batches) => `${runLabel(run, batches)
  * @param {{id: string, name: string}[]} [props.batches]
  */
 export function ReportPicker({ agentId, value = {}, onPick, current, latestId, batches = [] }) {
-  const { runs, hasOlder, loadOlder, error, mutate } = useRuns(agentId)
+  const { runs, hasOlder, loadOlder, error, isLoading, mutate } = useRuns(agentId)
   const options = current && !runs.some((r) => r.id === current.id) ? [current, ...runs] : runs
   const newest = latestId ?? options[0]?.id
   const months = [...new Set(options.map((r) => monthKey(r.local_date)).filter(Boolean))]
@@ -88,6 +88,10 @@ export function ReportPicker({ agentId, value = {}, onPick, current, latestId, b
             </>
           )}
         </DropdownMenuRadioGroup>
+        {/* With nothing listed the menu would open as an empty sliver: say why instead. */}
+        {options.length === 0 && !error && (
+          <DropdownMenuItem disabled>{isLoading ? "Loading reports…" : "No reports yet"}</DropdownMenuItem>
+        )}
         {hasOlder && (
           <>
             <DropdownMenuSeparator />

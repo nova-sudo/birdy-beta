@@ -103,12 +103,15 @@ describe("Media Buying page", () => {
     expect(screen.getByRole("button", { name: /Report:/ })).toHaveTextContent("October 2026 · Whole month")
   })
 
-  it("draft agent shows Finish setup", () => {
+  it("draft agent shows Finish setup, and the empty picker says there are no reports", async () => {
     state.agent = { ...state.agent, status: "draft" }
     state.latest = { run: null, openCards: 0, error: null, isLoading: false, mutate: vi.fn() }
     state.runs = []
     render(<Page />)
     expect(screen.getByRole("link", { name: "Finish setup" })).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    fireEvent.keyDown(screen.getByRole("button", { name: /Report:/ }), { key: "Enter" })
+    const menu = await screen.findByRole("menu")
+    expect(within(menu).getByRole("menuitem", { name: "No reports yet" })).toHaveAttribute("data-disabled")
   })
 
   it("a ?client= link is taken off the URL once read", () => {
