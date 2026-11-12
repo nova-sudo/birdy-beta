@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { LayoutDashboard, Plus } from "lucide-react"
-import { Button, EmptyState, ErrorState, Skeleton, Surface } from "@/components/ds"
+import { Button, ErrorState, Skeleton, Surface } from "@/components/ds"
+import { HubEmptyCard } from "@/components/hub/HubCard"
 import { DashboardCard } from "@/components/dashboards/DashboardCard"
 import { NewDashboardDialog } from "@/components/dashboards/NewDashboardDialog"
 import { useDashboards } from "@/components/dashboards/useDashboards"
@@ -43,7 +44,7 @@ export function DashboardList({ creating, onCreatingChange }) {
     body = (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading dashboards">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-22 rounded-surface" />
+          <Skeleton key={i} className="h-16 rounded-frame" />
         ))}
       </div>
     )
@@ -55,19 +56,17 @@ export function DashboardList({ creating, onCreatingChange }) {
     )
   } else if (items.length === 0) {
     body = (
-      <Surface>
-        <EmptyState
-          icon={LayoutDashboard}
-          title="No dashboards yet"
-          description="Describe the numbers you care about and Birdy will lay them out for you."
-          action={
-            <Button variant="outline" onClick={() => onCreatingChange(true)}>
-              <Plus aria-hidden="true" />
-              New dashboard
-            </Button>
-          }
-        />
-      </Surface>
+      <HubEmptyCard
+        icon={LayoutDashboard}
+        title="No dashboards yet."
+        text="Build a page of the numbers you check most."
+        action={
+          <Button variant="outline" size="sm" onClick={() => onCreatingChange(true)}>
+            <Plus aria-hidden="true" />
+            New dashboard
+          </Button>
+        }
+      />
     )
   } else {
     body = (

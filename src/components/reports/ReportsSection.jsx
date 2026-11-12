@@ -3,20 +3,22 @@
 import { useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
-import { Plus } from "lucide-react"
-import { Button, EmptyState, ErrorState, Skeleton, toast } from "@/components/ds"
+import { Info, MessageSquareText, Plus } from "lucide-react"
+import { Button, EmptyState, ErrorState, Skeleton, Tooltip, TooltipContent, TooltipTrigger, toast } from "@/components/ds"
+import { HubEmptyCard, HubSectionHeader } from "@/components/hub/HubCard"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { fetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
-import { NewReportCard, ReportCard } from "./ReportCard"
+import { ReportCard } from "./ReportCard"
 import { ReportPanel } from "./ReportPanel"
 import { useSlackReports } from "./useSlackReports"
 
 const GRID = "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
 
 /**
- * Hub → Dashboards → Reports: the account's Slack reports as cards, the brief
- * first. A card (or "New report") opens the report form in a side sheet.
+ * Hub → Reports: the account's Slack reports as compact cards, the brief first.
+ * A card (or "New report", on the right of the header) opens the report form
+ * in a side sheet. With no reports, one empty card carries the button instead.
  */
 export function ReportsSection() {
   const { data: slack, error: slackError, isLoading: slackLoading } = useSWR(queryKeys.slackStatus(), fetcher)
@@ -38,11 +40,18 @@ export function ReportsSection() {
     }
   }
 
+  const newReport = (
+    <Button variant="outline" size="sm" onClick={() => openReport(null)} disabled={full}>
+      <Plus aria-hidden="true" />
+      New report
+    </Button>
+  )
+
   let body
   if (slackLoading || (connected && api.isLoading)) {
     body = (
       <div className={GRID}>
-        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[208px] rounded-card" />)}
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-frame" />)}
       </div>
     )
   } else if (slackError || api.error) {
@@ -55,6 +64,15 @@ export function ReportsSection() {
         title="Connect Slack to get reports"
         description="Birdy posts your daily brief, weekly wrap-ups and alert follow-ups straight into Slack."
         action={<Button asChild variant="primary"><Link href="/settings?tab=integrations">Connect Slack</Link></Button>}
+      />
+    )
+  } else if (api.reports.length === 0) {
+    body = (
+      <HubEmptyCard
+        icon={MessageSquareText}
+        title="No reports yet."
+        text="Send your live numbers to Slack on a schedule."
+        action={newReport}
       />
     )
   } else {
@@ -70,27 +88,32 @@ export function ReportsSection() {
             onToggle={toggle}
           />
         ))}
-        <NewReportCard onClick={() => openReport(null)} disabled={full} />
       </div>
     )
   }
 
+  const hasReports = connected && api.reports.length > 0
   return (
-    <section aria-labelledby="hub-reports" className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 id="hub-reports" className="text-base font-semibold text-foreground">
-            Reports
-          </h3>
-          <p className="text-sm text-muted-foreground">Slack messages built from your live numbers</p>
-        </div>
-        {connected && (
-          <Button variant="outline" size="sm" onClick={() => openReport(null)} disabled={full}>
-            <Plus aria-hidden="true" />
-            New report
-          </Button>
-        )}
-      </div>
+    <section aria-labelledby="hub-reports" className="flex flex-col gap-3">
+      <HubSectionHeader
+        id="hub-reports"
+        title="Reports"
+        hint={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="About reports"
+                className="inline-flex rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:shadow-control-focus"
+              >
+                <Info aria-hidden className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Slack messages built from your live numbers, on a schedule or when something happens in Birdy</TooltipContent>
+          </Tooltip>
+        }
+        action={hasReports ? newReport : null}
+      />
       {body}
       {connected && (
         <ReportPanel

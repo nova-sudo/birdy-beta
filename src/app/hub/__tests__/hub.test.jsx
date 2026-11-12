@@ -72,10 +72,34 @@ const STOCK = (status) => ({ id: "s1", type: "stock_media_buying", status, name:
 const CUSTOM = (over = {}) => ({ id: "a1", type: "custom", status: "active", name: "Pause and revive rules", ...over })
 
 describe("BirdyHub page", () => {
-  it("offers Set up agent when there is no stock agent, and creates one then opens setup", async () => {
+  it("shows agents dashboards reports in order with New buttons on the right of each header", async () => {
     renderPage()
-    expect(await screen.findByText("Birdy Media Buying Agent")).toBeInTheDocument()
-    fireEvent.click(await screen.findByRole("button", { name: /Set up agent/ }))
+    await screen.findByText("Weekly spend")
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual(["Agents", "Dashboards", "Reports"])
+    const header = (name) => screen.getByRole("heading", { level: 2, name }).closest("[data-hub-section-header]")
+    expect(within(header("Agents")).getByRole("link", { name: /New agent/ })).toHaveAttribute("href", "/hub/agents/custom/new")
+    expect(within(header("Dashboards")).getByRole("button", { name: /New dashboard/ })).toBeInTheDocument()
+    // The button is the last thing in the header row, so it sits on the right.
+    const row = header("Dashboards")
+    expect(row.lastElementChild).toContainElement(within(row).getByRole("button", { name: /New dashboard/ }))
+    expect(screen.queryByText("Birdy teammates that work your ad accounts")).not.toBeInTheDocument()
+  })
+
+  it("stock card shows N to decide when live with open cards", async () => {
+    agents = [STOCK("active")]
+    renderPage()
+    const card = await screen.findByRole("link", { name: /Birdy Media Buying Agent/ })
+    expect(card).toHaveAttribute("href", "/hub/agents/media-buying")
+    expect(within(card).getByText("Default")).toBeInTheDocument()
+    expect(await within(card).findByText("2 to decide")).toBeInTheDocument()
+    expect(within(card).getByText(/Live/)).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
+  })
+
+  it("missing stock agent creates then routes to setup", async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole("button", { name: /Birdy Media Buying Agent/ }))
     await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying/setup"))
     expect(vi.mocked(apiRequest)).toHaveBeenCalledWith(
       "/api/agents",
@@ -83,49 +107,7 @@ describe("BirdyHub page", () => {
     )
   })
 
-  it("treats a missing /api/agents route as no agents", async () => {
-    agents = 404
-    renderPage()
-    expect(await screen.findByRole("button", { name: /Set up agent/ })).toBeInTheDocument()
-    expect(screen.getByText("No custom agents yet")).toBeInTheDocument()
-  })
-
-  it("a failed agent list shows an error and not an empty hub", async () => {
-    agents = "error"
-    renderPage()
-    expect(await screen.findByText("Couldn't load your agents")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Set up agent/ })).not.toBeInTheDocument()
-    expect(screen.queryByText("No custom agents yet")).not.toBeInTheDocument()
-  })
-
-  it("a draft stock agent offers Continue setup or Start over", async () => {
-    agents = [STOCK("draft")]
-    renderPage()
-    const cont = await screen.findByRole("link", { name: /Continue setup/ })
-    expect(cont).toHaveAttribute("href", "/hub/agents/media-buying/setup")
-
-    fireEvent.click(screen.getByRole("button", { name: /Start over/ }))
-    const dialog = await screen.findByRole("alertdialog")
-    fireEvent.click(within(dialog).getByRole("button", { name: "Start over" }))
-    await waitFor(() =>
-      expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/agents/s1", expect.objectContaining({ method: "DELETE" })),
-    )
-    // Starting a stock agent over stays on the hub; it doesn't open the custom wizard.
-    expect(push).not.toHaveBeenCalledWith("/hub/agents/custom/new")
-    // ...and the card goes back to Set up agent.
-    expect(await screen.findByRole("button", { name: /Set up agent/ })).toBeInTheDocument()
-  })
-
-  it("the Start over warning fits a stock draft", async () => {
-    agents = [STOCK("draft")]
-    renderPage()
-    fireEvent.click(await screen.findByRole("button", { name: /Start over/ }))
-    const dialog = await screen.findByRole("alertdialog")
-    expect(dialog.textContent).not.toMatch(/training chat|practice answers|playbook/i)
-    expect(dialog.textContent).toMatch(/settings/i)
-  })
-
-  it("a 409 on Set up (agent already exists) reloads the list", async () => {
+  it("a 409 on create (agent already exists) reloads the list", async () => {
     const base = mockApi
     let posted = false
     vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
@@ -137,92 +119,87 @@ describe("BirdyHub page", () => {
       return base(path, init)
     })
     renderPage()
-    fireEvent.click(await screen.findByRole("button", { name: /Set up agent/ }))
-    expect(await screen.findByRole("link", { name: /Continue setup/ })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole("button", { name: /Birdy Media Buying Agent/ }))
+    expect(await screen.findByRole("link", { name: /Birdy Media Buying Agent/ })).toHaveAttribute(
+      "href",
+      "/hub/agents/media-buying/setup",
+    )
     expect(posted).toBe(true)
     expect(push).not.toHaveBeenCalled()
   })
 
-  it("custom rows show the client count", async () => {
-    agents = [CUSTOM({ scope: { client_group_ids: ["g1", "g2", "g3"] } })]
+  it("draft stock card links to setup", async () => {
+    agents = [STOCK("draft")]
     renderPage()
-    expect(await screen.findByText("Live · 3 clients")).toBeInTheDocument()
-  })
-
-  it("a live stock agent only offers Open agent", async () => {
-    agents = [STOCK("active")]
-    renderPage()
-    const open = await screen.findByRole("link", { name: /Open agent/ })
-    expect(open).toHaveAttribute("href", "/hub/agents/media-buying")
+    const card = await screen.findByRole("link", { name: /Birdy Media Buying Agent/ })
+    expect(card).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    expect(within(card).getByText("Setting up")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
   })
 
-  it("a turned off stock agent offers Turn on and Open agent, and never Start over or Continue setup", async () => {
+  it("a turned off stock agent opens the agent page and says Turned off", async () => {
     agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
     renderPage()
-    expect(await screen.findByText("Turned off")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Open agent/ })).toHaveAttribute("href", "/hub/agents/media-buying")
-    expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: /Continue setup/ })).not.toBeInTheDocument()
+    const card = await screen.findByRole("link", { name: /Birdy Media Buying Agent/ })
+    expect(card).toHaveAttribute("href", "/hub/agents/media-buying")
+    expect(within(card).getByText("Turned off")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Turn on" })).not.toBeInTheDocument()
   })
 
-  it("Turn on calls activate directly, with no setup step", async () => {
-    agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
-    const base = mockApi
-    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
-      if (path === "/api/agents/s1/activate" && init.method === "POST") {
-        agents = [STOCK("active")]
-        return Promise.resolve(res({ ...STOCK("active") }))
-      }
-      return base(path, init)
-    })
-    renderPage()
-    fireEvent.click(await screen.findByRole("button", { name: "Turn on" }))
-    await waitFor(() => expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/agents/s1/activate", expect.objectContaining({ method: "POST" })))
-    expect(await screen.findByRole("link", { name: /Open agent/ })).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Turn on" })).not.toBeInTheDocument())
-    expect(push).not.toHaveBeenCalled()
-  })
-
-  it("Turn on lists what the server says is missing", async () => {
-    agents = [{ ...STOCK("draft"), turned_off_at: "2026-11-04T09:00:00" }]
-    const base = mockApi
-    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
-      path === "/api/agents/s1/activate"
-        ? Promise.resolve(res({ detail: "The agent isn't ready to switch on yet", missing: ["Preview the first report again"] }, 409))
-        : base(path, init)
-    )
-    renderPage()
-    fireEvent.click(await screen.findByRole("button", { name: "Turn on" }))
-    expect(await screen.findByText("Preview the first report again")).toBeInTheDocument()
-  })
-
-  it("lists each custom agent linking to its page", async () => {
+  it("custom agent card shows Setting up for draft", async () => {
     agents = [CUSTOM(), CUSTOM({ id: "a2", name: "Winner mover", status: "draft" })]
     renderPage()
-    const first = await screen.findByRole("link", { name: /Pause and revive rules/ })
-    expect(first).toHaveAttribute("href", "/hub/agents/custom/a1")
-    expect(screen.getByRole("link", { name: /Winner mover/ })).toHaveAttribute("href", "/hub/agents/custom/a2")
-    expect(screen.queryByText("No custom agents yet")).not.toBeInTheDocument()
+    const live = await screen.findByRole("link", { name: /Pause and revive rules/ })
+    expect(live).toHaveAttribute("href", "/hub/agents/custom/a1")
+    expect(within(live).getByText(/Live/)).toBeInTheDocument()
+    const draft = screen.getByRole("link", { name: /Winner mover/ })
+    expect(draft).toHaveAttribute("href", "/hub/agents/custom/a2")
+    expect(within(draft).getByText("Setting up")).toBeInTheDocument()
+  })
+
+  it("a live custom agent with open work shows N to decide", async () => {
+    agents = [CUSTOM()]
+    const base = mockApi
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/a1/work" ? Promise.resolve(res({ open: [{ id: "w1" }, { id: "w2" }, { id: "w3" }], auto_applied: [] })) : base(path, init),
+    )
+    renderPage()
+    const card = await screen.findByRole("link", { name: /Pause and revive rules/ })
+    expect(await within(card).findByText("3 to decide")).toBeInTheDocument()
   })
 
   it("custom agents are not mistaken for the stock agent", async () => {
     agents = [CUSTOM()]
     renderPage()
-    expect(await screen.findByRole("button", { name: /Set up agent/ })).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: /Birdy Media Buying Agent/ })).toBeInTheDocument()
   })
 
-  it("Create custom agent opens the custom wizard", async () => {
+  it("a failed agent list shows an error and not an empty hub", async () => {
+    agents = "error"
     renderPage()
-    const link = await screen.findByRole("link", { name: /Create custom agent/ })
-    expect(link).toHaveAttribute("href", "/hub/agents/custom/new")
-    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument()
+    expect(await screen.findByText("Couldn't load your agents")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Birdy Media Buying Agent/ })).not.toBeInTheDocument()
   })
 
-  it("lists dashboards", async () => {
+  it("treats a missing /api/agents route as no agents", async () => {
+    agents = 404
     renderPage()
-    expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
-    expect(screen.getByText("Lead sources")).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: /Birdy Media Buying Agent/ })).toBeInTheDocument()
+  })
+
+  it("lists dashboards as compact cards", async () => {
+    renderPage()
+    expect(await screen.findByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/hub/dashboards/d1")
+    expect(screen.getByRole("link", { name: /Lead sources/ })).toHaveAttribute("href", "/hub/dashboards/d2")
+  })
+
+  it("empty dashboards shows single empty card with New dashboard", async () => {
+    listed = []
+    renderPage()
+    expect(await screen.findByText("No dashboards yet.")).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: /New dashboard/ })).toHaveLength(1)
+    fireEvent.click(screen.getByRole("button", { name: /New dashboard/ }))
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
   })
 })
 

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { SWRConfig } from "swr"
 import { ReportsSection } from "../ReportsSection"
 import { bodyFor, initialForm } from "../ReportPanel"
-import { contentSummary, lastRunLabel, timeLabel, triggerLabel } from "../report-format"
+import { contentSummary, lastRunShort, timeLabel, triggerLabel } from "../report-format"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(), API_BASE_URL: "http://api.test" }))
 vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
@@ -136,9 +136,10 @@ describe("report words", () => {
   })
 
   it("last run reads naive server times as UTC", () => {
-    const run = lastRunLabel({ at: "2026-10-27T09:00:00", status: "skipped", error: "no active clients" },
+    const run = lastRunShort({ at: "2026-10-27T09:00:00", status: "skipped", error: "no active clients" },
       new Date("2026-10-27T12:00:00Z"))
-    expect(run.tone).toBe("neutral")
-    expect(run.text).toMatch(/^Skipped today .*: no active clients$/)
+    expect(run).toEqual({ tone: "neutral", text: "Skipped today", error: "no active clients" })
+    expect(lastRunShort({ at: "2026-10-27T09:00:00Z", status: "sent" }, new Date("2026-10-27T12:00:00Z")))
+      .toEqual({ tone: "success", text: "Sent today", error: null })
   })
 })
