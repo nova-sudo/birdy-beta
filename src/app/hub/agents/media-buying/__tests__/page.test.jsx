@@ -58,7 +58,8 @@ describe("Media Buying page", () => {
     render(<Page />)
     expect(screen.getByRole("tab", { name: "Report" })).toHaveAttribute("aria-selected", "true")
     expect(screen.queryByRole("tab", { name: "Scoreboard" })).not.toBeInTheDocument()
-    expect(screen.getByTestId("sheet")).toBeVisible()
+    expect(screen.getByRole("table")).toBeVisible()
+    expect(within(screen.getByRole("table")).getByRole("button", { name: "Aura: open Birdy's chat" })).toBeInTheDocument()
   })
 
   it("summary shows N to decide and omits zero parts", () => {
@@ -93,6 +94,12 @@ describe("Media Buying page", () => {
     state.runs = []
     render(<Page />)
     expect(screen.getByRole("link", { name: "Finish setup" })).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+  })
+
+  it("a ?client= link is taken off the URL once read", () => {
+    params = new URLSearchParams("client=aura&tab=report")
+    render(<Page />)
+    expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying?tab=report")
   })
 
   it("keeps the other panels mounted but hidden", () => {

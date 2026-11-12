@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useMemo } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 
@@ -10,6 +10,7 @@ import { Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } f
 import { AgentSettings } from "@/components/agents/stock/AgentSettings"
 import { LessonsList } from "@/components/agents/stock/LessonsList"
 import { clientProblems } from "@/components/agents/stock/AlertsFrame"
+import { ClientSheet } from "@/components/agents/stock/sheet/ClientSheet"
 import { ReportPicker } from "@/components/agents/stock/sheet/ReportPicker"
 import { SheetSummary } from "@/components/agents/stock/sheet/SheetSummary"
 import { latestCards, moves as movesOf, sheetRows, summary as summaryOf, targetsFor } from "@/components/agents/stock/sheet/rows"
@@ -163,6 +164,25 @@ function StockAgentPage() {
 
   const hasSheet = view === "month" ? Boolean(month.month) || month.rows.length > 0 : Boolean(report)
 
+  // The client whose chat is open, by group id. A past report or month picked closes it.
+  const [openGid, setOpenGid] = useState(null)
+  useEffect(() => setOpenGid(null), [runId, monthParam])
+
+  // ?client= (a gid, a name or a slug, as Slack links send) opens that client's chat once, then leaves the URL.
+  const clientParam = searchParams?.get("client") ?? null
+  const handledClient = useRef(null)
+  useEffect(() => {
+    if (!clientParam || !hasSheet || handledClient.current === clientParam) return
+    handledClient.current = clientParam
+    const slug = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    const hit = sheet.rows.find((r) => r.gid === clientParam || slug(r.name) === slug(clientParam))
+    if (hit?.cardId) setOpenGid(hit.gid)
+    const params = new URLSearchParams(searchParams?.toString() ?? "")
+    params.delete("client")
+    const query = params.toString()
+    router.replace(query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH)
+  }, [clientParam, hasSheet, sheet.rows, searchParams, router])
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
       <PageHeader
@@ -200,7 +220,7 @@ function StockAgentPage() {
           {/* Every panel stays mounted, so an open chat survives a tab switch. */}
           <div id={PANEL} role="tabpanel" aria-labelledby={`${PANEL}-tab-report`} hidden={tab !== "report"}>
             {hasSheet ? (
-              <div data-testid="sheet" />
+              <ClientSheet rows={sheet.rows} view={view} onOpen={(row) => setOpenGid(row.gid)} />
             ) : view === "month" ? (
               month.error ? <ErrorState title="Couldn't load this month" description={month.error.message} onRetry={() => month.mutate()} /> : <Skeleton className="h-96 w-full rounded-frame" />
             ) : (
