@@ -6,7 +6,7 @@ vi.mock("@/lib/jobs-store", () => ({ startJob: vi.fn(), finishJob: vi.fn() }))
 vi.mock("@/lib/ask-birdy", () => ({ openBirdyChat: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-import { getChat, resetChat, sendChatMessage, subscribeChat } from "@/lib/chat-store"
+import { getChat, hydrateChat, resetChat, sendChatMessage, subscribeChat } from "@/lib/chat-store"
 
 const reply = (body) => Promise.resolve({ ok: true, status: 200, json: async () => body })
 
@@ -92,5 +92,18 @@ describe("chat-store", () => {
     expect(body).not.toHaveProperty("dashboard_id")
     expect(body).not.toHaveProperty("summary")
     expect(getChat("k4").messages.at(-1)).toEqual({ role: "assistant", content: "Hi", tools_used: [] })
+  })
+
+  it("hydrateChat fills an empty chat with a saved transcript, and never overwrites one", () => {
+    const seen = []
+    const off = subscribeChat("hyd1", () => seen.push(getChat("hyd1").messages.length))
+    hydrateChat("hyd1", { sessionId: "s9", messages: [{ role: "user", content: "a" }, { role: "assistant", content: "b" }] })
+    expect(getChat("hyd1").sessionId).toBe("s9")
+    expect(getChat("hyd1").messages.map((m) => m.content)).toEqual(["a", "b"])
+    expect(seen).toEqual([2])
+    hydrateChat("hyd1", { sessionId: "s10", messages: [{ role: "user", content: "c" }] })
+    expect(getChat("hyd1").messages).toHaveLength(2)
+    expect(getChat("hyd1").sessionId).toBe("s9")
+    off()
   })
 })

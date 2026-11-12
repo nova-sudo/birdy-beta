@@ -53,6 +53,12 @@ import { startersFor } from "@/lib/chat-starters"
  *   cardId?                 the Media Buying card the chat is about, sent as card_id (with agentId)
  *   sendRef?                ref the surface's send(text) is written to, so the page can post
  *                           a message through the same gates as the composer
+ *   introMessage?           Birdy's opening line, shown first and never sent (markdown); the
+ *                           empty state is not shown when there is one (the agent setup chat)
+ *   aboveComposer?          node shown just above the composer (the setup chat's example jobs)
+ *   interceptSend?          (text) => boolean | Promise<boolean> — takes over a send that passed
+ *                           the gates; true clears the composer, false keeps the text (the setup
+ *                           chat creates the agent on the first message, then sends it itself)
  *
  * The three dashboard props only reach the store-owned (uncontrolled) send;
  * the dashboards page is uncontrolled, and /ask-birdy has no dashboard.
@@ -92,6 +98,9 @@ export default function ChatConversation({
   onUndoDashboardOps = null,
   renderAfterMessage = null,
   sendRef = null,
+  introMessage = null,
+  aboveComposer = null,
+  interceptSend = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -143,6 +152,8 @@ export default function ChatConversation({
   const onToolUsedRef = useRef(onToolUsed)
   useEffect(() => { onMessagesChangeRef.current = onMessagesChange }, [onMessagesChange])
   useEffect(() => { onToolUsedRef.current = onToolUsed }, [onToolUsed])
+  const interceptSendRef = useRef(interceptSend)
+  useEffect(() => { interceptSendRef.current = interceptSend }, [interceptSend])
   const getDashboardSummaryRef = useRef(getDashboardSummary)
   const onDashboardOpsRef = useRef(onDashboardOps)
   useEffect(() => { getDashboardSummaryRef.current = getDashboardSummary }, [getDashboardSummary])
@@ -189,6 +200,16 @@ export default function ChatConversation({
         description: "Top up to keep using Birdy AI.",
       })
       return false
+    }
+    if (interceptSendRef.current) {
+      let taken = false
+      try {
+        taken = (await interceptSendRef.current(text)) !== false
+      } catch {
+        taken = false
+      }
+      if (taken) setInput("")
+      return taken
     }
     setInput("")
 
@@ -343,7 +364,7 @@ export default function ChatConversation({
     <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
-        {isEmpty && !loading ? (
+        {isEmpty && !loading && !introMessage ? (
           <EmptyState
             title={emptyStateTitle}
             subtitle={emptyStateSubtitle}
@@ -355,6 +376,13 @@ export default function ChatConversation({
           />
         ) : (
           <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
+            {introMessage && (
+              <MessageBubble
+                message={{ role: "assistant", content: introMessage }}
+                messageIndex={-1}
+                widthClass={bubbleWidthClass}
+              />
+            )}
             {messages.map((m, i) => {
               if (isHidden(m, i)) return null
               const bubble = (
@@ -399,6 +427,7 @@ export default function ChatConversation({
               </Link>
             </div>
           )}
+          {aboveComposer && <div className="mb-2">{aboveComposer}</div>}
           <ChatComposer
             value={input}
             onChange={setInput}

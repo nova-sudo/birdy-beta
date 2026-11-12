@@ -1,27 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import { SWRConfig } from "swr"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(), API_BASE_URL: "http://api.test" }))
-const push = vi.fn()
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
+vi.mock("@/lib/jobs-store", () => ({ startJob: vi.fn(), finishJob: vi.fn() }))
+const replace = vi.fn()
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace }) }))
+
+let chatProps
+vi.mock("@/components/chat/ChatConversation", () => ({
+  default: (props) => {
+    chatProps = props
+    return <div data-testid="setup-chat" data-page={props.page} />
+  },
+}))
 
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import NewAgentPage from "../page"
 
 const res = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body })
-const posts = () => vi.mocked(apiRequest).mock.calls.filter(([, init]) => init?.method === "POST")
+const posts = (path) => vi.mocked(apiRequest).mock.calls.filter(([p, init]) => p === path && init?.method === "POST")
 
 beforeEach(() => {
-  push.mockReset()
+  replace.mockReset()
   vi.mocked(apiRequest).mockReset()
-  vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
-    path === "/api/agents" && init.method === "POST"
-      ? Promise.resolve(res({ id: "ag9", type: "custom", name: "Lead rules" }))
-      : Promise.resolve(res([]))
-  )
+  vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+    if (path === "/api/agents" && init.method === "POST") return Promise.resolve(res({ id: "ag9", type: "custom", name: "New agent" }))
+    if (path === "/api/chat") return Promise.resolve(res({ reply: "Got it.", tools_used: [], session_id: "s9" }))
+    return Promise.resolve(res([]))
+  })
 })
 
 const renderPage = () =>
@@ -32,33 +40,22 @@ const renderPage = () =>
   )
 
 describe("New custom agent page", () => {
-  it("creates a custom agent with the typed name and opens its setup", async () => {
+  it("opens the setup chat and creates nothing until the first message", async () => {
     renderPage()
-    await userEvent.type(screen.getByLabelText("Agent name"), "Lead rules")
-    await userEvent.click(screen.getByRole("button", { name: /Create agent/ }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag9/setup"))
-    expect(posts()).toHaveLength(1)
-    expect(posts()[0][0]).toBe("/api/agents")
-    expect(JSON.parse(posts()[0][1].body)).toEqual({ type: "custom", name: "Lead rules" })
+    expect(screen.getByRole("heading", { name: "Set up your new agent" })).toBeInTheDocument()
+    expect(screen.getByTestId("setup-chat")).toHaveAttribute("data-page", "agent_setup")
+    expect(chatProps.agentId).toBeNull()
+    expect(chatProps.introMessage).toMatch(/What should the agent do\?/)
+    expect(posts("/api/agents")).toHaveLength(0)
   })
 
-  it("a blank name shows an inline error and posts nothing", async () => {
+  it("the first message creates a draft named New agent and opens its setup", async () => {
     renderPage()
-    await userEvent.type(screen.getByLabelText("Agent name"), "   ")
-    await userEvent.click(screen.getByRole("button", { name: /Create agent/ }))
-    expect(await screen.findByRole("alert")).toHaveTextContent("Give the agent a name.")
-    expect(posts()).toHaveLength(0)
-    expect(push).not.toHaveBeenCalled()
-  })
-
-  it("shows the server's refusal inline and stays on the page", async () => {
-    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
-      init.method === "POST" ? Promise.resolve(res({ detail: "Name is too long" }, 400)) : Promise.resolve(res([]))
-    )
-    renderPage()
-    await userEvent.type(screen.getByLabelText("Agent name"), "x")
-    await userEvent.click(screen.getByRole("button", { name: /Create agent/ }))
-    expect(await screen.findByRole("alert")).toHaveTextContent("Name is too long")
-    expect(push).not.toHaveBeenCalled()
+    await act(async () => {
+      await chatProps.interceptSend("Pause ads that cost too much")
+    })
+    expect(JSON.parse(posts("/api/agents")[0][1].body)).toEqual({ type: "custom", name: "New agent" })
+    expect(replace).toHaveBeenCalledWith("/hub/agents/custom/ag9/setup")
+    await waitFor(() => expect(posts("/api/chat")).toHaveLength(1))
   })
 })

@@ -69,6 +69,18 @@ export function seedSessionId(sessionKey, sessionId) {
   if (!chat.sessionId) chat.sessionId = sessionId
 }
 
+/**
+ * Fill a chat with a saved transcript (a reload of the agent setup chat). Only an empty, idle
+ * chat is filled, so a transcript already on screen or a reply in flight is never overwritten.
+ */
+export function hydrateChat(sessionKey, { sessionId, messages }) {
+  const chat = entry(sessionKey)
+  if (chat.loading || chat.messages.length > 0 || !messages?.length) return
+  chat.messages = messages
+  if (sessionId) chat.sessionId = sessionId
+  emit(sessionKey)
+}
+
 /** "New chat": drop transcript + session. */
 export function resetChat(sessionKey) {
   generations.set(sessionKey, (generations.get(sessionKey) ?? 0) + 1)
