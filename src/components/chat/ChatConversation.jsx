@@ -52,7 +52,8 @@ import { startersFor } from "@/lib/chat-starters"
  *                           replies (the agent training chat's "rule updated" chips)
  *   cardId?                 the Media Buying card the chat is about, sent as card_id (with agentId)
  *   intro?                  node shown first in the conversation, before any message (a page-built
- *                           opening from Birdy that costs no AI call); with it there is no empty state
+ *                           opening from Birdy that costs no AI call); with it there is no empty state, and
+ *                           it and composerTop stay up without an AI key
  *   composerTop?            node just above the composer (quick replies)
  *   sendRef?                ref the surface's send(text) is written to, so the page can post
  *                           a message through the same gates as the composer
@@ -349,7 +350,8 @@ export default function ChatConversation({
   const visibleMessages = messages.filter((m, i) => !isHidden(m, i))
   const isEmpty = visibleMessages.length === 0 && !intro
 
-  if (!configured) {
+  // A surface that built its own opening (the card chat) keeps it without a key: its quick replies need no AI.
+  if (!configured && !intro && !composerTop) {
     return (
       <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
         <AiCredentialsEmptyState />
@@ -430,6 +432,14 @@ export default function ChatConversation({
               <span>You&apos;re out of Birdy Credits.</span>
               <Link href="/billing" className="font-semibold underline underline-offset-2 hover:no-underline">
                 Buy credits
+              </Link>
+            </div>
+          )}
+          {!configured && (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-full bg-pd-warning px-4 py-2 text-xs font-semibold text-white">
+              <span>Chatting with Birdy needs an AI key.</span>
+              <Link href="/settings?tab=integrations" className="font-semibold underline underline-offset-2 hover:no-underline">
+                Add your AI key
               </Link>
             </div>
           )}

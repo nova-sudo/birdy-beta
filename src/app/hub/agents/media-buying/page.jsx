@@ -7,8 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/hub/HubShell"
 import { Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
-import { AgentSettings } from "@/components/agents/stock/AgentSettings"
-import { LessonsList } from "@/components/agents/stock/LessonsList"
+import { AgentSettings, SettingsStatus } from "@/components/agents/stock/AgentSettings"
+import { LessonsTab } from "@/components/agents/stock/LessonsTab"
 import { clientProblems } from "@/components/agents/stock/AlertsFrame"
 import { ClientChatDialog } from "@/components/agents/stock/chat/ClientChatDialog"
 import { ClientSheet } from "@/components/agents/stock/sheet/ClientSheet"
@@ -130,14 +130,16 @@ function StockAgentPage() {
     if (noAgent) router.replace(STOCK_SETUP_PATH)
   }, [noAgent, router])
 
-  const goTo = (changes) => {
+  const goTo = (changes, { replace = false } = {}) => {
     const params = new URLSearchParams(searchParams?.toString() ?? "")
     for (const [key, value] of Object.entries(changes)) {
       if (value) params.set(key, value)
       else params.delete(key)
     }
     const query = params.toString()
-    router.push(query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH)
+    const href = query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH
+    if (replace) router.replace(href)
+    else router.push(href)
   }
 
   const sheet = useMemo(() => {
@@ -182,6 +184,10 @@ function StockAgentPage() {
   // ?client= (a gid, a name or a slug, as Slack links send) opens that client's chat once, then leaves the URL.
   const clientParam = searchParams?.get("client") ?? null
   const handledClient = useRef(null)
+  useEffect(() => {
+    // Once the param has left the URL, the same client can be asked for again (a second lesson link).
+    if (!clientParam) handledClient.current = null
+  }, [clientParam])
   useEffect(() => {
     if (tab !== "report" || !clientParam || !hasSheet || handledClient.current === clientParam) return
     handledClient.current = clientParam
@@ -232,9 +238,12 @@ function StockAgentPage() {
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <SegmentedTabs ariaLabel="Agent sections" panelId={PANEL} value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value })} items={TABS} />
+            <SegmentedTabs ariaLabel="Agent sections" panelId={PANEL} value={tab} onValueChange={(value) => goTo({ tab: value === "report" ? null : value, client: null })} items={TABS} />
             {tab === "report" && hasSheet && (
               <SheetSummary view={view} summary={sheet.summary} moves={sheet.moves} range={sheet.range} onToday={() => goTo({ run: null, month: null })} />
+            )}
+            {tab === "settings" && full && !clientsLoading && !clientsError && (
+              <SettingsStatus agent={full} clients={clientGroups.map(toClient)} actions={actions} />
             )}
           </div>
 
@@ -275,13 +284,27 @@ function StockAgentPage() {
             )}
           </div>
           <div role="tabpanel" aria-labelledby={`${PANEL}-tab-lessons`} hidden={tab !== "lessons"}>
-            <LessonsList agentId={agentId} actions={actions} nameOf={(gid) => clientGroups.find((c) => c.id === gid)?.name ?? "A client"} />
+            <LessonsTab
+              agentId={agentId}
+              actions={actions}
+              nameOf={(gid) => clientGroups.find((c) => c.id === gid)?.name ?? "A client"}
+              // A lesson's source or one of its uses: that run's chat, or the client's latest card when there is no run.
+              onOpenCard={(lessonRun, gid) => goTo({ tab: null, run: lessonRun ?? null, month: null, section: null, client: gid })}
+            />
           </div>
           <div role="tabpanel" aria-labelledby={`${PANEL}-tab-settings`} hidden={tab !== "settings"}>
             {clientsError ? (
               <ErrorState title="Couldn't load your clients" description={String(clientsError)} onRetry={() => refreshClients()} />
             ) : full && !clientsLoading ? (
-              <AgentSettings key={full.id} agent={full} clients={clientGroups.map(toClient)} actions={actions} />
+              <AgentSettings
+                key={full.id}
+                agent={full}
+                clients={clientGroups.map(toClient)}
+                actions={actions}
+                section={searchParams?.get("section") ?? undefined}
+                onSection={(value) => goTo({ section: value, client: null }, { replace: true })}
+                focusClient={tab === "settings" ? (searchParams?.get("client") ?? undefined) : undefined}
+              />
             ) : (
               <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
             )}

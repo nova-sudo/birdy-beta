@@ -10,8 +10,20 @@ vi.mock("next/navigation", () => ({
 }))
 vi.mock("@/components/page-header", () => ({ usePageHeader: () => {} }))
 vi.mock("@/components/hub/HubShell", () => ({ SalesHubHeaderTitle: () => null }))
-vi.mock("@/components/agents/stock/AgentSettings", () => ({ AgentSettings: () => <div data-testid="settings" /> }))
-vi.mock("@/components/agents/stock/LessonsList", () => ({ LessonsList: () => <div data-testid="lessons" /> }))
+const seen = {}
+vi.mock("@/components/agents/stock/AgentSettings", () => ({
+  AgentSettings: (props) => {
+    seen.settings = props
+    return <div data-testid="settings" data-section={props.section ?? ""} data-client={props.focusClient ?? ""} />
+  },
+  SettingsStatus: () => <div data-testid="settings-status" />,
+}))
+vi.mock("@/components/agents/stock/LessonsTab", () => ({
+  LessonsTab: (props) => {
+    seen.lessons = props
+    return <div data-testid="lessons" />
+  },
+}))
 vi.mock("@/components/agents/stock/TurnOn", () => ({ TurnOn: () => null }))
 vi.mock("@/lib/useClientGroups", () => ({
   useClientGroups: () => ({ clientGroups: [{ id: "g1", name: "Aura" }, { id: "g2", name: "Glow" }], loading: false, error: null, refresh: vi.fn() }),
@@ -126,5 +138,31 @@ describe("Media Buying page", () => {
     render(<Page />)
     expect(screen.getByTestId("lessons").closest("[role=tabpanel]")).not.toBeVisible()
     expect(screen.getByTestId("settings").closest("[role=tabpanel]")).not.toBeVisible()
+  })
+
+  it("Settings reads ?section and ?client, shows the status line, and a sub-tab pick replaces ?section", () => {
+    params = new URLSearchParams("tab=settings&section=clients&client=g1")
+    render(<Page />)
+    const settings = screen.getByTestId("settings")
+    expect(settings).toHaveAttribute("data-section", "clients")
+    expect(settings).toHaveAttribute("data-client", "g1")
+    expect(screen.getByTestId("settings-status")).toBeInTheDocument()
+    seen.settings.onSection("schedule")
+    expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying?tab=settings&section=schedule")
+  })
+
+  it("the status line is only on Settings, and ?client= is not a settings focus on Report", () => {
+    render(<Page />)
+    expect(screen.queryByTestId("settings-status")).not.toBeInTheDocument()
+    expect(screen.getByTestId("settings")).toHaveAttribute("data-client", "")
+  })
+
+  it("a lesson's source opens that client's chat on the Report tab", () => {
+    params = new URLSearchParams("tab=lessons")
+    render(<Page />)
+    seen.lessons.onOpenCard("r0", "g2")
+    expect(push).toHaveBeenLastCalledWith("/hub/agents/media-buying?run=r0&client=g2")
+    seen.lessons.onOpenCard(null, "g1")
+    expect(push).toHaveBeenLastCalledWith("/hub/agents/media-buying?client=g1")
   })
 })

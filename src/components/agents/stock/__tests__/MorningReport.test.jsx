@@ -150,7 +150,7 @@ describe("Agent page: lessons and settings tabs", () => {
   it("the Lessons tab lists the lessons, empty at first", async () => {
     search = "tab=lessons"
     renderPage()
-    expect(await screen.findByText(/Nothing yet. When you edit a card/)).toBeInTheDocument()
+    expect(await screen.findByText("No lessons yet")).toBeInTheDocument()
   })
 
   it("the Settings tab opens the agent's settings once the clients are in", async () => {
