@@ -62,16 +62,23 @@ export function errorLabel(error) {
   return ERRORS[error] || error || "Couldn't post to Slack"
 }
 
-/** { tone, text } for a card's last-run line, or null when it never ran. */
-export function lastRunLabel(lastRun, now = new Date()) {
+/** A last run's time; naive server times are UTC. */
+function runDate(at) {
+  return new Date(at.endsWith?.("Z") || /[+-]\d\d:\d\d$/.test(at) ? at : `${at}Z`)
+}
+
+/**
+ * { tone, text, error } for a report's last run, or null when it never ran.
+ * `text` is the verb and day only ("Sent today", "Failed Mon, 27 Oct"); `error`
+ * is what went wrong as something a person can act on, or null.
+ */
+export function lastRunShort(lastRun, now = new Date()) {
   if (!lastRun?.at) return null
-  const at = new Date(lastRun.at.endsWith?.("Z") || /[+-]\d\d:\d\d$/.test(lastRun.at) ? lastRun.at : `${lastRun.at}Z`)
-  const when = sameDay(at, now)
-    ? `today ${at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-    : at.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })
-  if (lastRun.status === "sent") return { tone: "success", text: `Sent ${when}` }
-  if (lastRun.status === "failed") return { tone: "danger", text: `Failed ${when}: ${errorLabel(lastRun.error)}` }
-  return { tone: "neutral", text: `Skipped ${when}: ${errorLabel(lastRun.error)}` }
+  const at = runDate(lastRun.at)
+  const when = sameDay(at, now) ? "today" : at.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })
+  if (lastRun.status === "sent") return { tone: "success", text: `Sent ${when}`, error: null }
+  const verb = lastRun.status === "failed" ? "Failed" : "Skipped"
+  return { tone: lastRun.status === "failed" ? "danger" : "neutral", text: `${verb} ${when}`, error: errorLabel(lastRun.error) }
 }
 
 function sameDay(a, b) {

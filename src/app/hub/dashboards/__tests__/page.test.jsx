@@ -67,7 +67,7 @@ describe("My dashboards list page", () => {
 
     expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
     expect(screen.getByText("Lead sources")).toBeInTheDocument()
-    expect(screen.getAllByText(/^Updated /)).toHaveLength(2)
+    expect(screen.getAllByText(/^Edited /)).toHaveLength(2)
     expect(document.querySelectorAll('[data-ds="surface"]')).toHaveLength(2)
     expect(screen.getByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/hub/dashboards/d1")
   })
@@ -76,8 +76,8 @@ describe("My dashboards list page", () => {
     listed = []
     renderPage()
 
-    expect(await screen.findByText("No dashboards yet")).toBeInTheDocument()
-    expect(document.querySelector('[data-ds="empty-state"]')).not.toBeNull()
+    expect(await screen.findByText("No dashboards yet.")).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: /New dashboard/ }).length).toBeGreaterThan(0)
   })
 
   it("shows an error state with a retry when the list fails to load", async () => {

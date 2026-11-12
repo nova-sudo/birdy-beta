@@ -3,36 +3,53 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Pause, Plus, RefreshCw, TriangleAlert } from "lucide-react"
+import { Bot, Plus } from "lucide-react"
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/hub/HubShell"
-import { Badge, Button, ErrorState, Frame, Skeleton, Surface, toast } from "@/components/ds"
+import { HubCard, HubSectionHeader } from "@/components/hub/HubCard"
+import { Button, ErrorState, Skeleton, toast } from "@/components/ds"
 import { DashboardList } from "@/components/dashboards/DashboardList"
+import { useDashboards } from "@/components/dashboards/useDashboards"
 import { ReportsSection } from "@/components/reports/ReportsSection"
-import { StartOverButton } from "@/components/agents/StartOverButton"
-import { TurnOn } from "@/components/agents/stock/TurnOn"
-import { customAgentPath, useAgents } from "@/lib/agents-api"
-import { STOCK_AGENT_PATH, STOCK_SETUP_PATH, createStockAgent, useStockAgent } from "@/lib/stock-agent-api"
+import { customAgentPath, useAgentWork, useAgents } from "@/lib/agents-api"
+import {
+  STOCK_AGENT_PATH,
+  STOCK_SETUP_PATH,
+  createStockAgent,
+  useLatestRun,
+  useStockAgent,
+} from "@/lib/stock-agent-api"
 
 // ─── BirdyHub ───────────────────────────────────────────────────────────────
-// Agents (Birdy teammates you train on your strategy) and dashboards, together,
-// with the Slack reports under Dashboards.
+// Agents, Dashboards and Reports, in that order. Each section's "New …" button
+// sits on the right of its header row; every item is one compact HubCard.
 
 const NEW_CUSTOM_HREF = "/hub/agents/custom/new"
+const GRID = "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+const SECTION = "flex flex-col gap-3"
+// Each section after the first is ruled off from the one above.
+const DIVIDED = "border-t border-border pt-6"
 
-const STOCK_POINTS = [
-  { icon: TriangleAlert, text: "Catches what stops spend first: payment, rejections, zero spend days" },
-  { icon: Pause, text: "Zones each client against the targets you set" },
-  { icon: RefreshCw, text: "Moves proven winners between matching accounts" },
-]
+const decide = (n) => (n > 0 ? (
+  <>
+    {" · "}
+    <span className="font-semibold text-foreground">{n} to decide</span>
+  </>
+) : null)
 
+/**
+ * The Birdy Media Buying Agent's card. Missing: the card creates the agent and
+ * opens setup (a 409 means the list was stale, so it reloads). Draft: opens
+ * setup. Live or turned off: opens the agent page.
+ */
 function StockAgentCard({ agent }) {
   const router = useRouter()
   const { mutate } = useAgents()
   const [busy, setBusy] = useState(false)
-  // A turned-off agent is a draft with a mark. It has a finished setup, so it gets Turn on and never Start over.
+  // A turned-off agent is a draft with a mark: it has a finished setup and opens its own page.
   const turnedOff = Boolean(agent) && agent.status !== "active" && Boolean(agent.turned_off_at)
-  const isDraft = Boolean(agent) && agent.status !== "active" && !turnedOff
+  const live = agent?.status === "active"
+  const { openCards } = useLatestRun(live ? agent.id : null)
 
   const setUp = async () => {
     setBusy(true)
@@ -48,131 +65,46 @@ function StockAgentCard({ agent }) {
     }
   }
 
-  return (
-    <Frame
-      title="Birdy Media Buying Agent"
-      action={turnedOff ? <Badge tone="neutral">Turned off</Badge> : <Badge tone="primary">Default</Badge>}
-      padded
-      contentClassName="flex flex-col gap-4"
-    >
-      <p className="text-sm leading-normal text-ink-secondary">
-        Checks your accounts on your schedule, drafts a change card for each one, and learns from what actually worked.
-      </p>
-      <ul className="flex flex-col gap-2">
-        {STOCK_POINTS.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-center gap-2.5 text-sm text-foreground">
-            <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-            {text}
-          </li>
-        ))}
-      </ul>
-      {isDraft ? (
-        <div className="flex flex-col gap-2">
-          <Button asChild variant="primary" size="lg">
-            <Link href={STOCK_SETUP_PATH}>
-              Continue setup
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-          <StartOverButton
-            agent={agent}
-            variant="outline"
-            size="lg"
-            className="w-full"
-            redirectTo={null}
-            description="This deletes the clients you picked and the settings you chose, including your Slack messages. You can't undo it."
-          />
-        </div>
-      ) : agent ? (
-        <div className="flex flex-col gap-2">
-          {turnedOff && (
-            <>
-              <p className="text-sm text-muted-foreground">Birdy isn&apos;t checking your clients. Your settings and reports are kept.</p>
-              <TurnOn agent={agent} size="lg" className="w-full" />
-            </>
-          )}
-          <Button asChild variant={turnedOff ? "outline" : "primary"} size="lg">
-            <Link href={STOCK_AGENT_PATH}>
-              Open agent
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-        </div>
-      ) : (
-        <Button variant="primary" size="lg" loading={busy} onClick={setUp}>
-          Set up agent
-          <ArrowRight aria-hidden />
-        </Button>
-      )}
-    </Frame>
-  )
+  const common = {
+    icon: Bot,
+    title: "Birdy Media Buying Agent",
+    tag: "Default",
+    line: "Checks your accounts and drafts a change card",
+  }
+  if (!agent) return <HubCard {...common} onClick={setUp} busy={busy} cue="Set up" />
+  if (live) return <HubCard {...common} href={STOCK_AGENT_PATH} status={<>Live{decide(openCards)}</>} />
+  if (turnedOff) return <HubCard {...common} href={STOCK_AGENT_PATH} status="Turned off" statusTone="off" />
+  return <HubCard {...common} href={STOCK_SETUP_PATH} status="Setting up" statusTone="setting" />
 }
 
-// The agent list carries the client count but not the open work, which is a request per agent, so rows
-// show the clients and leave the waiting items to the agent's own page and the nav badge.
-function customSummary(a) {
+/** The agent list has no description, so the line says what the agent watches. */
+function customLine(a) {
+  if (a.description) return a.description
   const clients = a.scope?.client_group_ids?.length ?? 0
-  const state = a.status === "active" ? "Live" : "Setting up"
-  return clients > 0 ? `${state} · ${clients} ${clients === 1 ? "client" : "clients"}` : state
+  return clients > 0 ? `Watches ${clients} ${clients === 1 ? "client" : "clients"}` : "Your own rules, on the clients you pick"
 }
 
-function CustomAgentsFrame({ agents }) {
+/** A custom agent's card. Its open work shares `useAgentWork`'s SWR entry with the agent page. */
+function CustomAgentCard({ agent }) {
+  const live = agent.status === "active"
+  const { work } = useAgentWork(live ? agent.id : null)
+  const open = Array.isArray(work?.open) ? work.open.length : 0
   return (
-    <Frame
-      title="Custom agents"
-      action={agents.length > 0 ? <Badge>{agents.length}</Badge> : undefined}
-      contentClassName="flex flex-col"
-    >
-      {agents.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-muted-foreground">No custom agents yet</p>
-      ) : (
-        <ul className="divide-y divide-border">
-          {agents.map((a) => (
-            <li key={a.id}>
-              <Link
-                href={customAgentPath(a.id)}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/50"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-foreground">{a.name || "Custom agent"}</span>
-                  <span className="block text-muted-foreground">{customSummary(a)}</span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-primary">
-                  Open
-                  <ArrowRight aria-hidden className="size-3.5" />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Frame>
-  )
-}
-
-function CreateCustomAgentCard() {
-  return (
-    <Surface className="flex flex-col justify-center gap-2.5 border border-dashed border-border shadow-none">
-      <h3 className="text-base font-semibold text-foreground">Create your own agent</h3>
-      <p className="text-sm leading-normal text-muted-foreground">
-        Choose its clients, teach it your rules in a chat, practise on real past cases and see what it would have done
-        before you switch it on.
-      </p>
-      <div>
-        <Button asChild variant="outline">
-          <Link href={NEW_CUSTOM_HREF}>
-            <Plus aria-hidden />
-            Create custom agent
-          </Link>
-        </Button>
-      </div>
-    </Surface>
+    <HubCard
+      href={customAgentPath(agent.id)}
+      icon={Bot}
+      title={agent.name || "Custom agent"}
+      line={customLine(agent)}
+      status={live ? <>Live{decide(open)}</> : "Setting up"}
+      statusTone={live ? "ok" : "setting"}
+    />
   )
 }
 
 export default function HubPage() {
   const { agents, error, isLoading, mutate } = useAgents()
   const { agent: stock } = useStockAgent()
+  const { items: dashboards, isLoading: dashboardsLoading } = useDashboards()
   const [creating, setCreating] = useState(false)
   const custom = agents.filter((a) => a.type === "custom")
 
@@ -191,12 +123,20 @@ export default function HubPage() {
 
   return (
     <SalesHubShell>
-      <div className="flex flex-col gap-10">
-        <section aria-labelledby="hub-agents" className="flex flex-col gap-4">
-          <h2 id="hub-agents" className="text-lg font-semibold text-foreground">
-            Agents
-          </h2>
-          <p className="-mt-3 text-sm text-muted-foreground">Birdy teammates that work your ad accounts</p>
+      <div className="flex flex-col gap-6">
+        <section aria-labelledby="hub-agents" className={SECTION}>
+          <HubSectionHeader
+            id="hub-agents"
+            title="Agents"
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link href={NEW_CUSTOM_HREF}>
+                  <Plus aria-hidden="true" />
+                  New agent
+                </Link>
+              </Button>
+            }
+          />
           {error ? (
             <ErrorState
               title="Couldn't load your agents"
@@ -204,33 +144,39 @@ export default function HubPage() {
               onRetry={() => mutate()}
             />
           ) : isLoading ? (
-            <Skeleton className="h-72 w-full" />
+            <div className={GRID} aria-busy="true" aria-label="Loading agents">
+              <Skeleton className="h-24 rounded-frame" />
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={GRID}>
               <StockAgentCard agent={stock} />
-              <div className="flex flex-col gap-4">
-                <CustomAgentsFrame agents={custom} />
-                <CreateCustomAgentCard />
-              </div>
+              {custom.map((a) => (
+                <CustomAgentCard key={a.id} agent={a} />
+              ))}
             </div>
           )}
         </section>
 
-        <section aria-labelledby="hub-dashboards" className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="hub-dashboards" className="text-lg font-semibold text-foreground">
-              Dashboards
-            </h2>
-            <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
-              <Plus aria-hidden="true" />
-              New dashboard
-            </Button>
-          </div>
+        <section aria-labelledby="hub-dashboards" className={`${SECTION} ${DIVIDED}`}>
+          <HubSectionHeader
+            id="hub-dashboards"
+            title="Dashboards"
+            action={
+              // With no dashboards the empty card carries the button instead.
+              dashboardsLoading || dashboards?.length > 0 ? (
+                <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
+                  <Plus aria-hidden="true" />
+                  New dashboard
+                </Button>
+              ) : null
+            }
+          />
           <DashboardList creating={creating} onCreatingChange={setCreating} />
-          <div className="mt-4 border-t border-border pt-6">
-            <ReportsSection />
-          </div>
         </section>
+
+        <div className={DIVIDED}>
+          <ReportsSection />
+        </div>
       </div>
     </SalesHubShell>
   )
