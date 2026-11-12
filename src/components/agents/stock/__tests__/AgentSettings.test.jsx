@@ -10,7 +10,7 @@ import { ConfirmHost } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import { useStockActions } from "@/lib/stock-agent-api"
-import { AgentSettings } from "../AgentSettings"
+import { AgentSettings, SettingsStatus, nextCheckLabel } from "../AgentSettings"
 import { LessonsList } from "../LessonsList"
 
 // Radix Select asks jsdom for these.
@@ -112,17 +112,29 @@ function Host({ children }) {
     </SWRConfig>
   )
 }
-function Settings() {
+function Settings(props) {
   const actions = useStockActions("ag1")
-  return <AgentSettings agent={agent} clients={CLIENTS} actions={actions} />
+  return (
+    <>
+      <SettingsStatus agent={agent} clients={CLIENTS} actions={actions} now={NOW} />
+      <AgentSettings agent={agent} clients={CLIENTS} actions={actions} {...props} />
+    </>
+  )
 }
+// 06:00 in London on a Thursday: today's 07:00 check hasn't happened yet.
+const NOW = new Date("2026-11-12T06:00:00Z")
 function Lessons() {
   const actions = useStockActions("ag1")
   return <LessonsList agentId="ag1" actions={actions} nameOf={(gid) => CLIENTS.find((c) => c.id === gid)?.name ?? "A client"} />
 }
 const fireEventTime = (el, value) => fireEvent.change(el, { target: { value } })
-const renderSettings = () => render(<Host><Settings /></Host>)
-const section = (name) => screen.getByRole("region", { name })
+const renderSettings = (props = {}) => render(<Host><Settings {...props} /></Host>)
+/** Opens a settings sub-tab, then finds its section. */
+async function region(label) {
+  const tab = await screen.findByRole("tab", { name: label })
+  if (tab.getAttribute("data-state") !== "active") await userEvent.click(tab)
+  return screen.findByRole("region", { name: `${label} settings` })
+}
 
 beforeEach(() => {
   agent = mkAgent()
@@ -138,7 +150,7 @@ beforeEach(() => {
 describe("Agent settings: modes", () => {
   it("a changed mode is saved", async () => {
     renderSettings()
-    const modes = within(await screen.findByRole("region", { name: "Flag, Ask me or Auto settings" }))
+    const modes = within(await region("What it can change"))
     await userEvent.click(within(modes.getByRole("tablist", { name: "Remove mode" })).getByRole("tab", { name: "Auto" }))
     await userEvent.click(modes.getByRole("button", { name: "Save changes" }))
     await waitFor(() => expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(1))
@@ -149,14 +161,14 @@ describe("Agent settings: modes", () => {
   it("Add can't leave Flag while the agent's top-level add_writes_enabled is off", async () => {
     agent = mkAgent({ add_writes_enabled: false, settings: { ...SETTINGS, add_writes_enabled: true } })
     renderSettings()
-    const modes = within(await screen.findByRole("region", { name: "Flag, Ask me or Auto settings" }))
+    const modes = within(await region("What it can change"))
     expect(within(modes.getByRole("tablist", { name: "Add mode" })).getByRole("tab", { name: "Auto" })).toBeDisabled()
   })
 
   it("a client override is added, then removed with the two patches the server needs", async () => {
     const user = userEvent.setup()
     const { unmount } = renderSettings()
-    let modes = within(await screen.findByRole("region", { name: "Flag, Ask me or Auto settings" }))
+    let modes = within(await region("What it can change"))
     await user.click(modes.getByRole("combobox", { name: "Remove for Velvet Laser" }))
     await user.click(await screen.findByRole("option", { name: "Flag" }))
     await user.click(modes.getByRole("button", { name: "Save changes" }))
@@ -167,7 +179,7 @@ describe("Agent settings: modes", () => {
     vi.mocked(apiRequest).mockClear()
     agent = mkAgent({ settings: { ...SETTINGS, clients: { g2: { modes: { remove: "flag" } } } } })
     renderSettings()
-    modes = within(await screen.findByRole("region", { name: "Flag, Ask me or Auto settings" }))
+    modes = within(await region("What it can change"))
     await user.click(modes.getByRole("combobox", { name: "Remove for Velvet Laser" }))
     await user.click(await screen.findByRole("option", { name: /^Default/ }))
     await user.click(modes.getByRole("button", { name: "Save changes" }))
@@ -181,7 +193,7 @@ describe("Agent settings: modes", () => {
       Promise.resolve(res({ detail: "Some settings need fixing", errors: [{ client_group_id: "g2", message: "Velvet Laser can't be set to Auto" }] }, 400))
     agent = mkAgent({ settings: { ...SETTINGS, clients: { g2: { modes: { remove: "flag" } } } } })
     renderSettings()
-    const modes = within(await screen.findByRole("region", { name: "Flag, Ask me or Auto settings" }))
+    const modes = within(await region("What it can change"))
     await userEvent.click(within(modes.getByRole("tablist", { name: "Revive mode" })).getByRole("tab", { name: "Flag" }))
     await userEvent.click(modes.getByRole("button", { name: "Save changes" }))
     const row = (await modes.findByText("Velvet Laser can't be set to Auto")).closest("tr")
@@ -197,7 +209,7 @@ describe("Agent settings: the other forms", () => {
       .mockResolvedValueOnce(res({ detail: "Another agent acts on this client", conflicts: [{ client_group_id: "g2", holder_name: "Pause and revive rules" }] }, 409))
       .mockResolvedValue(res(agent))
     renderSettings()
-    const clients = within(await screen.findByRole("region", { name: "Clients and targets settings" }))
+    const clients = within(await region("Clients and targets"))
     await user.click(await clients.findByRole("button", { name: "Save changes" }))
     await user.click(await screen.findByRole("button", { name: "Only flag" }))
     await waitFor(() => expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(2))
@@ -210,7 +222,7 @@ describe("Agent settings: the other forms", () => {
     patchHandler = () =>
       Promise.resolve(res({ detail: "Some settings need fixing", errors: [{ client_group_id: "g2", message: "Velvet Laser needs its own zones" }] }, 400))
     renderSettings()
-    const clients = within(await screen.findByRole("region", { name: "Clients and targets settings" }))
+    const clients = within(await region("Clients and targets"))
     await userEvent.click(await clients.findByRole("button", { name: "Save changes" }))
     const message = await clients.findByText("Velvet Laser needs its own zones")
     expect(message.closest("tr")).toHaveTextContent("Velvet Laser")
@@ -218,13 +230,13 @@ describe("Agent settings: the other forms", () => {
 
   it("the schedule and the creative rules save from here", async () => {
     renderSettings()
-    const schedule = within(await screen.findByRole("region", { name: "Schedule settings" }))
+    const schedule = within(await region("Schedule"))
     await userEvent.click(schedule.getByRole("button", { name: "Batch A Tue" }))
     await userEvent.click(schedule.getByRole("button", { name: "Save changes" }))
     await waitFor(() => expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(1))
     expect(bodies("/api/agents/ag1/settings", "PATCH")[0].settings.batches[0].weekdays).toEqual([0, 1, 3])
 
-    const creative = within(screen.getByRole("region", { name: "Creative rules settings" }))
+    const creative = within(await region("Creative rules"))
     await userEvent.clear(creative.getByLabelText("Most ads live in one ad set"))
     await userEvent.type(creative.getByLabelText("Most ads live in one ad set"), "5")
     await userEvent.click(creative.getByRole("button", { name: "Save changes" }))
@@ -234,7 +246,7 @@ describe("Agent settings: the other forms", () => {
 
   it("a live agent's Slack section keeps the note that anyone in the channel can approve", async () => {
     renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     expect(await slack.findByText(/Anyone in this channel can approve a card/)).toBeInTheDocument()
   })
 })
@@ -258,14 +270,14 @@ describe("Agent settings: turning the agent off", () => {
   it("a draft agent has nothing to turn off", async () => {
     agent = mkAgent({ status: "draft" })
     renderSettings()
-    await screen.findByRole("region", { name: "Schedule settings" })
+    await region("Schedule")
     expect(screen.queryByRole("button", { name: "Turn off" })).toBeNull()
   })
 })
 
 describe("Slack templates", () => {
   const open = async (name) => {
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     await userEvent.click(await slack.findByRole("button", { name: `Edit ${name}` }))
   }
 
@@ -333,7 +345,7 @@ describe("Slack templates", () => {
   it("a saved template that failed shows the server's notice, and the default row has none", async () => {
     views.summary = view("summary", { customised: true, notice: "The summary template could not be used, so the default went out." })
     renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     expect(await slack.findByText(/default went out/)).toBeInTheDocument()
     expect(slack.getAllByText(/default went out/)).toHaveLength(1)
   })
@@ -441,7 +453,7 @@ describe("Agent settings: a turned off agent", () => {
 describe("Agent settings: saving details", () => {
   it("a schedule save on a live agent leaves the scope alone when the time and zone are unchanged", async () => {
     renderSettings()
-    const schedule = within(await screen.findByRole("region", { name: "Schedule settings" }))
+    const schedule = within(await region("Schedule"))
     await userEvent.click(schedule.getByRole("button", { name: "Batch A Tue" }))
     await userEvent.click(schedule.getByRole("button", { name: "Save changes" }))
     await waitFor(() => expect(bodies("/api/agents/ag1/settings", "PATCH")).toHaveLength(1))
@@ -451,7 +463,7 @@ describe("Agent settings: saving details", () => {
   it("a claim conflict on the schedule is a readable message, and a half-saved schedule says so", async () => {
     const user = userEvent.setup()
     renderSettings()
-    const schedule = within(await screen.findByRole("region", { name: "Schedule settings" }))
+    const schedule = within(await region("Schedule"))
     fireEventTime(schedule.getByLabelText("Every day at"), "08:00")
     vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
       path === "/api/agents/ag1" && init.method === "PATCH"
@@ -471,7 +483,7 @@ describe("Agent settings: saving details", () => {
 
   it("no Saved. when the Slack channel is as it was", async () => {
     renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     await userEvent.click(await slack.findByRole("button", { name: "Save changes" }))
     await new Promise((r) => setTimeout(r, 30))
     expect(slack.queryByText("Saved.")).toBeNull()
@@ -480,7 +492,7 @@ describe("Agent settings: saving details", () => {
 
   it("a refetch of the agent while a template is open doesn't preview again", async () => {
     const { rerender } = renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     await userEvent.click(await slack.findByRole("button", { name: "Edit Card" }))
     await screen.findByText("Glow Aesthetics")
     const before = calls("/api/agents/ag1/slack-templates/card/preview", "POST").length
@@ -493,7 +505,7 @@ describe("Agent settings: saving details", () => {
   it("a save error goes away once the draft changes", async () => {
     const user = userEvent.setup()
     renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     await user.click(await slack.findByRole("button", { name: "Edit Card" }))
     await screen.findByText("Glow Aesthetics")
     vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
@@ -511,7 +523,7 @@ describe("Agent settings: saving details", () => {
     const user = userEvent.setup()
     views.summary = view("summary", { placeholders: ["date"], template: { blocks: [{ type: "divider" }] } })
     renderSettings()
-    const slack = within(await screen.findByRole("region", { name: "Slack settings" }))
+    const slack = within(await region("Slack"))
     await user.click(await slack.findByRole("button", { name: "Edit Daily summary" }))
     await user.click(await screen.findByRole("button", { name: /add block/i }))
     await user.click(await screen.findByRole("menuitem", { name: /client table/i }))
@@ -530,5 +542,86 @@ describe("Lessons: removed ones", () => {
     expect(active.getByText(/Keep this one/)).toBeInTheDocument()
     expect(screen.queryByText(/Removed one/)).toBeNull()
     expect(active.getByText("1")).toBeInTheDocument()
+  })
+})
+
+describe("Settings sub-tabs", () => {
+  it("shows one section at a time", async () => {
+    renderSettings()
+    const tabs = within(await screen.findByRole("tablist", { name: "Settings sections" }))
+    expect(tabs.getAllByRole("tab").map((t) => t.textContent)).toEqual(["What it can change", "Schedule", "Clients and targets", "Creative rules", "Slack"])
+    expect(await screen.findByRole("region", { name: "What it can change settings" })).toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "Schedule settings" })).toBeNull()
+    expect(screen.queryByRole("region", { name: "Slack settings" })).toBeNull()
+    await userEvent.click(tabs.getByRole("tab", { name: "Schedule" }))
+    expect(await screen.findByRole("region", { name: "Schedule settings" })).toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "What it can change settings" })).toBeNull()
+  })
+
+  it("section param selects sub-tab", async () => {
+    const onSection = vi.fn()
+    renderSettings({ section: "creative", onSection })
+    expect(await screen.findByRole("region", { name: "Creative rules settings" })).toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "What it can change settings" })).toBeNull()
+    await userEvent.click(screen.getByRole("tab", { name: "Slack" }))
+    expect(onSection).toHaveBeenCalledWith("slack")
+  })
+
+  it("an unknown section falls back to the first", async () => {
+    renderSettings({ section: "nope" })
+    expect(await screen.findByRole("region", { name: "What it can change settings" })).toBeInTheDocument()
+  })
+
+  it("focusClient highlights row", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView")
+    renderSettings({ section: "clients", focusClient: "g2" })
+    const clients = within(await screen.findByRole("region", { name: "Clients and targets settings" }))
+    const row = clients.getByText("Velvet Laser").closest("tr")
+    expect(row).toHaveAttribute("data-focused", "true")
+    expect(clients.getByText("Lumen Skin Clinic").closest("tr")).not.toHaveAttribute("data-focused")
+    await waitFor(() => expect(scroll).toHaveBeenCalled())
+    expect(scroll.mock.contexts.at(-1)).toBe(row)
+    scroll.mockRestore()
+  })
+
+  it("status line live shows next check and Review setup", async () => {
+    renderSettings()
+    const status = await screen.findByRole("status", { name: "Agent status" })
+    expect(status).toHaveTextContent("Live")
+    expect(status).toHaveTextContent("next check today 07:00")
+    expect(within(status).getByRole("link", { name: /Review setup/ })).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    expect(within(status).getByRole("button", { name: "Turn off" })).toBeInTheDocument()
+  })
+
+  it("turned off shows TurnOn", async () => {
+    agent = mkAgent({ status: "draft", turned_off_at: "2026-11-04T09:00:00" })
+    renderSettings()
+    const status = await screen.findByRole("status", { name: "Agent status" })
+    expect(status).toHaveTextContent("Turned off")
+    expect(within(status).getByRole("button", { name: "Turn on" })).toBeInTheDocument()
+    expect(within(status).queryByRole("link", { name: /Review setup/ })).toBeNull()
+  })
+
+  it("a draft says Not on yet and links to Finish setup", async () => {
+    agent = mkAgent({ status: "draft" })
+    renderSettings()
+    const status = await screen.findByRole("status", { name: "Agent status" })
+    expect(status).toHaveTextContent("Not on yet")
+    expect(within(status).getByRole("link", { name: "Finish setup" })).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+  })
+})
+
+describe("nextCheckLabel", () => {
+  const at = (time, tz) => mkAgent({ scope: { client_group_ids: [], schedule: { time, tz } } })
+  it("is today before the time, tomorrow after it, in the agent's zone", () => {
+    expect(nextCheckLabel(at("07:00", "Europe/London"), new Date("2026-11-12T06:59:00Z"))).toBe("today 07:00")
+    expect(nextCheckLabel(at("07:00", "Europe/London"), new Date("2026-11-12T07:00:00Z"))).toBe("tomorrow 07:00")
+    // 23:30 UTC on the 12th is 10:30 on the 13th in Sydney, past 07:00, so tomorrow.
+    expect(nextCheckLabel(at("07:00", "Australia/Sydney"), new Date("2026-11-12T23:30:00Z"))).toBe("tomorrow 07:00")
+    // In summer London is on BST: 05:30 UTC is 06:30 local, before 07:00.
+    expect(nextCheckLabel(at("07:00", "Europe/London"), new Date("2026-07-01T05:30:00Z"))).toBe("today 07:00")
+  })
+  it("defaults to 07:00 London", () => {
+    expect(nextCheckLabel(mkAgent({ scope: {} }), new Date("2026-11-12T03:00:00Z"))).toBe("today 07:00")
   })
 })

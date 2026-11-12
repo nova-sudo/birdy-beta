@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
@@ -20,6 +20,7 @@ import {
   SegmentedTabs,
   Switch,
 } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import { ClaimConflicts } from "@/components/agents/ClaimConflicts"
 import { integrationsHref } from "@/components/agents/ClientScopeTable"
 import { currencySymbol } from "@/lib/chat-viz"
@@ -91,8 +92,15 @@ function RowSeg({ batches, value, onChange, name }) {
 /**
  * Step 2: zones for the whole agency, then one table. Every client follows those zones with no treatment
  * until someone changes it, on its row or by ticking several and using the bulk bar. Saves through `patchSettings`.
+ * `focusClient` (a client group id) scrolls that client's row into view once and marks it `data-focused`.
  */
-export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext, saveLabel, inPlace = false }) {
+export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, onBack, onNext, saveLabel, inPlace = false, focusClient = null }) {
+  const tableRef = useRef(null)
+  useEffect(() => {
+    if (!focusClient) return
+    const row = [...(tableRef.current?.querySelectorAll("tr[data-gid]") ?? [])].find((tr) => tr.dataset.gid === focusClient)
+    row?.scrollIntoView?.({ block: "center", behavior: "smooth" })
+  }, [focusClient])
   const settings = useMemo(() => settingsOf(agent), [agent])
   const firstBatch = settings.batches[0]?.id ?? null
   // A client deleted since it was chosen is dropped, so it isn't sent back.
@@ -306,7 +314,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
           </form>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[56rem] text-sm">
+          <table ref={tableRef} className="w-full min-w-[56rem] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="w-10 px-3 py-2">
@@ -336,7 +344,16 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                 const sym = currencySymbol(c.currency)
                 const needs = needsOwn.includes(c)
                 return (
-                  <tr key={c.id} className={isPicked ? "border-t bg-primary-soft align-middle" : "border-t align-middle"}>
+                  <tr
+                    key={c.id}
+                    data-gid={c.id}
+                    data-focused={focusClient === c.id ? "true" : undefined}
+                    className={cn(
+                      "border-t align-middle",
+                      isPicked && "bg-primary-soft",
+                      focusClient === c.id && "bg-primary-soft shadow-[inset_3px_0_0_var(--color-primary)]"
+                    )}
+                  >
                     <td className="px-3 py-2">
                       <Checkbox
                         aria-label={`Select ${c.name}`}
