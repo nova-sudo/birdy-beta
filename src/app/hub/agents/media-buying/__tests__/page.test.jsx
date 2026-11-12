@@ -27,7 +27,10 @@ vi.mock("@/lib/stock-agent-api", async (importOriginal) => ({
   useRuns: () => ({ runs: state.runs, hasOlder: false, loadOlder: vi.fn(), error: null, mutate: vi.fn() }),
   useMonth: (id, m) => (m ? state.month : { month: null, range: null, rows: [], error: null, mutate: vi.fn() }),
   useStockActions: () => ({}),
+  useCardChat: () => ({ sessionId: null, messages: [], isLoading: false }),
 }))
+vi.mock("@/components/chat/ChatConversation", () => ({ default: (props) => <div data-testid="chat" data-card={props.cardId}>{props.intro}{props.composerTop}</div> }))
+vi.mock("@/components/birdy/BirdyAvatar", () => ({ default: () => null }))
 
 import Page from "../page"
 
@@ -100,6 +103,23 @@ describe("Media Buying page", () => {
     params = new URLSearchParams("client=aura&tab=report")
     render(<Page />)
     expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying?tab=report")
+  })
+
+  it("a row opens Birdy's chat on its card, and Skip moves to the next client to decide", () => {
+    render(<Page />)
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Aura: open Birdy's chat" }))
+    const dialog = screen.getByRole("dialog", { name: "Aura" })
+    expect(within(dialog).getByTestId("chat")).toHaveAttribute("data-card", "c1")
+    expect(within(dialog).getByText("2 left to decide")).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole("button", { name: "Skip for now: Glow ›" }))
+    expect(screen.getByRole("dialog", { name: "Glow" })).toBeInTheDocument()
+  })
+
+  it("Set targets switches to Settings on that client", () => {
+    render(<Page />)
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Aura: open Birdy's chat" }))
+    fireEvent.click(screen.getByRole("button", { name: "Set targets" }))
+    expect(push).toHaveBeenCalledWith("/hub/agents/media-buying?tab=settings&section=clients&client=g1")
   })
 
   it("keeps the other panels mounted but hidden", () => {

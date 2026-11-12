@@ -69,6 +69,24 @@ export function seedSessionId(sessionKey, sessionId) {
   if (!chat.sessionId) chat.sessionId = sessionId
 }
 
+/**
+ * Fill an empty chat with a saved transcript (the Media Buying card chat, read back from the server).
+ * A chat that already has messages, or one waiting on a reply, is left alone, so a reload never doubles them.
+ */
+export function seedMessages(sessionKey, messages) {
+  const chat = entry(sessionKey)
+  if (chat.loading || chat.messages.length > 0 || !messages?.length) return
+  chat.messages = [...messages]
+  emit(sessionKey)
+}
+
+/** Add a message the page wrote itself, with no AI call (the card chat's "Yes to all" result). */
+export function appendMessage(sessionKey, message) {
+  const chat = entry(sessionKey)
+  chat.messages = [...chat.messages, message]
+  emit(sessionKey)
+}
+
 /** "New chat": drop transcript + session. */
 export function resetChat(sessionKey) {
   generations.set(sessionKey, (generations.get(sessionKey) ?? 0) + 1)

@@ -10,10 +10,11 @@ import { Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } f
 import { AgentSettings } from "@/components/agents/stock/AgentSettings"
 import { LessonsList } from "@/components/agents/stock/LessonsList"
 import { clientProblems } from "@/components/agents/stock/AlertsFrame"
+import { ClientChatDialog } from "@/components/agents/stock/chat/ClientChatDialog"
 import { ClientSheet } from "@/components/agents/stock/sheet/ClientSheet"
 import { ReportPicker } from "@/components/agents/stock/sheet/ReportPicker"
 import { SheetSummary } from "@/components/agents/stock/sheet/SheetSummary"
-import { latestCards, moves as movesOf, sheetRows, summary as summaryOf, targetsFor } from "@/components/agents/stock/sheet/rows"
+import { isDecide, latestCards, moves as movesOf, orderRows, sheetRows, summary as summaryOf, targetsFor } from "@/components/agents/stock/sheet/rows"
 import { toClient } from "@/components/agents/AgentTraining"
 import { TurnOn } from "@/components/agents/stock/TurnOn"
 import { useAgent } from "@/lib/agents-api"
@@ -84,6 +85,16 @@ function ReportState({ agent, reportError, latest, runParam, onRetry, onLatest }
     )
   }
   return <Skeleton className="h-96 w-full rounded-frame" />
+}
+
+/**
+ * A row's chat. A row in the report on screen has its card; any other (a client outside today's batch,
+ * a month row) opens on its latest card, read from that card's own run.
+ */
+function RowChat({ agentId, row, ...props }) {
+  const { report } = useRun(agentId, row.card ? null : row.runId)
+  const card = row.card ?? report?.cards?.find((c) => c.id === row.cardId) ?? null
+  return <ClientChatDialog agentId={agentId} card={card} row={row} {...props} />
 }
 
 function StockAgentPage() {
@@ -172,7 +183,7 @@ function StockAgentPage() {
   const clientParam = searchParams?.get("client") ?? null
   const handledClient = useRef(null)
   useEffect(() => {
-    if (!clientParam || !hasSheet || handledClient.current === clientParam) return
+    if (tab !== "report" || !clientParam || !hasSheet || handledClient.current === clientParam) return
     handledClient.current = clientParam
     const slug = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
     const hit = sheet.rows.find((r) => r.gid === clientParam || slug(r.name) === slug(clientParam))
@@ -181,7 +192,17 @@ function StockAgentPage() {
     params.delete("client")
     const query = params.toString()
     router.replace(query ? `${STOCK_AGENT_PATH}?${query}` : STOCK_AGENT_PATH)
-  }, [clientParam, hasSheet, sheet.rows, searchParams, router])
+  }, [tab, clientParam, hasSheet, sheet.rows, searchParams, router])
+
+  const openRow = openGid ? (sheet.rows.find((r) => r.gid === openGid) ?? null) : null
+  // Skip goes to the next client still to decide, in the sheet's urgent order, wrapping round.
+  const nextClient = useMemo(() => {
+    if (!openRow || view !== "today") return null
+    const decide = orderRows(sheet.rows, { mode: "urgent" }).filter((r) => isDecide(r.chip) && r.cardId)
+    const at = decide.findIndex((r) => r.gid === openRow.gid)
+    const next = [...decide.slice(at + 1), ...decide.slice(0, Math.max(at, 0))].find((r) => r.gid !== openRow.gid)
+    return next ? { gid: next.gid, name: next.name } : null
+  }, [openRow, sheet.rows, view])
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
@@ -220,7 +241,26 @@ function StockAgentPage() {
           {/* Every panel stays mounted, so an open chat survives a tab switch. */}
           <div id={PANEL} role="tabpanel" aria-labelledby={`${PANEL}-tab-report`} hidden={tab !== "report"}>
             {hasSheet ? (
-              <ClientSheet rows={sheet.rows} view={view} onOpen={(row) => setOpenGid(row.gid)} />
+              <>
+                <ClientSheet rows={sheet.rows} view={view} onOpen={(row) => setOpenGid(row.gid)} />
+                {openRow && (
+                  <RowChat
+                    key={openRow.gid}
+                    agentId={agentId}
+                    row={openRow}
+                    alerts={sheet.alerts}
+                    nextClient={nextClient}
+                    leftToDecide={sheet.summary.toDecide}
+                    actions={actions}
+                    onClose={() => setOpenGid(null)}
+                    onNext={(next) => setOpenGid(next.gid)}
+                    onSetTargets={(gid) => {
+                      setOpenGid(null)
+                      goTo({ tab: "settings", section: "clients", client: gid, run: null, month: null })
+                    }}
+                  />
+                )}
+              </>
             ) : view === "month" ? (
               month.error ? <ErrorState title="Couldn't load this month" description={month.error.message} onRetry={() => month.mutate()} /> : <Skeleton className="h-96 w-full rounded-frame" />
             ) : (

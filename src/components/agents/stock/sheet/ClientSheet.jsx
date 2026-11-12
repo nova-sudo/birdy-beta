@@ -158,7 +158,7 @@ export function ClientSheet({ rows, view, onOpen }) {
         meta: { minWidth: 200 },
         cell: ({ row }) =>
           row.original.cardId ? (
-            <button type="button" data-cell="client" aria-label={`${row.original.name}: open Birdy's chat`} className="cursor-pointer text-left font-medium outline-none hover:underline focus-visible:underline">
+            <button type="button" data-cell="client" data-gid={row.original.gid} aria-label={`${row.original.name}: open Birdy's chat`} className="cursor-pointer text-left font-medium outline-none hover:underline focus-visible:underline">
               {row.original.name}
             </button>
           ) : (
