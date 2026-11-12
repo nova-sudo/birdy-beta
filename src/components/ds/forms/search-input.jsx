@@ -55,11 +55,28 @@ function SearchInput({
   const inputId = props.id ?? autoId
   const [query, setQuery] = React.useState(value || "")
   const [syncedValue, setSyncedValue] = React.useState(value)
+  // Every query this field has handed to `onChange`. The parent echoing one of them back is not an
+  // outside change: resetting to it would drop whatever was typed while the echo was in flight
+  // (typing "Sculpt" fast came out as "Sup").
+  const emitted = React.useRef(new Set())
 
   if (!Object.is(value, syncedValue)) {
     setSyncedValue(value)
-    setQuery(value || "")
+    if (emitted.current.has(value || "")) {
+      emitted.current.delete(value || "")
+    } else {
+      emitted.current.clear()
+      setQuery(value || "")
+    }
   }
+
+  const emit = React.useCallback(
+    (next) => {
+      emitted.current.add(next)
+      onChange(next)
+    },
+    [onChange]
+  )
 
   React.useEffect(() => {
     const normalizedValue = value || ""
@@ -67,28 +84,28 @@ function SearchInput({
       // Zero means "no debounce", not "next macrotask": a purely local filter wants the list to
       // move with the keystroke.
       if (debounceMs === 0) {
-        onChange(query)
+        emit(query)
         return
       }
       const handler = setTimeout(() => {
-        onChange(query)
+        emit(query)
       }, debounceMs)
 
       return () => {
         clearTimeout(handler)
       }
     }
-  }, [query, onChange, value, debounceMs])
+  }, [query, emit, value, debounceMs])
 
   const handleClear = () => {
     setQuery("")
-    onChange("")
+    emit("")
   }
 
   const handleKeyDown = (e) => {
     const normalizedValue = value || ""
     if (e.key === "Enter" && query !== normalizedValue) {
-      onChange(query)
+      emit(query)
     }
   }
 

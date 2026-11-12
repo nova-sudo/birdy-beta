@@ -151,6 +151,9 @@ export default function ChatConversation({
   // Shown once a request runs long enough that "just wait" stops being fair.
   const [slowNotice, setSlowNotice] = useState(false)
   const scrollRef = useRef(null)
+  // Whether new content should keep the view on the latest message; off once the reader scrolls up.
+  const stickRef = useRef(true)
+  const lastTopRef = useRef(0)
   const hasAutoSent = useRef(false)
   const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
   const { blocked: creditsBlocked, refresh: refreshCredits } = useCredits()
@@ -198,8 +201,30 @@ export default function ChatConversation({
 
   // Auto-scroll
   useEffect(() => {
+    stickRef.current = true
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, loading])
+
+  // Stay pinned to the latest message while content below it grows after the messages arrive
+  // (inline blocks that load their own data, a resumed transcript), until the reader scrolls up.
+  const onScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (nearBottom) stickRef.current = true
+    else if (el.scrollTop < lastTopRef.current) stickRef.current = false
+    lastTopRef.current = el.scrollTop
+  }, [])
+  // A callback ref, so the observer follows the message list in and out of the empty state.
+  const contentRef = useCallback((content) => {
+    const el = scrollRef.current
+    if (!el || !content || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(() => {
+      if (stickRef.current) el.scrollTop = el.scrollHeight
+    })
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [])
 
   const sendMessage = useCallback(async (text, attachments) => {
     // Resolves false when the message was not sent (the surface's sendRef callers use it).
@@ -374,7 +399,7 @@ export default function ChatConversation({
   return (
     <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto">
         {isEmpty && !loading && !introMessage ? (
           <EmptyState
             title={emptyStateTitle}
@@ -386,7 +411,7 @@ export default function ChatConversation({
             onQuickStarter={sendMessage}
           />
         ) : (
-          <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
+          <div ref={contentRef} className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
             {intro}
             {introMessage && (
               <MessageBubble
