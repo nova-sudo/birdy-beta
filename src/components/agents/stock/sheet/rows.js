@@ -200,9 +200,11 @@ export function sheetRows({
 const byName = (a, b) => String(a.name).localeCompare(String(b.name))
 /** Spend with no leads ranks as the worst CPL. */
 const cplKey = (row) => (row.cpl != null ? Number(row.cpl) : hasFigures(row) ? Infinity : null)
+/** Ads already stopped first, then ads that stop soon, then changes, then anything else to check. */
 const urgency = (row) => {
-  if (row.chip.k === "stopped" || row.chip.soon || row.chip.k === "soon") return 0
-  return row.chip.k === "changes" ? 1 : 2
+  if (row.chip.k === "stopped") return 0
+  if (row.chip.soon || row.chip.k === "soon") return 1
+  return row.chip.k === "changes" ? 2 : 3
 }
 
 /** Ranking columns: best first is the most leads, the lowest CPL, the most spend. */

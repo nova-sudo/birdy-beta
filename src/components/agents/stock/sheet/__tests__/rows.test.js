@@ -125,6 +125,15 @@ describe("orderRows", () => {
     ]
     expect(orderRows(rows, { mode: "urgent" }).map((x) => x.name)).toEqual(["Stopped", "Changes", "Cheap", "Pricey", "Blank"])
   })
+  it("most urgent: stopped ads before ads that stop soon, whatever the CPL", () => {
+    const rows = [
+      r("Soon with changes", { cpl: 5.9, chip: { k: "changes", n: 2, soon: true } }),
+      r("Stopped", { cpl: 4.67, chip: { k: "stopped" } }),
+      r("Soon", { cpl: 3, chip: { k: "soon" } }),
+      r("Changes", { cpl: 12, chip: { k: "changes", n: 1 } }),
+    ]
+    expect(orderRows(rows, { mode: "urgent" }).map((x) => x.name)).toEqual(["Stopped", "Soon with changes", "Soon", "Changes"])
+  })
   it("best to worst ranks by the chosen column", () => {
     const rows = [r("A", { leads: 5, cpl: 4 }), r("B", { leads: 9, cpl: 6 }), r("C", { cpl: null, spend: null, leads: null })]
     expect(orderRows(rows, { mode: "best", sort: "cpl" }).map((x) => [x.name, x.rank])).toEqual([["A", 1], ["B", 2], ["C", null]])
