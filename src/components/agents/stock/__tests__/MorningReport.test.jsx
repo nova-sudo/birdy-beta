@@ -156,8 +156,8 @@ describe("Agent page: lessons and settings tabs", () => {
   it("the Settings tab opens the agent's settings once the clients are in", async () => {
     search = "tab=settings"
     renderPage()
-    expect(await screen.findByRole("region", { name: "Schedule settings" })).toBeInTheDocument()
-    expect(screen.getByRole("region", { name: "Flag, Ask me or Auto settings" })).toBeInTheDocument()
+    expect(await screen.findByRole("region", { name: "What it can change settings" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Schedule" })).toBeInTheDocument()
   })
 })
 
@@ -167,7 +167,7 @@ describe("Agent page: the top bar", () => {
   it("names the section that is open", async () => {
     search = "tab=settings"
     withBar()
-    await screen.findByRole("region", { name: "Schedule settings" })
+    await screen.findByRole("region", { name: "What it can change settings" })
     expect(screen.getByTestId("bar")).toHaveTextContent("Birdy Media Buying AgentSettings")
     expect(screen.getByTestId("bar")).not.toHaveTextContent("Morning report")
   })
