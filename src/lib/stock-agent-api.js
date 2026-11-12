@@ -5,7 +5,8 @@ import useSWRInfinite from "swr/infinite"
 import { fetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
 import { currencySymbol } from "@/lib/chat-viz"
-import { STOCK_AGENT_TYPE, acceptProposal, rejectProposal, revalidateAgentWork, send, useAgents } from "@/lib/agents-api"
+import { STOCK_AGENT_TYPE, acceptProposal, deleteMemory, rejectProposal, revalidateAgentWork, send, useAgents } from "@/lib/agents-api"
+import { seedSessionId } from "@/lib/chat-store"
 
 // ─── The Birdy Media Buying Agent ────────────────────────────────────────────
 // One per user. Its routes live under /api/agents/{id}; every hook and mutation
@@ -221,6 +222,35 @@ export function useLessons(id) {
   return { lessons: Array.isArray(data) ? data : [], error, isLoading, mutate }
 }
 
+/**
+ * One whole month of the report: `{month, range, rows}`, a row per client in scope
+ * (`client_group_id, client_name, leads, spend, cpl, zone, decided`; figures are null with no data).
+ * Idle until there is both an agent and a month ("YYYY-MM").
+ */
+export function useMonth(id, month) {
+  const { data, error, isLoading, mutate } = useSWR(id && month ? queryKeys.stockMonth(id, month) : null, fetcher)
+  return { month: data?.month ?? null, range: data?.range ?? null, rows: Array.isArray(data?.rows) ? data.rows : [], error, isLoading, mutate }
+}
+
+/**
+ * The saved chat about one card: the latest session's id and its messages, in order, shaped like the
+ * chat store's (`{role, content, agent_changes?}`). Pass `sessionKey` to seed that chat with the session
+ * (seedSessionId), so the next message carries on the same conversation.
+ */
+export function useCardChat(id, cardId, { sessionKey } = {}) {
+  const { data, error, isLoading, mutate } = useSWR(id && cardId ? queryKeys.cardChat(id, cardId) : null, fetcher, {
+    onSuccess: (latest) => {
+      if (sessionKey && latest?.session_id) seedSessionId(sessionKey, latest.session_id)
+    },
+  })
+  const messages = (Array.isArray(data?.messages) ? data.messages : []).map((m) => ({
+    role: m.role,
+    content: m.content,
+    ...(m.agent_changes?.length ? { agent_changes: m.agent_changes } : {}),
+  }))
+  return { sessionId: data?.session_id ?? null, messages, error, isLoading, mutate }
+}
+
 /** One Slack template view: the template, its default and a `notice`. @param {string} kind a template kind */
 export function useSlackTemplate(id, kind) {
   const { data, error, isLoading, mutate } = useSWR(id && kind ? queryKeys.stockSlackTemplate(id, kind) : null, fetcher)
@@ -293,6 +323,11 @@ export function overruleLesson(id, lessonId) {
   return send(`${queryKeys.stockLessons(id)}/${encodeURIComponent(lessonId)}/overrule`, "POST")
 }
 
+/** Removes a lesson. Lessons are agent memory rows, so this is the memory DELETE. */
+export function removeLesson(id, lessonId) {
+  return deleteMemory(id, lessonId)
+}
+
 /** A result is wrong: takes it out of the record. The row stays listed as cleared. Only a won or lost row can be cleared. */
 export function clearOutcome(id, rowId) {
   return send(`${queryKeys.stockOutcomes(id)}/${encodeURIComponent(rowId)}/clear`, "POST")
@@ -322,13 +357,13 @@ export function previewSlackTemplate(id, kind, blocks) {
 
 /**
  * Re-reads everything a decision can change for this agent: the agent, its reports (latest and each run),
- * the scoreboard, lessons, Slack templates, and with them the nav badge. Pass the `mutate` from `useSWRConfig()`.
+ * month rows, card chats, the scoreboard, lessons, Slack templates, and with them the nav badge. Pass the `mutate` from `useSWRConfig()`.
  */
 export function revalidateStock(mutate, id) {
   const base = `/api/agents/${id}`
   const mine = (key) =>
     typeof key === "string" &&
-    (key === base || ["/runs", "/outcomes", "/lessons", "/slack-templates"].some((p) => key.startsWith(`${base}${p}`)))
+    (key === base || ["/runs", "/months", "/cards", "/outcomes", "/lessons", "/slack-templates", "/memory"].some((p) => key.startsWith(`${base}${p}`)))
   return Promise.all([mutate(mine), revalidateAgentWork(mutate)])
 }
 
@@ -357,6 +392,7 @@ export function useStockActions(id) {
     attachLineFile: run(attachLineFile),
     keepLesson: run(keepLesson),
     overruleLesson: run(overruleLesson),
+    removeLesson: run(removeLesson),
     acceptProposal: run(acceptProposal),
     rejectProposal: run(rejectProposal),
     clearOutcome: run(clearOutcome),

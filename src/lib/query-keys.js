@@ -74,6 +74,8 @@ export const queryKeys = {
   stockCard: (id, cardId) => `/api/agents/${id}/cards/${cardId}`,
   stockOutcomes: (id) => `/api/agents/${id}/outcomes`,
   stockLessons: (id) => `/api/agents/${id}/lessons`,
+  stockMonth: (id, month) => `/api/agents/${id}/months/${encodeURIComponent(month)}`,
+  cardChat: (id, cardId) => `/api/agents/${id}/cards/${cardId}/chat`,
   stockSlackTemplate: (id, kind) => `/api/agents/${id}/slack-templates/${kind}`,
 
   // Creative tests. Mutations through lib/creatives-api revalidate these.

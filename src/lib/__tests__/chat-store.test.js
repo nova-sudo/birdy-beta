@@ -38,6 +38,20 @@ describe("chat-store", () => {
     expect(JSON.parse(apiRequest.mock.calls[1][1].body)).not.toHaveProperty("agent_id")
   })
 
+  it("sends card_id when cardId given", async () => {
+    apiRequest.mockImplementation(() => reply({ reply: "ok", tools_used: [] }))
+    await sendChatMessage("k-card", { text: "hi", page: "stock_card", agentId: "ag1", cardId: "c1" })
+    const body = JSON.parse(apiRequest.mock.calls[0][1].body)
+    expect(body.card_id).toBe("c1")
+    expect(body.agent_id).toBe("ag1")
+  })
+
+  it("omits card_id otherwise", async () => {
+    apiRequest.mockImplementation(() => reply({ reply: "ok", tools_used: [] }))
+    await sendChatMessage("k-nocard", { text: "hi", page: "stock_lessons", agentId: "ag1" })
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body)).not.toHaveProperty("card_id")
+  })
+
   it("drops a reply that arrives after the chat was reset", async () => {
     let resolve
     apiRequest.mockReturnValue(new Promise((r) => { resolve = r }))

@@ -19,6 +19,9 @@ import {
   useOutcomes,
   useLessons,
   useSlackTemplate,
+  useMonth,
+  useCardChat,
+  removeLesson,
   createStockAgent,
   patchSettings,
   startPreview,
@@ -94,6 +97,11 @@ describe("stock agent mutations match the backend routes", () => {
     })
   })
 
+  it("removeLesson deletes the memory row", async () => {
+    await removeLesson("a1", "l 1")
+    expect(lastCall()).toEqual({ path: "/api/agents/a1/memory/l%201", method: "DELETE", body: undefined })
+  })
+
   it("lessons and weekly", async () => {
     await keepLesson("a1", "m1")
     expect(lastCall()).toMatchObject({ path: "/api/agents/a1/lessons/m1/keep", method: "POST" })
@@ -149,6 +157,10 @@ describe("stock agent reads use the route as the key and idle without an id", ()
     expect(key()).toBe("/api/agents/a1/lessons")
     useSlackTemplate("a1", "morning")
     expect(key()).toBe("/api/agents/a1/slack-templates/morning")
+    useMonth("a1", "2026-10")
+    expect(key()).toBe("/api/agents/a1/months/2026-10")
+    useCardChat("a1", "c1")
+    expect(key()).toBe("/api/agents/a1/cards/c1/chat")
   })
   it("idle keys", () => {
     useLatestRun(null)
@@ -157,6 +169,39 @@ describe("stock agent reads use the route as the key and idle without an id", ()
     expect(key()).toBeNull()
     useSlackTemplate("a1", null)
     expect(key()).toBeNull()
+    useCardChat("a1", null)
+    expect(key()).toBeNull()
+  })
+  it("useMonth skips without month", () => {
+    const month = useMonth("a1", null)
+    expect(key()).toBeNull()
+    expect(month).toEqual(expect.objectContaining({ month: null, range: null, rows: [] }))
+    useMonth(null, "2026-10")
+    expect(key()).toBeNull()
+  })
+  it("useMonth and useCardChat read the server's shapes", () => {
+    vi.mocked(useSWR).mockReturnValue({
+      data: { month: "2026-10", range: "1 Oct – 31 Oct", rows: [{ client_group_id: "g1", leads: 3 }] },
+    })
+    const m = useMonth("a1", "2026-10")
+    expect(m.month).toBe("2026-10")
+    expect(m.range).toBe("1 Oct – 31 Oct")
+    expect(m.rows).toEqual([{ client_group_id: "g1", leads: 3 }])
+    vi.mocked(useSWR).mockReturnValue({
+      data: {
+        session_id: "s1",
+        messages: [
+          { role: "user", content: "pause it", agent_changes: null, created_at: "t1" },
+          { role: "assistant", content: "Done", agent_changes: [{ kind: "card" }], created_at: "t2" },
+        ],
+      },
+    })
+    const c = useCardChat("a1", "c1")
+    expect(c.sessionId).toBe("s1")
+    expect(c.messages).toEqual([
+      { role: "user", content: "pause it" },
+      { role: "assistant", content: "Done", agent_changes: [{ kind: "card" }] },
+    ])
   })
   it("useStockAgent finds the stock agent in the list", () => {
     vi.mocked(useSWR).mockReturnValue({

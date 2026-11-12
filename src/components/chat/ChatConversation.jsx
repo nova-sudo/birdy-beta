@@ -50,6 +50,7 @@ import { startersFor } from "@/lib/chat-starters"
  *                           as an Undo on that reply only (true when it undid them)
  *   renderAfterMessage?     (message, index) => node — extra content under one of Birdy's
  *                           replies (the agent training chat's "rule updated" chips)
+ *   cardId?                 the Media Buying card the chat is about, sent as card_id (with agentId)
  *   sendRef?                ref the surface's send(text) is written to, so the page can post
  *                           a message through the same gates as the composer
  *
@@ -64,6 +65,7 @@ export default function ChatConversation({
   onSessionId,
   page = null,
   agentId = null,
+  cardId = null,
   clientGroupId = null,
   clientName = null,
   onMessagesChange,
@@ -195,7 +197,7 @@ export default function ChatConversation({
       await sendChatMessage(
         sessionKey,
         {
-          text, page, agentId,
+          text, page, agentId, cardId,
           // Without the picker the surface's own client (if any) still goes.
           clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
           clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
@@ -235,6 +237,7 @@ export default function ChatConversation({
         body: JSON.stringify({
           message: text, session_id: sessionId, page,
           ...(agentId ? { agent_id: agentId } : {}),
+          ...(cardId ? { card_id: cardId } : {}),
           client_group_id: scope.id, client_name: scope.id ? scope.name : null,
           view_catalogues: readViewCatalogues(),
           ...(attachments?.length ? { attachments } : {}),
@@ -282,7 +285,7 @@ export default function ChatConversation({
       setLocalLoading(false)
     }
     return true
-  }, [loading, sessionId, sessionKey, isControlled, page, agentId, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, agentId, cardId, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Expose send to the surface (the agent training page posts practice follow-ups).
   useEffect(() => {

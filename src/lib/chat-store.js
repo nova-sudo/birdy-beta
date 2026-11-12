@@ -104,7 +104,7 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   if (chat().loading) return
   const generation = generations.get(sessionKey) ?? 0
   const stale = () => (generations.get(sessionKey) ?? 0) !== generation
-  const { text, page, agentId, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
+  const { text, page, agentId, cardId, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
 
   chat().messages = [
     ...chat().messages,
@@ -131,6 +131,8 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         page,
         // undefined drops out of the JSON, so other pages' bodies are unchanged.
         agent_id: agentId || undefined,
+        // The Media Buying chat about one card (page stock_card).
+        card_id: cardId || undefined,
         client_group_id: clientGroupId,
         client_name: clientName,
         // undefined drops out of the JSON, so other pages' bodies are unchanged.
