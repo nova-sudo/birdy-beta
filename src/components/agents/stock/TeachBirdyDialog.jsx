@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { useSWRConfig } from "swr"
 import { Check, Sparkles } from "lucide-react"
 
@@ -11,16 +11,21 @@ import { queryKeys } from "@/lib/query-keys"
 
 export const LESSONS_PAGE = "stock_lessons"
 
-/** The Teach Birdy tools that change a lesson, and the chip each one leaves under Birdy's reply. */
+/**
+ * What a Teach Birdy tool changed (`agent_changes[].changed`), and the chip it leaves under Birdy's reply.
+ * Keyed on `changed`, not the tool name: the BE's add tool is `save_lesson`, and only an ok result carries it.
+ */
 const LESSON_CHANGES = {
-  add_lesson: "Lesson saved",
-  edit_lesson: "Lesson changed",
-  remove_lesson: "Lesson removed",
+  lesson: "Lesson saved",
+  lesson_edited: "Lesson changed",
+  lesson_removed: "Lesson removed",
 }
+
+const lessonChanges = (message) => (message?.agent_changes ?? []).map((c) => c?.changed).filter((c) => LESSON_CHANGES[c])
 
 /** The chips under one of Birdy's replies: what its tools changed. */
 export function lessonChips(message) {
-  return (message?.agent_changes ?? []).map((c) => LESSON_CHANGES[c?.tool]).filter(Boolean)
+  return lessonChanges(message).map((c) => LESSON_CHANGES[c])
 }
 
 /**
@@ -29,18 +34,23 @@ export function lessonChips(message) {
  *
  * @param {object} props
  * @param {string} props.agentId
- * @param {() => void} [props.onChanged] Called after a reply whose tools changed a lesson
+ * @param {(changed: string) => void} [props.onChanged] Called after a reply whose tools changed a lesson
  * @param {"primary"|"outline"|"ghost"} [props.variant]
  */
 export function TeachBirdyDialog({ agentId, onChanged, variant = "outline" }) {
   const [open, setOpen] = useState(false)
   const { mutate } = useSWRConfig()
 
-  const onToolUsed = useCallback(
-    (tool) => {
-      if (!LESSON_CHANGES[tool]) return
+  // A reply whose tools changed a lesson re-reads the Lessons list. Messages already there when the chat opened don't count.
+  const seen = useRef(null)
+  const onMessagesChange = useCallback(
+    (messages) => {
+      const from = seen.current ?? messages.length
+      seen.current = messages.length
+      const changes = messages.slice(from).filter((m) => m.role !== "user").flatMap(lessonChanges)
+      if (!changes.length) return
       mutate(queryKeys.stockLessons(agentId))
-      onChanged?.(tool)
+      changes.forEach((c) => onChanged?.(c))
     },
     [agentId, mutate, onChanged]
   )
@@ -91,7 +101,7 @@ export function TeachBirdyDialog({ agentId, onChanged, variant = "outline" }) {
               emptyStateTitle="What should Birdy do differently?"
               emptyStateSubtitle="Like “Don't remove ads during a client's launch week”. You can also change or remove a lesson here."
               showQuickActions={false}
-              onToolUsed={onToolUsed}
+              onMessagesChange={onMessagesChange}
               renderAfterMessage={renderAfterMessage}
             />
           )}
