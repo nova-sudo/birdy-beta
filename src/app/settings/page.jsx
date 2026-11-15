@@ -8,6 +8,7 @@ import { pdFontClass } from "@/lib/pd-fonts"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/portfolio"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
+import { ConnectAI } from "@/components/settings/ConnectAI"
 import { CreditsPanel } from "@/components/settings/CreditsPanel"
 import { PlanPicker } from "@/components/billing/PlanPicker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -88,7 +89,7 @@ function SettingsPageContent() {
     TAB_ALIASES[requestedTab] ??
     // Kept in step with SETTINGS_TABS below — they are two separate lists, and a
     // tab missing from this one silently falls back to integrations.
-    (["general", "integrations", "tracking", "billing"].includes(requestedTab)
+    (["general", "integrations", "tracking", "billing", "ai"].includes(requestedTab)
       ? requestedTab
       : "integrations")
 
@@ -108,6 +109,7 @@ function SettingsPageContent() {
     { key: "integrations", label: "Integrations" },
     { key: "tracking", label: "Tracking" },
     { key: "billing", label: "Billing" },
+    { key: "ai", label: "Connect to AI" },
   ]
 
   // Keep the URL in step so the tab survives a reload and can be shared.
@@ -1257,6 +1259,10 @@ function SettingsPageContent() {
 
           <TabsContent value="tracking" className="space-y-6">
             <TrackingOverview />
+          </TabsContent>
+
+          <TabsContent value="ai" className="space-y-6">
+            <ConnectAI />
           </TabsContent>
 
           <TabsContent value="billing" className={pdFontClass}>
