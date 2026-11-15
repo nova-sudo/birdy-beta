@@ -47,7 +47,7 @@ export default function ConsentCard({ requestId }) {
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState(null)
 
-  const loginUrl = `/login?redirect=${encodeURIComponent(`/connect/authorize?request=${requestId}`)}`
+  const loginUrl = `/login?redirect=${encodeURIComponent(`/connect/authorize?request=${encodeURIComponent(requestId ?? "")}`)}`
 
   useEffect(() => {
     setEmail(readEmail())
@@ -155,13 +155,14 @@ export default function ConsentCard({ requestId }) {
                 value={o.value}
                 checked={on}
                 onChange={() => setAccess(o.value)}
-                className="sr-only"
+                disabled={busy}
+                className="peer sr-only"
                 aria-label={o.title}
               />
               <i
                 aria-hidden="true"
                 className={cn(
-                  "mt-0.5 size-[18px] flex-none rounded-full border-pd-primary",
+                  "mt-0.5 size-[18px] flex-none rounded-full border-pd-primary peer-focus-visible:ring-2 peer-focus-visible:ring-pd-primary peer-focus-visible:ring-offset-2",
                   on ? "border-[5px]" : "border-2 border-pd-border-strong",
                 )}
               />
@@ -185,7 +186,7 @@ export default function ConsentCard({ requestId }) {
         </Button>
       </div>
       <p className="mt-4 text-center text-xs text-pd-subtle">
-        You'll be sent back to <b className="text-pd-ink">{req.redirect_host}</b>. You can disconnect anytime in
+        You&apos;ll be sent back to <b className="text-pd-ink">{req.redirect_host}</b>. You can disconnect anytime in
         Settings → Connect to AI.
       </p>
     </Shell>

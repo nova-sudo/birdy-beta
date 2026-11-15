@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
@@ -12,6 +12,10 @@ const REQ = { client_name: "Claude", redirect_host: "claude.ai", requested_acces
 
 let fetchMock
 let assign
+const realLocation = window.location
+afterEach(() => {
+  Object.defineProperty(window, "location", { value: realLocation, writable: true })
+})
 beforeEach(() => {
   localStorage.setItem("user", JSON.stringify({ email: "you@agency.com" }))
   fetchMock = vi.fn()
@@ -78,5 +82,15 @@ describe("ConsentCard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Allow" }))
     expect(await screen.findByText(/active Birdy subscription is needed/)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /billing/i })).toHaveAttribute("href", "/settings?tab=billing")
+  })
+
+  it("disables Allow, Cancel and the radios while a decision is in flight", async () => {
+    fetchMock.mockResolvedValueOnce(json(200, REQ))
+    fetchMock.mockReturnValueOnce(new Promise(() => {}))
+    render(<ConsentCard requestId="r1" />)
+    await userEvent.click(await screen.findByRole("button", { name: "Allow" }))
+    expect(screen.getByRole("button", { name: "Allow" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled()
+    expect(screen.getByRole("radio", { name: /View my data/ })).toBeDisabled()
   })
 })
