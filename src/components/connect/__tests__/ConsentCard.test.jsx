@@ -34,6 +34,15 @@ describe("ConsentCard", () => {
     expect(screen.getByRole("radio", { name: /View my data/ })).toBeChecked()
   })
 
+  it("uses the shared app logo (Claude is coral, same as Settings)", async () => {
+    fetchMock.mockResolvedValueOnce(json(200, REQ))
+    const { container } = render(<ConsentCard requestId="r1" />)
+    await screen.findByText(/Claude wants to connect/)
+    const tile = Array.from(container.querySelectorAll("span[aria-hidden='true']")).find((e) => e.textContent === "C")
+    expect(tile).toBeTruthy()
+    expect(tile.style.background).toMatch(/rgb\(217, 119, 87\)|#d97757/i)
+  })
+
   it("allow posts chosen access and navigates to redirect_to", async () => {
     fetchMock.mockResolvedValueOnce(json(200, REQ))
     fetchMock.mockResolvedValueOnce(json(200, { redirect_to: "https://claude.ai/cb?code=x" }))

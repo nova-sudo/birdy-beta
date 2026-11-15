@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import AppLogo from "@/components/connect/AppLogo"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Button } from "@/components/ui/button"
 import { API_BASE_URL } from "@/lib/api"
@@ -126,12 +127,7 @@ export default function ConsentCard({ requestId }) {
       <div className="mb-[18px] flex items-center justify-center gap-3">
         <BirdyAvatar size={56} tone="tint" />
         <div className="w-10 border-t-2 border-dashed border-pd-border-strong" aria-hidden="true" />
-        <div
-          aria-hidden="true"
-          className="grid size-14 place-items-center rounded-[14px] bg-pd-ink text-xl font-bold text-white"
-        >
-          {(clientName || "?").trim().charAt(0).toUpperCase()}
-        </div>
+        <AppLogo name={clientName} size="lg" />
       </div>
       <h1 className="text-center text-xl font-semibold text-pd-ink">
         {clientName} wants to connect to your Birdy account

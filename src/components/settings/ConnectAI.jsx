@@ -23,32 +23,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
+import AppLogo from "@/components/connect/AppLogo"
 import { CONNECT_APPS, CHECK_IN_PROMPT } from "./connect-ai-steps"
 
 const ACCESS_LABEL = { read: "View my data", write: "View and make changes" }
 const ACCESS_CHIP = {
   read: "bg-pd-canvas text-pd-muted",
   write: "bg-pd-primary-tint text-pd-primary",
-}
-
-const APP_LOGOS = [
-  { match: /claude/i, text: "C", bg: "#D97757" },
-  { match: /chatgpt|openai/i, text: "G", bg: "#10A37F" },
-  { match: /cursor/i, text: "Cu", bg: "#18181B" },
-]
-
-function AppLogo({ name }) {
-  const known = APP_LOGOS.find((l) => l.match.test(name || ""))
-  const text = known?.text || (name || "?").trim().charAt(0).toUpperCase() || "?"
-  return (
-    <span
-      aria-hidden="true"
-      className="grid size-[26px] flex-none place-items-center rounded-[7px] text-[11px] font-bold text-white"
-      style={{ background: known?.bg || "#3a3a40" }}
-    >
-      {text}
-    </span>
-  )
 }
 
 function formatDate(iso) {
@@ -262,7 +243,24 @@ export function ConnectAI() {
           ) : connections.length === 0 ? (
             <p className="text-[13px] text-pd-subtle">Nothing connected yet. Add Birdy to an AI app above and it will show up here.</p>
           ) : (
-            <div className="overflow-hidden rounded-[12px] border border-pd-border">
+            <>
+            <ul className="divide-y divide-pd-row-border rounded-[12px] border border-pd-border sm:hidden" aria-label="Connections">
+              {connections.map((c) => (
+                <li key={c.id} className="space-y-2.5 p-3.5">
+                  <div className="flex items-center gap-2.5 font-medium text-pd-ink"><AppLogo name={c.name} />{c.name}</div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-pd-body">
+                    <span className={`inline-flex whitespace-nowrap rounded-full px-[9px] py-0.5 text-[12px] font-medium ${ACCESS_CHIP[c.access] || ACCESS_CHIP.read}`}>
+                      {ACCESS_LABEL[c.access] || ACCESS_LABEL.read}
+                    </span>
+                    <span>Last used {formatRelative(c.last_used_at)}</span>
+                  </div>
+                  <Button variant="outline" size="md" className="w-full text-pd-danger hover:text-pd-danger" onClick={() => setRevoking(c)}>
+                    Disconnect
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-hidden rounded-[12px] border border-pd-border sm:block">
               <div className="overflow-x-auto">
                 <table className="w-full text-[13px]">
                   <thead>
@@ -295,6 +293,7 @@ export function ConnectAI() {
                 </table>
               </div>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

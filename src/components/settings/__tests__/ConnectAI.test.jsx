@@ -59,15 +59,27 @@ describe("ConnectAI", () => {
   it("lists connections and revokes after confirm", async () => {
     const user = userEvent.setup()
     render(<ConnectAI />)
-    expect(await screen.findByText("View and make changes")).toBeInTheDocument()
-    expect(screen.getByText("View my data")).toBeInTheDocument()
+    // The list is rendered twice (stacked list below sm, table from sm up); CSS picks one.
+    expect((await screen.findAllByText("View and make changes")).length).toBe(2)
+    expect(screen.getAllByText("View my data").length).toBe(2)
     const row = screen.getByText("Claude", { selector: "td *, td" }).closest("tr")
     await user.click(within(row).getByRole("button", { name: "Disconnect" }))
     expect(calls.some((c) => c[1] === "DELETE")).toBe(false)
     const dialog = await screen.findByRole("alertdialog")
     await user.click(within(dialog).getByRole("button", { name: "Disconnect" }))
     await waitFor(() => expect(calls).toContainEqual(["/api/mcp/connections/c1", "DELETE", undefined]))
-    await waitFor(() => expect(screen.queryByText("View and make changes")).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryAllByText("View and make changes")).toHaveLength(0))
+  })
+
+  it("the stacked mobile list shows app, access, last used and a Disconnect button", async () => {
+    const user = userEvent.setup()
+    render(<ConnectAI />)
+    const list = await screen.findByRole("list", { name: "Connections" })
+    const item = within(list).getByText("Claude").closest("li")
+    expect(within(item).getByText("View and make changes")).toBeInTheDocument()
+    expect(within(item).getByText(/Last used/)).toBeInTheDocument()
+    await user.click(within(item).getByRole("button", { name: "Disconnect" }))
+    expect(await screen.findByRole("alertdialog")).toBeInTheDocument()
   })
 
   it("keeps the row and shows an error toast when revoke fails", async () => {
@@ -76,13 +88,13 @@ describe("ConnectAI", () => {
     apiRequest.mockImplementation(async (url, opts = {}) =>
       opts.method === "DELETE" ? { ok: false, status: 500, json: async () => ({}) } : base(url, opts))
     render(<ConnectAI />)
-    await screen.findByText("View and make changes")
+    await screen.findAllByText("View and make changes")
     const row = screen.getByText("Claude", { selector: "td *, td" }).closest("tr")
     await user.click(within(row).getByRole("button", { name: "Disconnect" }))
     const dialog = await screen.findByRole("alertdialog")
     await user.click(within(dialog).getByRole("button", { name: "Disconnect" }))
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
-    expect(screen.getByText("View and make changes")).toBeInTheDocument()
+    expect(screen.getAllByText("View and make changes").length).toBe(2)
   })
 
   it("creates read-only token and shows it once", async () => {
