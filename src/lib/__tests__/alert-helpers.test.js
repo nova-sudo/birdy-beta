@@ -15,14 +15,15 @@ describe("withEmailChannel", () => {
   it("never duplicates email", () => {
     expect(withEmailChannel(["in_app", "email"], true)).toEqual(["in_app", "email"])
   })
-  it("undefined or empty input falls back to in_app", () => {
+  it("undefined or null input falls back to in_app; empty stays empty", () => {
     expect(withEmailChannel(undefined, false)).toEqual(["in_app"])
-    expect(withEmailChannel([], false)).toEqual(["in_app"])
-    expect(withEmailChannel(undefined, true)).toEqual(["in_app", "email"])
-    expect(withEmailChannel([], true)).toEqual(["in_app", "email"])
+    expect(withEmailChannel(null, true)).toEqual(["in_app", "email"])
+    expect(withEmailChannel([], true)).toEqual(["email"])
   })
-  it("keeps in_app when it was missing", () => {
-    expect(withEmailChannel(["slack"], false)).toEqual(["in_app", "slack"])
+  it("does not re-add in_app when the user turned Internal off", () => {
+    expect(withEmailChannel(["slack"], true)).toEqual(["slack", "email"])
+    expect(withEmailChannel(["email"], false)).toEqual([])
+    expect(withEmailChannel(undefined, true)).toEqual(["in_app", "email"])
   })
 })
 
