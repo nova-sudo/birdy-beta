@@ -25,6 +25,19 @@ const nextConfig = {
       { source: "/dashboards/:id", destination: "/hub/dashboards/:id", permanent: true },
     ];
   },
+  // The OAuth consent page must never be framed: a framed "Allow" could be
+  // clickjacked into approving a connection (RFC 6819 §4.4.1.9).
+  async headers() {
+    return [
+      {
+        source: "/connect/authorize",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+        ],
+      },
+    ];
+  },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
 };
