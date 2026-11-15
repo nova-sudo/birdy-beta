@@ -70,6 +70,21 @@ describe("ConnectAI", () => {
     await waitFor(() => expect(screen.queryByText("View and make changes")).not.toBeInTheDocument())
   })
 
+  it("keeps the row and shows an error toast when revoke fails", async () => {
+    const user = userEvent.setup()
+    const base = apiRequest.getMockImplementation()
+    apiRequest.mockImplementation(async (url, opts = {}) =>
+      opts.method === "DELETE" ? { ok: false, status: 500, json: async () => ({}) } : base(url, opts))
+    render(<ConnectAI />)
+    await screen.findByText("View and make changes")
+    const row = screen.getByText("Claude", { selector: "td *, td" }).closest("tr")
+    await user.click(within(row).getByRole("button", { name: "Disconnect" }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("button", { name: "Disconnect" }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    expect(screen.getByText("View and make changes")).toBeInTheDocument()
+  })
+
   it("creates read-only token and shows it once", async () => {
     const user = userEvent.setup()
     render(<ConnectAI />)

@@ -31,6 +31,26 @@ const ACCESS_CHIP = {
   write: "bg-pd-primary-tint text-pd-primary",
 }
 
+const APP_LOGOS = [
+  { match: /claude/i, text: "C", bg: "#D97757" },
+  { match: /chatgpt|openai/i, text: "G", bg: "#10A37F" },
+  { match: /cursor/i, text: "Cu", bg: "#18181B" },
+]
+
+function AppLogo({ name }) {
+  const known = APP_LOGOS.find((l) => l.match.test(name || ""))
+  const text = known?.text || (name || "?").trim().charAt(0).toUpperCase() || "?"
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-[26px] flex-none place-items-center rounded-[7px] text-[11px] font-bold text-white"
+      style={{ background: known?.bg || "#3a3a40" }}
+    >
+      {text}
+    </span>
+  )
+}
+
 function formatDate(iso) {
   if (!iso) return "—"
   const d = new Date(iso)
@@ -210,7 +230,7 @@ export function ConnectAI() {
                 <legend className="text-[12.5px] font-medium text-pd-muted">Access</legend>
                 {["read", "write"].map((v) => (
                   <label key={v} className="flex cursor-pointer items-center gap-2 text-[13px] text-pd-body">
-                    <input type="radio" name="mcp-token-access" value={v} checked={tokenAccess === v} onChange={() => setTokenAccess(v)} className="accent-[#5B3FD6]" />
+                    <input type="radio" name="mcp-token-access" value={v} checked={tokenAccess === v} onChange={() => setTokenAccess(v)} className="accent-pd-primary" />
                     {ACCESS_LABEL[v]}
                   </label>
                 ))}
@@ -256,7 +276,7 @@ export function ConnectAI() {
                   <tbody>
                     {connections.map((c) => (
                       <tr key={c.id} className="border-b border-pd-row-border last:border-b-0">
-                        <td className="px-2.5 py-2.5 font-medium text-pd-ink">{c.name}</td>
+                        <td className="px-2.5 py-2.5 font-medium text-pd-ink"><div className="flex items-center gap-2.5"><AppLogo name={c.name} />{c.name}</div></td>
                         <td className="px-2.5 py-2.5">
                           <span className={`inline-flex whitespace-nowrap rounded-full px-[9px] py-0.5 text-[12px] font-medium ${ACCESS_CHIP[c.access] || ACCESS_CHIP.read}`}>
                             {ACCESS_LABEL[c.access] || ACCESS_LABEL.read}
