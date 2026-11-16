@@ -68,6 +68,10 @@ describe("admin MCP rates", () => {
     CONFIG = { ...BASE, mcp_max_per_call: 12 } // someone else saved a different rate
     rerender(<AdminCreditsPage />)
     expect(screen.getByLabelText("MCP request fee")).toHaveValue(0.7)
+    expect(screen.getByLabelText("MCP max per request")).toHaveValue(12) // untouched field follows the saved value
+    await user.click(screen.getByRole("button", { name: /save pricing/i }))
+    await waitFor(() => expect(updateCreditsConfig).toHaveBeenCalledTimes(1))
+    expect(updateCreditsConfig.mock.calls[0][0]).toMatchObject({ mcp_base_fee: 0.7, mcp_max_per_call: 12 })
   })
 
   it("untouched fields follow a changed saved value", () => {

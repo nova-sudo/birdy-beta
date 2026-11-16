@@ -74,14 +74,14 @@ function PricingControls({ config, mutate }) {
   }, [config.markup, config.enforce]);
 
   // Follow the saved rates when they change under us, but never wipe edits in progress:
-  // only adopt the new values if the fields still match the previous saved baseline.
+  // adopt the new value per field, only where the field still matches the previous saved baseline.
   const mcpSaved = MCP_FIELDS.map((f) => config[f.key]).join("|");
   const mcpBaseline = useRef(mcpFromConfig(config));
   useEffect(() => {
     const next = mcpFromConfig(config);
     const base = mcpBaseline.current;
     mcpBaseline.current = next;
-    setMcp((cur) => (MCP_FIELDS.every((f) => String(cur[f.key]) === String(base[f.key])) ? next : cur));
+    setMcp((cur) => Object.fromEntries(MCP_FIELDS.map((f) => [f.key, String(cur[f.key]) === String(base[f.key]) ? next[f.key] : cur[f.key]])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mcpSaved]);
   const mcpValid = MCP_FIELDS.every((f) => {
