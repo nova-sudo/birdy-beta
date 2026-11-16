@@ -32,10 +32,13 @@ function FilterSelect({ label, value, onChange, options, allLabel }) {
   )
 }
 
-function localDay(daysAgo) {
+// Start of the viewer's local day N days ago, as an exact instant. A bare date would be read as UTC
+// midnight by the API and move the window edge by up to a day.
+function localDayStart(daysAgo) {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
 }
 
 function filterQuery({ app, kind, client, days }) {
@@ -43,7 +46,7 @@ function filterQuery({ app, kind, client, days }) {
   if (app) q.set("app", app)
   if (kind) q.set("kind", kind)
   if (client) q.set("client_group_id", client)
-  q.set("from", localDay(days))
+  q.set("from", localDayStart(days))
   return q
 }
 
@@ -58,6 +61,7 @@ export default function AIActivity() {
   const [cursor, setCursor] = useState(null)
   const [loadError, setLoadError] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [moreError, setMoreError] = useState(false)
   const [openId, setOpenId] = useState(null)
   const seq = useRef(0)
 
@@ -81,6 +85,7 @@ export default function AIActivity() {
     const mine = ++seq.current
     setItems(null)
     setLoadError(false)
+    setMoreError(false)
     setCursor(null)
     ;(async () => {
       try {
@@ -102,6 +107,7 @@ export default function AIActivity() {
     if (!cursor || loadingMore) return
     const mine = seq.current
     setLoadingMore(true)
+    setMoreError(false)
     try {
       const q = filterQuery(filters)
       q.set("cursor", cursor)
@@ -113,7 +119,7 @@ export default function AIActivity() {
       setCursor(data.next_cursor || null)
       rememberClients(data.items || [])
     } catch {
-      setLoadError(true)
+      if (mine === seq.current) setMoreError(true)
     } finally {
       setLoadingMore(false)
     }
@@ -189,8 +195,10 @@ export default function AIActivity() {
                         </button>
                         <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-pd-muted md:hidden">
                           <AppLogo name={it.app_name} />
-                          <span>{formatWhen(it.created_at)}</span>·
-                          <span className="inline-flex items-center gap-1.5">
+                          <span>{formatWhen(it.created_at)}</span>
+                          {/* The separator travels with the kind so a wrap never strands it at a line end. */}
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                            <span aria-hidden="true">·</span>
                             <span aria-hidden="true" className={`size-2 rounded-full ${KIND_DOT[it.kind] || KIND_DOT.lookup}`} />
                             {kindLabel(it.kind, it.refusal_reason)}
                           </span>
@@ -213,6 +221,7 @@ export default function AIActivity() {
         )}
 
         {loadError && <p className="text-[13px] text-pd-danger">Couldn't load activity. Change a filter or refresh to try again.</p>}
+        {moreError && <p className="text-[13px] text-pd-danger">Couldn't load more. Try Load more again.</p>}
         {cursor && (
           <div className="flex justify-center">
             <Button variant="outline" size="md" disabled={loadingMore} onClick={loadMore}>Load more</Button>

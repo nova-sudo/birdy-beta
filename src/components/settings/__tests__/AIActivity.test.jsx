@@ -56,7 +56,7 @@ describe("AIActivity", () => {
     expect(screen.getByText(/2 requests · 1\.3 credits/)).toBeInTheDocument()
     expect(screen.getByText("Tried to create an alert")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Export CSV" }).getAttribute("href")).toMatch(
-      /^https:\/\/api\.example\.test\/api\/mcp\/activity\.csv\?from=\d{4}-\d{2}-\d{2}$/,
+      /^https:\/\/api\.example\.test\/api\/mcp\/activity\.csv\?from=\d{4}-\d{2}-\d{2}T[\d%A:.]+Z$/,
     )
     await userEvent.setup().click(screen.getByRole("combobox", { name: "App" }))
     expect(await screen.findByRole("option", { name: "Cursor (disconnected)" })).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe("AIActivity", () => {
     const user = userEvent.setup()
     render(<AIActivity />)
     await screen.findByText("Paused 2 ads for Acme Dental")
-    expect(calls.find((u) => u.startsWith("/api/mcp/activity?"))).toMatch(/^\/api\/mcp\/activity\?from=\d{4}-\d{2}-\d{2}$/)
+    expect(calls.find((u) => u.startsWith("/api/mcp/activity?"))).toMatch(/^\/api\/mcp\/activity\?from=\d{4}-\d{2}-\d{2}T[\d%A:.]+Z$/)
     const pick = async (label, option) => {
       await user.click(screen.getByRole("combobox", { name: label }))
       await user.click(await screen.findByRole("option", { name: option }))
@@ -80,7 +80,7 @@ describe("AIActivity", () => {
       expect(last).toContain("kind=live")
       expect(last).toContain("app=c1")
       expect(last).toContain("client_group_id=g1")
-      expect(last).toMatch(/from=\d{4}-\d{2}-\d{2}/)
+      expect(last).toMatch(/from=\d{4}-\d{2}-\d{2}T/)
       expect(last).not.toContain("cursor=")
     })
   })
@@ -89,7 +89,7 @@ describe("AIActivity", () => {
     const user = userEvent.setup()
     render(<AIActivity />)
     await user.click(await screen.findByText("Paused 2 ads for Acme Dental"))
-    const panel = await screen.findByRole("complementary", { name: "Activity details" })
+    const panel = await screen.findByRole("dialog", { name: "Activity details" })
     expect(await within(panel).findByText("Paused 2 ads in Meta.")).toBeInTheDocument()
     expect(within(panel).getByText("Applied an agent card")).toBeInTheDocument()
     expect(within(panel).getByText("Data returned (1,200 characters)")).toBeInTheDocument()
@@ -128,7 +128,7 @@ describe("AIActivity", () => {
     const user = userEvent.setup()
     render(<AIActivity />)
     await user.click(await screen.findByText("Tried to create an alert"))
-    const panel = await screen.findByRole("complementary", { name: "Activity details" })
+    const panel = await screen.findByRole("dialog", { name: "Activity details" })
     expect(await within(panel).findByText("Refused · View-only connection")).toBeInTheDocument()
   })
 
@@ -153,5 +153,72 @@ describe("AIActivity", () => {
     expect(await screen.findByText("Older request")).toBeInTheDocument()
     expect(screen.getByText("Paused 2 ads for Acme Dental")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument()
+  })
+
+  it("sends the viewer's local midnight as an exact instant", async () => {
+    render(<AIActivity />)
+    await screen.findByText("Paused 2 ads for Acme Dental")
+    const d = new Date()
+    d.setDate(d.getDate() - 7)
+    d.setHours(0, 0, 0, 0)
+    const url = calls.find((u) => u.startsWith("/api/mcp/activity?"))
+    expect(new URLSearchParams(url.split("?")[1]).get("from")).toBe(d.toISOString())
+  })
+
+  it("keeps the mobile separator with the kind so a wrap cannot strand it", async () => {
+    render(<AIActivity />)
+    await screen.findByText("Tried to create an alert")
+    const seps = screen.getAllByText("·")
+    expect(seps.length).toBeGreaterThan(0)
+    for (const sep of seps) {
+      expect(sep.parentElement.className).toContain("whitespace-nowrap")
+      expect(sep.parentElement.textContent).toMatch(/Live change|Refused/)
+    }
+  })
+
+  it("a failed Load more says so and keeps the rows and the button", async () => {
+    const user = userEvent.setup()
+    apiRequest.mockImplementation(async (url) => {
+      calls.push(url)
+      if (url === "/api/mcp/activity/apps") return ok([])
+      if (url.includes("cursor=")) return { ok: false, status: 500, json: async () => ({}) }
+      return ok({ items: ITEMS, next_cursor: "c1", totals: { requests: 2, credits: 1.3 } })
+    })
+    render(<AIActivity />)
+    await screen.findByText("Paused 2 ads for Acme Dental")
+    await user.click(screen.getByRole("button", { name: "Load more" }))
+    expect(await screen.findByText("Couldn't load more. Try Load more again.")).toBeInTheDocument()
+    expect(screen.queryByText(/Change a filter or refresh/)).not.toBeInTheDocument()
+    expect(screen.getByText("Paused 2 ads for Acme Dental")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled()
+  })
+
+  it("the details panel is a dialog that takes focus and returns it on close", async () => {
+    const user = userEvent.setup()
+    render(<AIActivity />)
+    const rowText = await screen.findByText("Paused 2 ads for Acme Dental")
+    rowText.focus()
+    await user.click(rowText)
+    const panel = await screen.findByRole("dialog", { name: "Activity details" })
+    await waitFor(() => expect(panel).toHaveFocus())
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    expect(rowText).toHaveFocus()
+  })
+
+  it("locks page scroll behind the full-screen panel on small screens", async () => {
+    const user = userEvent.setup()
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })
+    try {
+      render(<AIActivity />)
+      await user.click(await screen.findByText("Paused 2 ads for Acme Dental"))
+      const panel = await screen.findByRole("dialog", { name: "Activity details" })
+      expect(panel).toHaveAttribute("aria-modal", "true")
+      expect(document.body.style.overflow).toBe("hidden")
+      await user.keyboard("{Escape}")
+      await waitFor(() => expect(document.body.style.overflow).toBe(""))
+    } finally {
+      delete window.matchMedia
+    }
   })
 })

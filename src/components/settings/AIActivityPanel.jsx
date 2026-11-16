@@ -5,7 +5,7 @@
 // what it cost. Also home to the small formatters the list shares with it.
 // Full screen with a back button below 768px, a column beside the table above.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ArrowLeft, X } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import AppLogo from "@/components/connect/AppLogo"
@@ -86,7 +86,13 @@ function Section({ title, children }) {
 
 const boxClass = "mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[10px] border border-pd-border bg-pd-table-head px-3 py-2.5 text-[13px] text-pd-body"
 
+// Below 768px the panel covers the page, so it behaves as a modal dialog there.
+const FULL_SCREEN = "(max-width: 767px)"
+const isFullScreen = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(FULL_SCREEN).matches
+
 export default function AIActivityPanel({ id, onClose, onOpen }) {
+  const panelRef = useRef(null)
+  const [modal, setModal] = useState(isFullScreen)
   const [entry, setEntry] = useState(null)
   const [error, setError] = useState(false)
   const [related, setRelated] = useState(null) // { id, at, label }
@@ -128,6 +134,28 @@ export default function AIActivityPanel({ id, onClose, onOpen }) {
   }, [id])
 
   useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(FULL_SCREEN)
+    const onChange = () => setModal(mq.matches)
+    mq.addEventListener?.("change", onChange)
+    return () => mq.removeEventListener?.("change", onChange)
+  }, [])
+
+  // Take focus when the panel opens and give it back to the row that opened it; lock page scroll behind the full-screen one.
+  useEffect(() => {
+    const opener = document.activeElement
+    panelRef.current?.focus()
+    return () => { if (opener && opener.isConnected) opener.focus?.() }
+  }, [])
+
+  useEffect(() => {
+    if (!modal) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = prev }
+  }, [modal])
+
+  useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose() }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -139,8 +167,12 @@ export default function AIActivityPanel({ id, onClose, onOpen }) {
 
   return (
     <aside
+      ref={panelRef}
+      role="dialog"
+      aria-modal={modal ? "true" : "false"}
       aria-label="Activity details"
-      className="fixed inset-0 z-50 overflow-y-auto bg-white p-4 md:static md:z-auto md:border-l md:border-pd-border md:p-[18px]"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-y-auto bg-white p-4 focus:outline-none md:static md:z-auto md:border-l md:border-pd-border md:p-[18px]"
     >
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-pd-primary md:hidden">
