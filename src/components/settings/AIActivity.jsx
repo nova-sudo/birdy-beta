@@ -196,9 +196,8 @@ export default function AIActivity() {
                         <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-pd-muted md:hidden">
                           <AppLogo name={it.app_name} />
                           <span>{formatWhen(it.created_at)}</span>
-                          {/* The separator travels with the kind so a wrap never strands it at a line end. */}
+                          {/* No "·" here: the kind's own dot separates it, so a wrap can't strand a separator. */}
                           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                            <span aria-hidden="true">·</span>
                             <span aria-hidden="true" className={`size-2 rounded-full ${KIND_DOT[it.kind] || KIND_DOT.lookup}`} />
                             {kindLabel(it.kind, it.refusal_reason)}
                           </span>

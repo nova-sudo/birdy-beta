@@ -165,15 +165,12 @@ describe("AIActivity", () => {
     expect(new URLSearchParams(url.split("?")[1]).get("from")).toBe(d.toISOString())
   })
 
-  it("keeps the mobile separator with the kind so a wrap cannot strand it", async () => {
+  it("the mobile meta line has no loose separator that a wrap could strand", async () => {
     render(<AIActivity />)
     await screen.findByText("Tried to create an alert")
-    const seps = screen.getAllByText("·")
-    expect(seps.length).toBeGreaterThan(0)
-    for (const sep of seps) {
-      expect(sep.parentElement.className).toContain("whitespace-nowrap")
-      expect(sep.parentElement.textContent).toMatch(/Live change|Refused/)
-    }
+    expect(screen.queryAllByText("·")).toHaveLength(0)
+    const kind = screen.getAllByText("Refused · View-only connection")[0]
+    expect(kind.className).toContain("whitespace-nowrap")
   })
 
   it("a failed Load more says so and keeps the rows and the button", async () => {
