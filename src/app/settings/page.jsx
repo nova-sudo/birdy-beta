@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import TrackingOverview from "@/components/attribution/TrackingOverview"
@@ -103,6 +103,17 @@ function SettingsPageContent() {
   // leave the reader on whichever tab they were already looking at.
   const [tab, setTab] = useState(urlTab)
   useEffect(() => { setTab(urlTab) }, [urlTab])
+
+  // On a phone the tab bar scrolls sideways, so a later tab (AI) can sit
+  // off-screen. Bring the selected one into view on load and on change.
+  // scrollIntoView is missing in jsdom, hence the guard.
+  const tabBarRef = useRef(null)
+  useEffect(() => {
+    const el = tabBarRef.current?.querySelector('[role="tab"][aria-selected="true"]')
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ inline: "nearest", block: "nearest" })
+    }
+  }, [tab])
 
   const SETTINGS_TABS = [
     { key: "general", label: "General" },
@@ -818,12 +829,16 @@ function SettingsPageContent() {
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div>
         <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
-          <div className={pdFontClass}>
+          <div className={pdFontClass} ref={tabBarRef}>
             <PageTabs
               label="Settings section"
               tabs={SETTINGS_TABS}
               value={tab}
               onChange={handleTabChange}
+              // Below 768px: scroll sideways, no visible scrollbar, tabs never
+              // wrap or shrink. Desktop keeps the plain strip.
+              className="max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+              itemClassName="whitespace-nowrap"
             />
           </div>
 

@@ -31,6 +31,15 @@ const CARD = "rounded-xl border border-pd-border bg-pd-surface shadow-sm";
 const TH = "bg-pd-table-head text-[11.5px] font-bold uppercase tracking-[.04em] text-pd-faint";
 const TR = "border-b border-pd-row-border hover:bg-pd-table-head";
 
+// MCP (AI connector) price inputs: state key, API field, label.
+const MCP_FIELDS = [
+  { id: "mcp-base-fee", key: "mcp_base_fee", label: "MCP request fee" },
+  { id: "mcp-per-10k", key: "mcp_per_10k_chars", label: "MCP credits per 10,000 characters" },
+  { id: "mcp-live-fee", key: "mcp_live_fee", label: "MCP live change fee" },
+  { id: "mcp-max", key: "mcp_max_per_call", label: "MCP max per request" },
+];
+const mcpFromConfig = (c) => Object.fromEntries(MCP_FIELDS.map((f) => [f.key, c[f.key] ?? ""]));
+
 // Illustrative token profile for the "per question" price preview. The markup
 // scales this linearly, so it's an honest way to feel 2× vs 5× at a glance.
 const SAMPLE_IN = 3000;
@@ -54,6 +63,7 @@ function PricingControls({ config, mutate }) {
   // Fixed at managed; the own-key rate has no meaning now that BYOK is gone.
   const rateMode = "managed";
   const [enforce, setEnforce] = useState(config.enforce);
+  const [mcp, setMcp] = useState(() => mcpFromConfig(config));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -63,9 +73,20 @@ function PricingControls({ config, mutate }) {
     setEnforce(config.enforce);
   }, [config.markup, config.enforce]);
 
+  const mcpSaved = MCP_FIELDS.map((f) => config[f.key]).join("|");
+  useEffect(() => {
+    setMcp(mcpFromConfig(config));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mcpSaved]);
+  const mcpValid = MCP_FIELDS.every((f) => {
+    const v = mcp[f.key];
+    return v !== "" && Number(v) >= 0 && Number(v) <= 100;
+  });
+  const mcpDirty = MCP_FIELDS.some((f) => Number(mcp[f.key]) !== config[f.key]);
+
   const min = config.markup_min ?? 1;
   const max = config.markup_max ?? 20;
-  const dirty = Number(markup) !== config.markup || rateMode !== config.rate_mode || enforce !== config.enforce;
+  const dirty = Number(markup) !== config.markup || rateMode !== config.rate_mode || enforce !== config.enforce || mcpDirty;
 
   const pricing = config.model_pricing || { in: 0, out: 0 };
   const previewManaged = useMemo(() => {
@@ -79,7 +100,12 @@ function PricingControls({ config, mutate }) {
   const save = async () => {
     setSaving(true);
     try {
-      const updated = await updateCreditsConfig({ markup: Number(markup), rate_mode: rateMode, enforce });
+      const updated = await updateCreditsConfig({
+        markup: Number(markup),
+        rate_mode: rateMode,
+        enforce,
+        ...Object.fromEntries(MCP_FIELDS.map((f) => [f.key, Number(mcp[f.key])])),
+      });
       await mutate(updated, { revalidate: false });
       toast.success("Credits settings updated", {
         description: `Markup ${updated.markup}× · ${updated.rate_mode === "managed" ? "Managed" : "Own-key"} · stopper ${updated.enforce ? "ON" : "off"}`,
@@ -186,6 +212,32 @@ function PricingControls({ config, mutate }) {
         </div>
       </div>
 
+      {/* AI connector (MCP): flat per-request prices, no markup applied */}
+      <div className="mt-4 rounded-xl border border-pd-border bg-pd-canvas p-4">
+        <p className="text-[11px] font-bold uppercase tracking-[.04em] text-pd-faint">AI connector (MCP)</p>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {MCP_FIELDS.map((f) => (
+            <div key={f.key} className="space-y-1.5">
+              <Label htmlFor={f.id} className="text-xs text-pd-body">{f.label}</Label>
+              <Input
+                id={f.id}
+                type="number"
+                step="0.1"
+                min={0}
+                max={100}
+                value={mcp[f.key]}
+                onChange={(e) => setMcp((m) => ({ ...m, [f.key]: e.target.value }))}
+                onBlur={(e) => { if (e.target.value === "") setMcp((m) => ({ ...m, [f.key]: config[f.key] ?? "" })); }}
+                className="tabular-nums"
+              />
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-pd-subtle">
+          Price per request = request fee + credits per 10,000 characters returned + live change fee (confirmed changes only), capped at the max.
+        </p>
+      </div>
+
       {/* Price preview */}
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className={`rounded-xl border p-3 ${managedActive ? "border-pd-primary-pale bg-pd-surface" : "border-pd-border bg-pd-canvas opacity-70"}`}>
@@ -217,7 +269,7 @@ function PricingControls({ config, mutate }) {
         <Button
           type="button"
           onClick={save}
-          disabled={!dirty || saving || markup === ""}
+          disabled={!dirty || saving || markup === "" || !mcpValid}
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? "Saving…" : "Save pricing"}
