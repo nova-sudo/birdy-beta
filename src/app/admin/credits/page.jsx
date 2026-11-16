@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck, Gift, Phone,
 } from "lucide-react";
@@ -73,9 +73,15 @@ function PricingControls({ config, mutate }) {
     setEnforce(config.enforce);
   }, [config.markup, config.enforce]);
 
+  // Follow the saved rates when they change under us, but never wipe edits in progress:
+  // only adopt the new values if the fields still match the previous saved baseline.
   const mcpSaved = MCP_FIELDS.map((f) => config[f.key]).join("|");
+  const mcpBaseline = useRef(mcpFromConfig(config));
   useEffect(() => {
-    setMcp(mcpFromConfig(config));
+    const next = mcpFromConfig(config);
+    const base = mcpBaseline.current;
+    mcpBaseline.current = next;
+    setMcp((cur) => (MCP_FIELDS.every((f) => String(cur[f.key]) === String(base[f.key])) ? next : cur));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mcpSaved]);
   const mcpValid = MCP_FIELDS.every((f) => {
@@ -107,8 +113,10 @@ function PricingControls({ config, mutate }) {
         ...Object.fromEntries(MCP_FIELDS.map((f) => [f.key, Number(mcp[f.key])])),
       });
       await mutate(updated, { revalidate: false });
+      mcpBaseline.current = mcpFromConfig(updated);
+      setMcp(mcpFromConfig(updated));
       toast.success("Credits settings updated", {
-        description: `Markup ${updated.markup}× · ${updated.rate_mode === "managed" ? "Managed" : "Own-key"} · stopper ${updated.enforce ? "ON" : "off"}`,
+        description: `Markup ${updated.markup}× · ${updated.rate_mode === "managed" ? "Managed" : "Own-key"} · stopper ${updated.enforce ? "ON" : "off"} · MCP ${updated.mcp_base_fee} + ${updated.mcp_per_10k_chars}/10k chars + ${updated.mcp_live_fee} live, max ${updated.mcp_max_per_call}`,
       });
     } catch (e) {
       toast.error("Couldn't update pricing", { description: e.message });

@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-const CONFIG = {
+const BASE = {
   markup: 3, markup_min: 1, markup_max: 20, rate_mode: "managed", enforce: false,
   model: "m", model_pricing: { in: 1, out: 2 },
   mcp_base_fee: 0.2, mcp_per_10k_chars: 1, mcp_live_fee: 1, mcp_max_per_call: 10,
 }
+let CONFIG = BASE
 const mutate = vi.fn()
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
 vi.mock("@/components/motion", () => ({ Stagger: ({ children }) => <div>{children}</div>, StaggerItem: ({ children }) => <div>{children}</div> }))
@@ -18,9 +19,10 @@ vi.mock("@/lib/admin-api", () => ({
 }))
 
 import { updateCreditsConfig } from "@/lib/admin-api"
+import { toast } from "sonner"
 import AdminCreditsPage from "../page"
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => { vi.clearAllMocks(); CONFIG = BASE })
 
 describe("admin MCP rates", () => {
   it("shows the defaults from the config", () => {
@@ -55,5 +57,34 @@ describe("admin MCP rates", () => {
     await user.clear(max)
     await user.type(max, "101")
     expect(screen.getByRole("button", { name: /save pricing/i })).toBeDisabled()
+  })
+
+  it("a revalidate with new saved rates does not wipe an edit in progress", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<AdminCreditsPage />)
+    const fee = screen.getByLabelText("MCP request fee")
+    await user.clear(fee)
+    await user.type(fee, "0.7")
+    CONFIG = { ...BASE, mcp_max_per_call: 12 } // someone else saved a different rate
+    rerender(<AdminCreditsPage />)
+    expect(screen.getByLabelText("MCP request fee")).toHaveValue(0.7)
+  })
+
+  it("untouched fields follow a changed saved value", () => {
+    const { rerender } = render(<AdminCreditsPage />)
+    CONFIG = { ...BASE, mcp_max_per_call: 12 }
+    rerender(<AdminCreditsPage />)
+    expect(screen.getByLabelText("MCP max per request")).toHaveValue(12)
+  })
+
+  it("the save toast names the MCP rates", async () => {
+    const user = userEvent.setup()
+    render(<AdminCreditsPage />)
+    const fee = screen.getByLabelText("MCP request fee")
+    await user.clear(fee)
+    await user.type(fee, "0.5")
+    await user.click(screen.getByRole("button", { name: /save pricing/i }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+    expect(toast.success.mock.calls[0][1].description).toContain("MCP 0.5 + 1/10k chars + 1 live, max 10")
   })
 })

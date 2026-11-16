@@ -31,6 +31,7 @@ const REFUSAL_REASON = {
   rate_limit: "Too many requests",
   bad_code: "Approval code invalid or expired",
   state_changed: "Changed since the preview",
+  no_scope: "No access granted",
 }
 const ACCESS_LABEL = { read: "View my data", write: "View and make changes" }
 
