@@ -24,6 +24,7 @@ import {
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
 import AppLogo from "@/components/connect/AppLogo"
+import AIActivity from "./AIActivity"
 import { CONNECT_APPS, CHECK_IN_PROMPT } from "./connect-ai-steps"
 
 const ACCESS_LABEL = { read: "View my data", write: "View and make changes" }
@@ -297,6 +298,8 @@ export function ConnectAI() {
           )}
         </CardContent>
       </Card>
+
+      <AIActivity />
 
       <Card className="gap-0 py-0">
         <CardContent className="space-y-2 p-5">
