@@ -111,7 +111,7 @@ export default function AIActivityPanel({ id, onClose, onOpen }) {
               if (p?.created_at) setRelated({ id: data.confirmed_after, at: p.created_at, label: "Confirmed after the preview at" })
             }
           } else if (data.kind === "preview") {
-            const r = await apiRequest(`/api/mcp/activity?confirmed_after=${encodeURIComponent(id)}&limit=1`)
+            const r = await apiRequest(`/api/mcp/activity?confirmed_after=${encodeURIComponent(id)}&from=${String(data.created_at).slice(0, 10)}&limit=1`)
             if (r.ok && live) {
               const hit = (await r.json())?.items?.[0]
               if (hit?.created_at) setRelated({ id: hit.id, at: hit.created_at, label: "Confirmed at" })
@@ -170,7 +170,7 @@ export default function AIActivityPanel({ id, onClose, onOpen }) {
           </p>
 
           <dl className="mt-3 grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
-            {entry.tool && (<><dt className="text-pd-subtle">Tool</dt><dd className="break-words text-pd-ink">{entry.tool}</dd></>)}
+            {entry.tool_label && (<><dt className="text-pd-subtle">Tool</dt><dd className="break-words text-pd-ink">{entry.tool_label}</dd></>)}
             {clients.length > 0 && (<><dt className="text-pd-subtle">Client</dt><dd className="break-words text-pd-ink">{clients.join(", ")}</dd></>)}
             <dt className="text-pd-subtle">Result</dt>
             <dd>

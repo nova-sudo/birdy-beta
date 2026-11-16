@@ -8,13 +8,29 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import AppLogo from "@/components/connect/AppLogo"
-import AIActivityPanel, { KIND_DOT, KIND_LABEL, formatCredits, formatWhen } from "./AIActivityPanel"
+import AIActivityPanel, { KIND_DOT, KIND_LABEL, formatCredits, formatWhen, kindLabel } from "./AIActivityPanel"
 
 const PERIODS = [7, 30, 90]
-const selectClass =
-  "h-8 max-w-full rounded-[9px] border border-pd-border-strong bg-white px-2.5 text-[13px] text-pd-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pd-primary"
+
+// Radix Select rejects "" as an item value, so "no filter" travels as ALL.
+const ALL = "all"
+
+function FilterSelect({ label, value, onChange, options, allLabel }) {
+  return (
+    <Select value={value === "" ? ALL : value} onValueChange={(v) => onChange(v === ALL ? "" : v)}>
+      <SelectTrigger aria-label={label} className="h-8 max-w-full text-[13px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {allLabel && <SelectItem value={ALL}>{allLabel}</SelectItem>}
+        {options.map(([v, text]) => <SelectItem key={v} value={v}>{text}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  )
+}
 
 function localDay(daysAgo) {
   const d = new Date()
@@ -103,8 +119,8 @@ export default function AIActivity() {
     }
   }, [cursor, loadingMore, filters])
 
-  const setFilter = (key) => (e) => {
-    const value = key === "days" ? Number(e.target.value) : e.target.value
+  const setFilter = (key) => (raw) => {
+    const value = key === "days" ? Number(raw) : raw
     setOpenId(null)
     setFilters((f) => ({ ...f, [key]: value }))
   }
@@ -129,23 +145,14 @@ export default function AIActivity() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select aria-label="App" value={filters.app} onChange={setFilter("app")} className={selectClass}>
-            <option value="">All apps</option>
-            {apps.map((a) => (
-              <option key={a.grant_id} value={a.grant_id}>{a.app_name}{a.revoked ? " (disconnected)" : ""}</option>
-            ))}
-          </select>
-          <select aria-label="Kind" value={filters.kind} onChange={setFilter("kind")} className={selectClass}>
-            <option value="">All kinds</option>
-            {Object.entries(KIND_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-          </select>
-          <select aria-label="Client" value={filters.client} onChange={setFilter("client")} className={selectClass}>
-            <option value="">All clients</option>
-            {Object.entries(clientOptions).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-          </select>
-          <select aria-label="Period" value={filters.days} onChange={setFilter("days")} className={selectClass}>
-            {PERIODS.map((d) => <option key={d} value={d}>Last {d} days</option>)}
-          </select>
+          <FilterSelect label="App" value={filters.app} onChange={setFilter("app")} allLabel="All apps"
+            options={apps.map((a) => [a.grant_id, `${a.app_name}${a.revoked ? " (disconnected)" : ""}`])} />
+          <FilterSelect label="Kind" value={filters.kind} onChange={setFilter("kind")} allLabel="All kinds"
+            options={Object.entries(KIND_LABEL)} />
+          <FilterSelect label="Client" value={filters.client} onChange={setFilter("client")} allLabel="All clients"
+            options={Object.entries(clientOptions)} />
+          <FilterSelect label="Period" value={String(filters.days)} onChange={setFilter("days")}
+            options={PERIODS.map((d) => [String(d), `Last ${d} days`])} />
         </div>
 
         {items === null ? (
@@ -160,8 +167,8 @@ export default function AIActivity() {
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="bg-pd-table-head text-left text-pd-subtle">
-                    <th className="border-b border-pd-border px-2 py-2 font-medium md:px-2.5">When</th>
-                    <th className="border-b border-pd-border px-1 py-2 font-medium"><span className="sr-only">App</span></th>
+                    <th className="hidden border-b border-pd-border px-2.5 py-2 font-medium md:table-cell">When</th>
+                    <th className="hidden border-b border-pd-border px-1 py-2 font-medium md:table-cell"><span className="sr-only">App</span></th>
                     <th className="border-b border-pd-border px-2 py-2 font-medium md:px-2.5">What happened</th>
                     <th className="hidden border-b border-pd-border px-2.5 py-2 font-medium md:table-cell">Kind</th>
                     <th className="border-b border-pd-border px-2 py-2 text-right font-medium md:px-2.5">Credits</th>
@@ -174,21 +181,25 @@ export default function AIActivity() {
                       onClick={() => setOpenId(it.id)}
                       className={`cursor-pointer border-b border-pd-row-border last:border-b-0 hover:bg-pd-primary-tint/50 ${openId === it.id ? "bg-pd-primary-tint" : ""}`}
                     >
-                      <td className="w-px whitespace-nowrap px-2 py-2.5 text-pd-body md:px-2.5">{formatWhen(it.created_at)}</td>
-                      <td className="w-px px-1 py-2.5"><AppLogo name={it.app_name} /></td>
+                      <td className="hidden w-px whitespace-nowrap px-2.5 py-2.5 text-pd-body md:table-cell">{formatWhen(it.created_at)}</td>
+                      <td className="hidden w-px px-1 py-2.5 md:table-cell"><AppLogo name={it.app_name} /></td>
                       <td className="min-w-0 px-2 py-2.5 text-pd-ink md:px-2.5">
                         <button type="button" className="text-left focus-visible:outline-none focus-visible:underline">
                           {it.summary}
                         </button>
-                        <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-pd-muted md:hidden">
-                          <span aria-hidden="true" className={`size-2 rounded-full ${KIND_DOT[it.kind] || KIND_DOT.lookup}`} />
-                          {KIND_LABEL[it.kind] || it.kind}
+                        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-pd-muted md:hidden">
+                          <AppLogo name={it.app_name} />
+                          <span>{formatWhen(it.created_at)}</span>·
+                          <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden="true" className={`size-2 rounded-full ${KIND_DOT[it.kind] || KIND_DOT.lookup}`} />
+                            {kindLabel(it.kind, it.refusal_reason)}
+                          </span>
                         </span>
                       </td>
                       <td className="hidden whitespace-nowrap px-2.5 py-2.5 md:table-cell">
                         <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-pd-body">
                           <span aria-hidden="true" className={`size-2 rounded-full ${KIND_DOT[it.kind] || KIND_DOT.lookup}`} />
-                          {KIND_LABEL[it.kind] || it.kind}
+                          {kindLabel(it.kind, it.refusal_reason)}
                         </span>
                       </td>
                       <td className="w-px whitespace-nowrap px-2 py-2.5 text-right tabular-nums md:px-2.5 text-pd-body">{formatCredits(it.credits?.total)}</td>
