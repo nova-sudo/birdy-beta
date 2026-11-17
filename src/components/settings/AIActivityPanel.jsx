@@ -87,6 +87,8 @@ function Section({ title, children }) {
 
 const boxClass = "mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[10px] border border-pd-border bg-pd-table-head px-3 py-2.5 text-[13px] text-pd-body"
 
+const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 // Below 768px the panel covers the page, so it behaves as a modal dialog there.
 const FULL_SCREEN = "(max-width: 767px)"
 const isFullScreen = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(FULL_SCREEN).matches
@@ -157,10 +159,23 @@ export default function AIActivityPanel({ id, onClose, onOpen }) {
   }, [modal])
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose() }
+    const onKey = (e) => {
+      if (e.key === "Escape") return onClose()
+      // Full-screen (modal) panel: keep Tab inside it, wrapping at either end.
+      if (e.key !== "Tab" || !modal || !panelRef.current) return undefined
+      const items = [...panelRef.current.querySelectorAll(FOCUSABLE)].filter((el) => !el.hasAttribute("disabled"))
+      if (!items.length) { e.preventDefault(); panelRef.current.focus(); return undefined }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      const inside = panelRef.current.contains(active)
+      if (e.shiftKey && (active === first || active === panelRef.current || !inside)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && (active === last || !inside)) { e.preventDefault(); first.focus() }
+      return undefined
+    }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
+  }, [onClose, modal])
 
   const args = entry ? prettyArgs(entry.args) : null
   const credits = entry?.credits || {}

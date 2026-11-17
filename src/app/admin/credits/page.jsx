@@ -66,11 +66,15 @@ function PricingControls({ config, mutate }) {
   const [mcp, setMcp] = useState(() => mcpFromConfig(config));
   const [saving, setSaving] = useState(false);
 
+  // Follow a changed saved markup/stopper (a revalidate, another admin's save) only where the
+  // field is untouched; an edit in progress is kept, the same per-field rule as the MCP rates below.
+  // (No setRateMode: the rate is fixed at "managed" — BYOK is gone.)
+  const savedBaseline = useRef({ markup: config.markup, enforce: config.enforce });
   useEffect(() => {
-    // No setRateMode: the rate is fixed at "managed" (BYOK is gone) — the
-    // stale setter call here crashed the whole page the moment config loaded.
-    setMarkup(config.markup);
-    setEnforce(config.enforce);
+    const base = savedBaseline.current;
+    savedBaseline.current = { markup: config.markup, enforce: config.enforce };
+    setMarkup((cur) => (String(cur) === String(base.markup) ? config.markup : cur));
+    setEnforce((cur) => (cur === base.enforce ? config.enforce : cur));
   }, [config.markup, config.enforce]);
 
   // Follow the saved rates when they change under us, but never wipe edits in progress:

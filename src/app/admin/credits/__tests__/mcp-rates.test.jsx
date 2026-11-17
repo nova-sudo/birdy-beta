@@ -91,4 +91,21 @@ describe("admin MCP rates", () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalled())
     expect(toast.success.mock.calls[0][1].description).toContain("MCP 0.5 + 1/10k chars + 1 live, max 10")
   })
+
+  it("a revalidate does not wipe an unsaved markup or stopper edit, and untouched ones follow", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<AdminCreditsPage />)
+    const markup = screen.getByLabelText("Credit markup", { selector: "input#markup" })
+    await user.clear(markup)
+    await user.type(markup, "5")
+    CONFIG = { ...BASE, markup: 4, enforce: true } // someone else saved
+    rerender(<AdminCreditsPage />)
+    expect(markup).toHaveValue(5)
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true") // untouched: follows
+    await user.click(screen.getByRole("switch"))
+    CONFIG = { ...BASE, markup: 4, enforce: true, mcp_live_fee: 2 }
+    rerender(<AdminCreditsPage />)
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false") // edited: kept
+    expect(markup).toHaveValue(5)
+  })
 })

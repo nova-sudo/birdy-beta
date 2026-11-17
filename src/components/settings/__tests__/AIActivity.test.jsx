@@ -218,4 +218,28 @@ describe("AIActivity", () => {
       delete window.matchMedia
     }
   })
+
+  it("traps Tab inside the full-screen panel on small screens", async () => {
+    const user = userEvent.setup()
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })
+    try {
+      render(<AIActivity />)
+      await user.click(await screen.findByText("Paused 2 ads for Acme Dental"))
+      const panel = await screen.findByRole("dialog", { name: "Activity details" })
+      await waitFor(() => expect(panel).toHaveFocus())
+      const items = [...panel.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      expect(items.length).toBeGreaterThan(0)
+      items[items.length - 1].focus()
+      await user.tab()
+      expect(items[0]).toHaveFocus()
+      await user.tab({ shift: true })
+      expect(items[items.length - 1]).toHaveFocus()
+      for (let i = 0; i < items.length + 2; i += 1) {
+        await user.tab()
+        expect(panel.contains(document.activeElement)).toBe(true)
+      }
+    } finally {
+      delete window.matchMedia
+    }
+  })
 })
