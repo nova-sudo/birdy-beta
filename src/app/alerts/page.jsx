@@ -77,7 +77,7 @@ import MetricPicker from "@/components/ui/MetricPicker"
 import { buildMetricPickerOptions } from "@/lib/metric-picker-options"
 import {
   CREATIVE_METRIC_OPTIONS, CREATIVE_NO_THRESHOLD, CREATIVE_OPERATOR_OPTIONS, metricLabel,
-  METRIC_OPTIONS, OPERATOR_OPTIONS, PERIOD_OPTIONS, SNOOZE_OPTIONS, EMPTY_FORM,
+  hasEmailChannel, withEmailChannel, METRIC_OPTIONS, OPERATOR_OPTIONS, PERIOD_OPTIONS, SNOOZE_OPTIONS, EMPTY_FORM,
   TYPE_OPTIONS, FREQUENCY_OPTIONS,
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
 } from "@/lib/alert-helpers"
@@ -749,6 +749,10 @@ function AlertsPageContent() {
   const [clientSearch, setClientSearch] = useState("")
   const [dialogMode, setDialogMode] = useState("birdy") // "birdy" | "manual"
   const [birdyChatKey, setBirdyChatKey] = useState(0)
+  const [accountEmail, setAccountEmail] = useState("")
+  useEffect(() => {
+    try { setAccountEmail(JSON.parse(localStorage.getItem("user") || "{}")?.email || "") } catch {}
+  }, [])
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "triggered")
 
@@ -1524,16 +1528,24 @@ function AlertsPageContent() {
                           <Switch disabled checked={false} />
                         </div>
                       </div>
-                      {/* Email — Coming Soon */}
-                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2 opacity-50">
-                        <div className="flex items-center justify-between">
+                      {/* Email */}
+                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Email</span>
-                            <Badge className="bg-pd-divider text-pd-body border-0 text-[10px] px-2 py-0">Soon</Badge>
+                            <Mail className="h-4 w-4 text-primary" />
+                            <label htmlFor="alert-email-switch" className="text-sm font-medium cursor-pointer">Also email me</label>
                           </div>
-                          <Switch disabled checked={false} />
+                          <Switch
+                            id="alert-email-switch"
+                            checked={hasEmailChannel(form.notification_channels)}
+                            onCheckedChange={(checked) => {
+                              setForm(f => ({ ...f, notification_channels: withEmailChannel(f.notification_channels, checked) }))
+                            }}
+                          />
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Sent to {accountEmail || "your account email"} once each time this fires.
+                        </p>
                       </div>
                     </div>
                   </div>

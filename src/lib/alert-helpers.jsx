@@ -264,3 +264,16 @@ export const EMPTY_FORM = {
   scope: "clients",
   creative_test_ids: [],
 }
+
+// ── Notification channels ──
+// The email switch adds/removes only "email"; every other stored channel
+// (including whether "in_app" is on) is left as the user set it. Only a
+// missing list (undefined/null) defaults to ["in_app"].
+export function hasEmailChannel(channels) {
+  return Array.isArray(channels) && channels.includes("email")
+}
+
+export function withEmailChannel(channels, on) {
+  const base = (Array.isArray(channels) ? channels : ["in_app"]).filter(c => c !== "email")
+  return on ? [...base, "email"] : base
+}

@@ -80,10 +80,11 @@ export async function stopImpersonation() {
   return res.json()
 }
 
-export async function updateCreditsConfig({ markup, rate_mode, enforce }) {
+export async function updateCreditsConfig({ markup, rate_mode, enforce, ...mcpRates }) {
   const res = await apiRequest("/api/admin/credits/config", {
     method: "PUT",
-    body: JSON.stringify({ markup, rate_mode, enforce }),
+    // mcpRates: mcp_base_fee, mcp_per_10k_chars, mcp_live_fee, mcp_max_per_call
+    body: JSON.stringify({ markup, rate_mode, enforce, ...mcpRates }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))

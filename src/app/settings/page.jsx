@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import TrackingOverview from "@/components/attribution/TrackingOverview"
@@ -8,6 +8,7 @@ import { pdFontClass } from "@/lib/pd-fonts"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/portfolio"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
+import { ConnectAI } from "@/components/settings/ConnectAI"
 import { CreditsPanel } from "@/components/settings/CreditsPanel"
 import { PlanPicker } from "@/components/billing/PlanPicker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -88,7 +89,7 @@ function SettingsPageContent() {
     TAB_ALIASES[requestedTab] ??
     // Kept in step with SETTINGS_TABS below — they are two separate lists, and a
     // tab missing from this one silently falls back to integrations.
-    (["general", "integrations", "tracking", "billing"].includes(requestedTab)
+    (["general", "integrations", "tracking", "billing", "ai"].includes(requestedTab)
       ? requestedTab
       : "integrations")
 
@@ -103,11 +104,23 @@ function SettingsPageContent() {
   const [tab, setTab] = useState(urlTab)
   useEffect(() => { setTab(urlTab) }, [urlTab])
 
+  // On a phone the tab bar scrolls sideways, so a later tab (AI) can sit
+  // off-screen. Bring the selected one into view on load and on change.
+  // scrollIntoView is missing in jsdom, hence the guard.
+  const tabBarRef = useRef(null)
+  useEffect(() => {
+    const el = tabBarRef.current?.querySelector('[role="tab"][aria-selected="true"]')
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ inline: "nearest", block: "nearest" })
+    }
+  }, [tab])
+
   const SETTINGS_TABS = [
     { key: "general", label: "General" },
     { key: "integrations", label: "Integrations" },
     { key: "tracking", label: "Tracking" },
     { key: "billing", label: "Billing" },
+    { key: "ai", label: "Connect to AI" },
   ]
 
   // Keep the URL in step so the tab survives a reload and can be shared.
@@ -816,12 +829,16 @@ function SettingsPageContent() {
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div>
         <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
-          <div className={pdFontClass}>
+          <div className={pdFontClass} ref={tabBarRef}>
             <PageTabs
               label="Settings section"
               tabs={SETTINGS_TABS}
               value={tab}
               onChange={handleTabChange}
+              // Below 768px: scroll sideways, no visible scrollbar, tabs never
+              // wrap or shrink. Desktop keeps the plain strip.
+              className="max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+              itemClassName="whitespace-nowrap"
             />
           </div>
 
@@ -1257,6 +1274,10 @@ function SettingsPageContent() {
 
           <TabsContent value="tracking" className="space-y-6">
             <TrackingOverview />
+          </TabsContent>
+
+          <TabsContent value="ai" className="space-y-6">
+            <ConnectAI />
           </TabsContent>
 
           <TabsContent value="billing" className={pdFontClass}>

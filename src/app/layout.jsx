@@ -100,6 +100,8 @@ export default function RootLayout({ children }) {
     // The forwardable install page is opened by people outside the account —
     // a sidebar and an account header would be meaningless to them.
     pathname.startsWith("/install") ||
+    // The OAuth consent screen is a standalone card; an AI app sent the owner here.
+    pathname.startsWith("/connect") ||
     pathname.startsWith("/admin");
 
   const [chatOpen, setChatOpen] = useState(false);
