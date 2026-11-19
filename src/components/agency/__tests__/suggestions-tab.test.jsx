@@ -63,6 +63,12 @@ describe("Agency Ops' Suggestions tab", () => {
     expect(history.map((li) => li.textContent)).toEqual(["Synced MetaAll clientsAuto-run12 min ago", "Turned on an adAuraApprovedYesterday"])
   })
 
+  it("marks a dismissed suggestion as dismissed in the history", () => {
+    sugg.state = state({ history: [{ id: "d1", what: "Refresh the creative", client: "Fallon Physique", mode: "Dismissed", when: "just now" }] })
+    render(<SuggestionsTab />)
+    expect(within(screen.getByRole("complementary", { name: "History" })).getByRole("listitem")).toHaveTextContent("Refresh the creativeFallon PhysiqueDismissed")
+  })
+
   it("narrows to one client", () => {
     route.search = "client=a"
     render(<SuggestionsTab />)

@@ -7,7 +7,8 @@ const TONE = { CRITICAL: "danger", HIGH: "danger", MEDIUM: "warning", LOW: "acce
 
 /**
  * What the tab lists, from `/api/dashboard/summary`.
- * Suggestions come back most impact first; history keeps only changes that were made, newest first as served.
+ * Suggestions come back most impact first. History keeps what was done and what was dismissed
+ * (not Birdy's read-only analysis passes or the suggestions themselves), newest first as served.
  */
 export function shapeSummary(data) {
   const suggestions = (data?.suggestions ?? [])
@@ -26,12 +27,13 @@ export function shapeSummary(data) {
     })
     .sort((a, b) => (IMPACT[a.severity] ?? 2) - (IMPACT[b.severity] ?? 2) || a.order - b.order);
 
-  const history = (data?.activity ?? []).filter(isChangeActivity).map((a) => ({
+  const dismissed = (a) => a?.kind === "suggestion_dismissed";
+  const history = (data?.activity ?? []).filter((a) => dismissed(a) || isChangeActivity(a)).map((a) => ({
     id: a.id,
     what: a.title ?? a.action ?? "",
     client: a.client ?? "",
-    // What Birdy did on standing approval, against what a person signed off.
-    mode: a.actor === "birdy" ? "Auto-run" : "Approved",
+    // A suggestion turned down, what Birdy did on standing approval, or what a person signed off.
+    mode: dismissed(a) ? "Dismissed" : a.actor === "birdy" ? "Auto-run" : "Approved",
     when: a.time ?? "",
   }));
 

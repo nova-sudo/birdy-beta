@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, MessageSquare, Zap } from "lucide-react";
+import { Check, MessageSquare, X, Zap } from "lucide-react";
 import { AskBar, AskPanel, Button, Card, Notice, Pill, SECTIONS, SectionHeader, Skeleton } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
@@ -16,11 +16,17 @@ import { useClientGroups } from "@/lib/useClientGroups";
 
 const OPS = SECTIONS.find((s) => s.id === "ops");
 const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
+// How each kind of history entry is marked.
+const MODE = {
+  "Auto-run": { icon: <Zap />, tile: "bg-by-accent-soft text-by-accent", pill: "accent" },
+  Approved: { icon: <Check />, tile: "bg-by-success-bg text-by-success", pill: "success" },
+  Dismissed: { icon: <X />, tile: "bg-by-sunken text-by-muted", pill: "neutral" },
+};
 const ICON_TONE = { danger: "bg-by-danger-bg text-by-danger", warning: "bg-by-warning-bg text-by-warning", accent: "bg-by-accent-soft text-by-accent" };
 
 /**
  * Agency Ops' Suggestions tab: what Birdy suggests doing, most impact first,
- * each with "Do it for me" and Dismiss, and the history of what was done.
+ * each with "Do it for me" and Dismiss, and the history of what was done or dismissed.
  * With `?client=<id>` only that client's suggestions and history show.
  */
 export function SuggestionsTab() {
@@ -109,15 +115,15 @@ export function SuggestionsTab() {
                 ) : (
                   <ol className="mt-1 divide-y divide-by-line-soft">
                     {history.slice(0, 30).map((h) => {
-                      const auto = h.mode === "Auto-run";
+                      const mode = MODE[h.mode] ?? MODE.Approved;
                       return (
                         <li key={h.id} className="flex gap-3 py-3">
-                          <span aria-hidden="true" className={`grid size-7 shrink-0 place-items-center rounded-full [&_svg]:size-3.5 ${auto ? "bg-by-accent-soft text-by-accent" : "bg-by-success-bg text-by-success"}`}>{auto ? <Zap /> : <Check />}</span>
+                          <span aria-hidden="true" className={`grid size-7 shrink-0 place-items-center rounded-full [&_svg]:size-3.5 ${mode.tile}`}>{mode.icon}</span>
                           <div className="min-w-0">
                             <b className="block text-by-body font-semibold text-by-text">{h.what}</b>
                             {h.client && <span className="block truncate text-by-body-sm text-by-text-2">{h.client}</span>}
                             <span className="mt-1 flex items-center gap-2 text-by-caption text-by-muted">
-                              <Pill tone={auto ? "accent" : "success"} dot={false}>{h.mode}</Pill>{ready && h.when}
+                              <Pill tone={mode.pill} dot={false}>{h.mode}</Pill>{ready && h.when}
                             </span>
                           </div>
                         </li>

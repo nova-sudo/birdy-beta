@@ -58,11 +58,16 @@ export function useSuggestions() {
       hide(s.id, false);
       return toast.error("Couldn’t dismiss that", { description: s.title });
     }
+    setDone((prev) => [{ id: `dismissed-${s.id}`, what: s.title, client: s.client, mode: "Dismissed", when: "just now" }, ...prev]);
     toast("Suggestion dismissed", { description: s.title });
   }, [mutateCache]);
 
   const suggestions = useMemo(() => shaped.suggestions.filter((s) => !gone[s.id]), [shaped.suggestions, gone]);
-  const history = useMemo(() => [...done, ...shaped.history], [done, shaped.history]);
+  // What was acted on here shows at once; once the server's own record of it arrives, that one is kept.
+  const history = useMemo(() => {
+    const served = new Set(shaped.history.map((h) => `${h.mode}|${h.what}|${h.client}`));
+    return [...done.filter((d) => !served.has(`${d.mode}|${d.what}|${d.client}`)), ...shaped.history];
+  }, [done, shaped.history]);
 
   return { suggestions, history, loading: isLoading, error: error && !data ? error : null, refresh: () => mutate(), apply, dismiss, busy };
 }

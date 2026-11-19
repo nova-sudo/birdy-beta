@@ -12,6 +12,8 @@ const SUMMARY = {
     { id: "a1", title: "Synced Meta", client: "All clients", actor: "birdy", time: "12 min ago", kind: "sync" },
     { id: "a2", title: "Analysed 33 clients", actor: "birdy", kind: "analysis_pass" },
     { id: "a3", action: "Turned on an ad", client: "Aura", actor: "user", time: "Yesterday", kind: "ad_enabled" },
+    { id: "a4", title: "Raise the budget", client: "Aura", actor: "user", time: "2 days ago", kind: "suggestion_dismissed" },
+    { id: "a5", title: "New suggestion", actor: "birdy", kind: "suggestion_created" },
   ],
 }
 
@@ -22,10 +24,11 @@ describe("shapeSummary", () => {
     expect(suggestions[0]).toMatchObject({ why: "CPL 2.1x its limit", agentId: "ag1", client: "Aura" })
   })
 
-  it("keeps only changes that were made in the history, and says who made each", () => {
+  it("keeps what was done and what was dismissed in the history, and says which", () => {
     expect(shapeSummary(SUMMARY).history).toEqual([
       { id: "a1", what: "Synced Meta", client: "All clients", mode: "Auto-run", when: "12 min ago" },
       { id: "a3", what: "Turned on an ad", client: "Aura", mode: "Approved", when: "Yesterday" },
+      { id: "a4", what: "Raise the budget", client: "Aura", mode: "Dismissed", when: "2 days ago" },
     ])
   })
 
