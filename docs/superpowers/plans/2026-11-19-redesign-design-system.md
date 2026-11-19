@@ -1,6 +1,6 @@
 # Birdy Redesign Design System Implementation Plan
 
-**Status:** in progress. Phases 1 and 2 done 2026-11-19; phase 3 next.
+**Status:** in progress. Phases 1 to 3 done 2026-11-19; phase 4 next.
 
 **Goal:** Build the `by-` tokens, the `by` component kit and the new app shell in `birdy-beta`, shown on a development-only `/kit` page, with no change to any existing page.
 
@@ -50,7 +50,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
   - once approved, run every phase without pausing; confirm at the end (`run-approved-plans-through`);
   - anything the boards don't settle gets a mock-up and a question, not a guess (`revamp-user-chooses-each-step`, `plans-need-html-mocks`).
 - **Required skills:** `nova-executing-plans` to run the plan; `impeccable` (read `reference/craft-floor.md` and `reference/operate.md`) before UI edits in phases 1 to 4; `nova-review` in phase 5.
-- **Commands:** tests `npx vitest run src` (plain `npm test` also runs the stale copies under `.claude/worktrees/`, where 90 files fail on unrelated code); production build `npm run build`; preview `npx next dev --turbopack --port 3005`. There is no lint script.
+- **Commands:** tests `npx vitest run --dir src` (plain `npm test` also runs the stale copies under `.claude/worktrees/`, where 90 files fail on unrelated code); production build `npm run build`; preview `npx next dev --turbopack --port 3005`. There is no lint script.
 - **Screenshots:** the headless Chromium at `~/Library/Caches/ms-playwright/chromium_headless_shell-1243/`, as used for the boards.
 - **Commit footer:** `Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>`.
 
@@ -89,7 +89,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 
 **Order that matters:** take "before" screenshots of `/dashboard`, `/clients`, `/Sales-Hub`, `/settings` and `/login` at 1440 wide on `origin/main` before the first edit. Phase 5 compares against them. The four signed-in pages use a session the user signed into themselves (their choice, 2026-11-19), saved in the session scratch folder and deleted after phase 5.
 
-**Verification:** `npx vitest run src` passes; `npm run build` passes; on the dev server `/kit` renders without the old sidebar or top bar; a production build serves "not found" for `/kit`; a screenshot of `/kit` shows Poppins headings and the token values from the spec.
+**Verification:** `npx vitest run --dir src` passes; `npm run build` passes; on the dev server `/kit` renders without the old sidebar or top bar; a production build serves "not found" for `/kit`; a screenshot of `/kit` shows Poppins headings and the token values from the spec.
 
 ### Phase 2: Actions and inputs (done)
 
@@ -110,9 +110,9 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 - Modify `package.json`: add `@radix-ui/react-radio-group`.
 - Modify `src/app/kit/page.jsx`: mount the section. It shows rest, with-icon, loading, disabled and error; hover, press and keyboard focus are live states, checked by driving the page (hover, Tab, Space, arrow keys) rather than frozen copies.
 
-**Verification:** `npx vitest run src` and `npm run build` pass; screenshot the controls section and compare with option C on `06-controls.html`; tab through the section with the keyboard and confirm every control shows the 2px accent focus outline and operates with Space, Enter and arrow keys.
+**Verification:** `npx vitest run --dir src` and `npm run build` pass; screenshot the controls section and compare with option C on `06-controls.html`; tab through the section with the keyboard and confirm every control shows the 2px accent focus outline and operates with Space, Enter and arrow keys.
 
-### Phase 3: Navigation, data display and identity
+### Phase 3: Navigation, data display and identity (done)
 
 **Outcome:** the remaining kit components exist and appear on `/kit`.
 
@@ -123,15 +123,15 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 **Files** (under `src/components/by/`):
 
 - `tab-pill.jsx`: Radix tabs with the measured sliding chip and a count badge.
-- `popover-menu.jsx`, `tooltip.jsx` on Radix, on the floating shadow.
-- `pill.jsx` (tones danger, warning, success, accent, neutral; tinted with a dot), `count-badge.jsx`, `cpl-chip.jsx`.
-- `kpi-tile.jsx` with `delta.jsx`: delta beside the figure; colour by good or bad, not direction; the figure counts up once on mount.
+- `popover-menu.jsx` (Radix dropdown menu, exported as `Menu*`) and `tooltip.jsx`, on the floating shadow.
+- `pill.jsx`: `Pill` (tones danger, warning, success, accent, neutral; tinted with a dot), `CplChip` and `CountBadge`, in one file because the last two are variations of the pill.
+- `kpi-tile.jsx` with `Delta` in the same file: delta beside the figure; colour by good or bad, not direction; the figure counts up once on mount.
 - `table.jsx`: header, row, numeric cell, hover arrow.
-- `card.jsx`, `empty-state.jsx`.
+- `card.jsx`: `Card` and `EmptyState`.
 - `avatar.jsx`: the framed Birdy avatar (wrapping `@/components/birdy/Birdy` in the round frame at 82%, in `by-` tokens; sizes 24, 32, 40, 56), the client initial tile and the user avatar.
 - Modify `src/app/kit/page.jsx`: a section per component, with the table and KPI tiles filled from the board's sample rows.
 
-**Verification:** `npx vitest run src` and `npm run build` pass; screenshot and compare with option A on `07-data.html` and the tab pill on `06-controls.html`; confirm the popover and tooltip are not clipped by a scrolling parent; with reduced motion switched on, confirm the chip does not slide and the figures do not count up.
+**Verification:** `npx vitest run --dir src` and `npm run build` pass; screenshot and compare with option A on `07-data.html` and the tab pill on `06-controls.html`; confirm the popover and tooltip are not clipped by a scrolling parent; with reduced motion switched on, confirm the chip does not slide and the figures do not count up.
 
 ### Phase 4: Shell
 
@@ -152,7 +152,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 
 Everything in the shell takes its data as props. Nothing here calls the API.
 
-**Verification:** `npx vitest run src` and `npm run build` pass; screenshots of `/kit/shell` at 1440 and 1280 wide show the one-row and two-row headers; compare with option B on `08-shell.html`; open the switcher with ⌘K and complete a pick using only the keyboard; check each of the four client-list states.
+**Verification:** `npx vitest run --dir src` and `npm run build` pass; screenshots of `/kit/shell` at 1440 and 1280 wide show the one-row and two-row headers; compare with option B on `08-shell.html`; open the switcher with ⌘K and complete a pick using only the keyboard; check each of the four client-list states.
 
 ### Phase 5: Final verification and pull request
 
@@ -169,7 +169,7 @@ Everything in the shell takes its data as props. Nothing here calls the API.
 - Reduced motion: with the setting on, nothing moves or counts up.
 - Existing pages: re-take the five "before" screenshots from phase 1 and confirm no visible difference.
 - Search `src/components/by/` for hex colours and for imports from `ds`, `ui` or `pd-*`; there are none.
-- `npx vitest run src` and `npm run build` pass; the production build returns "not found" for `/kit` and `/kit/shell`.
+- `npx vitest run --dir src` and `npm run build` pass; the production build returns "not found" for `/kit` and `/kit/shell`.
 - Run `nova-review` on the branch and fix what it finds.
 - Open the pull request against `main` when the user says to push, using the `nova-sudo` login.
 
@@ -184,7 +184,7 @@ Entered only after the pull request is opened and reviewed.
 - Shell: rail marks the open section and shows the dot only for a non-zero count; client switcher filters, picks by keyboard, and shows the loading, failed and no-match states; section header shows the date range only when given.
 - The class-merging helper keeps a `by-` text size and a `by-` text colour together.
 
-**Verification:** `npx vitest run src` passes.
+**Verification:** `npx vitest run --dir src` passes.
 
 ## Final verification
 
@@ -192,5 +192,5 @@ The goal is met when, on `feat/redesign-design-system`:
 
 - every component in the spec's list is on `/kit`, and the shell is on `/kit/shell`, matching the chosen boards;
 - the five existing pages look the same as before the work;
-- `npx vitest run src` and `npm run build` pass, and `/kit` is not served by a production build;
+- `npx vitest run --dir src` and `npm run build` pass, and `/kit` is not served by a production build;
 - the kit contains no hex colours and no imports from the older component sets.

@@ -1,5 +1,6 @@
 import { Section, Sub } from "./kit-parts";
 import { ControlsSection } from "./sections/controls";
+import { DisplaySection } from "./sections/display";
 
 // The token reference: every value in src/styles/tokens.css, drawn with the
 // utilities components will use. Raw ramps are shown with inline styles
@@ -190,6 +191,7 @@ export default function KitTokensPage() {
       </Section>
 
       <ControlsSection />
+      <DisplaySection />
     </main>
   );
 }

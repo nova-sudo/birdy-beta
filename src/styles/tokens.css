@@ -116,6 +116,16 @@
   from { transform: scale(0); }
 }
 
+/* A menu or popover opening from its trigger. */
+@keyframes by-menu {
+  from { opacity: 0; transform: translateY(-6px) scale(0.94); }
+}
+
+/* A tooltip appearing. */
+@keyframes by-fade {
+  from { opacity: 0; }
+}
+
 /* A block arriving on the page: fades in and settles upward. */
 @keyframes by-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.96); }
