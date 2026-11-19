@@ -2,10 +2,11 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
-import { ChevronsUpDown, LayoutGrid, Plus, Search } from "lucide-react";
+import { ChevronsUpDown, LayoutGrid, Plus } from "lucide-react";
 import { cn } from "../cn";
 import { FOCUS_RING, LIFT } from "../motion";
 import { Button } from "../button";
+import { SearchField } from "../field";
 
 const DOT = { danger: "bg-by-danger-solid", warning: "bg-by-warning-solid", success: "bg-by-success-solid" };
 const ROW = "flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-by-md px-2.5 text-left font-medium [&_svg]:size-4 [&_svg]:shrink-0";
@@ -116,22 +117,17 @@ export function ClientSwitcher({ clients, value, onChange, status = "ready", onR
           sideOffset={12}
           className="z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-by-lg bg-by-surface p-2 font-by-body text-by-body text-by-text shadow-by-floating outline-none motion-safe:animate-[by-menu_var(--by-dur-base)_var(--by-ease-spring)]"
         >
-          <div className="flex h-9 items-center gap-2 rounded-by-md border border-by-line bg-by-surface px-3 shadow-by-field focus-within:border-by-accent focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-by-accent">
-            <Search aria-hidden="true" className="size-4 shrink-0 text-by-muted" />
-            <input
-              autoFocus
-              role="combobox"
-              aria-expanded="true"
-              aria-controls={listId}
-              aria-activedescendant={`${listId}-${index}`}
-              aria-label="Search clients"
-              placeholder="Search clients"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setActive(e.target.value.trim() ? 2 : 0); }}
-              onKeyDown={onKeyDown}
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-by-muted"
-            />
-          </div>
+          <SearchField
+            autoFocus
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={listId}
+            aria-activedescendant={`${listId}-${index}`}
+            placeholder="Search clients"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setActive(e.target.value.trim() ? 2 : 0); }}
+            onKeyDown={onKeyDown}
+          />
 
           <div ref={listRef} id={listId} role="listbox" aria-label="Clients" className="mt-1.5 max-h-80 overflow-y-auto">
             {option(rows[0], 0, <><Plus aria-hidden="true" />{typed && status === "ready" && matches.length === 0 ? `Add “${typed}” as a new client` : "Add new client"}</>, "text-by-accent")}

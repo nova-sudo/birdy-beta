@@ -1,6 +1,6 @@
 "use client";
 
-import Birdy from "@/components/birdy/Birdy";
+import FramedBirdy from "@/components/birdy/BirdyAvatar";
 import { cn } from "./cn";
 
 /**
@@ -13,13 +13,9 @@ import { cn } from "./cn";
  */
 export function BirdyAvatar({ size = 40, className, ...birdyProps }) {
   return (
-    <span
-      aria-hidden="true"
-      className={cn("flex shrink-0 items-end justify-center overflow-hidden rounded-full border border-by-accent-line bg-by-accent-soft", className)}
-      style={{ width: size, height: size }}
-    >
-      <Birdy size={Math.round(size * 0.82)} {...birdyProps} />
-    </span>
+    // The frame itself (round, bird at 82%, standing on the bottom edge) is the
+    // app's existing one; only its colours move to the redesign's tokens.
+    <FramedBirdy size={size} className={cn("border-by-accent-line bg-by-accent-soft", className)} {...birdyProps} />
   );
 }
 

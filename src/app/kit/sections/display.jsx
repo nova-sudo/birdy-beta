@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Inbox, Plus } from "lucide-react";
+import { money as formatMoney } from "@/lib/stock-agent-api";
 import {
   BirdyAvatar, Button, Card, ClientTile, CountBadge, CplChip, Delta, EmptyState, KpiTile, Menu, MenuContent, MenuItem,
   MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, TabPanel, TabPill, Table, TableBody, TableHead, Td, Th, Tooltip, Tr, UserAvatar,
 } from "@/components/by";
 import { Section, Sub } from "../kit-parts";
 
-const money = (n) => `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n) => formatMoney(n, "GBP");
 const pounds = (n) => `£${Math.round(n).toLocaleString("en-GB")}`;
 
 const TABS = [

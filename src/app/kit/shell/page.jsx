@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Calendar, ChevronDown, Plus } from "lucide-react";
+import { money as formatMoney } from "@/lib/stock-agent-api";
 import {
   AskBar, Card, ClientSwitcher, CplChip, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger,
   PILL_EXTRA, Pill, Radio, RadioGroup, Rail, SECTIONS, SectionHeader, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
 import { CLIENTS, COUNTS, ROWS, STATUS_LABEL, TABS } from "./sample-data";
 
-const money = (n) => `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n) => formatMoney(n, "GBP");
 const HAS_DATE_RANGE = new Set(["birds-eye", "dashboard"]);
 
 export default function KitShellPage() {

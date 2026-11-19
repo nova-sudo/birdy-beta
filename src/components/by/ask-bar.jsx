@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { cn } from "./cn";
-import { FOCUS_RING, LIFT } from "./motion";
+import { buttonVariants } from "./button";
 
 /**
  * The bar for asking a section a question. Floats over the page content.
@@ -40,14 +40,7 @@ export function AskBar({ placeholder, onSubmit, className, ...props }) {
         type="submit"
         aria-label="Send"
         disabled={!text}
-        className={cn(
-          "grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-by-on-accent",
-          "bg-linear-to-b from-by-primary-from to-by-primary-to shadow-by-primary",
-          "hover:from-by-primary-from-hover hover:to-by-primary-to-hover hover:shadow-by-primary-hover",
-          "disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-4",
-          LIFT,
-          FOCUS_RING,
-        )}
+        className={cn(buttonVariants({ kind: "primary", iconOnly: true }), "rounded-full")}
       >
         <ArrowUp aria-hidden="true" strokeWidth={2.4} />
       </button>
