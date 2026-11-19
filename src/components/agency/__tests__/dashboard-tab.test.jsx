@@ -13,11 +13,14 @@ const route = { search: "" }
 const replace = vi.fn()
 const hubs = { leads: null, ads: null, calls: null }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => "/dashboard/table", useSearchParams: () => new URLSearchParams(route.search) }))
-vi.mock("@/components/contacts/LeadsContent", () => ({ LeadsContent: (p) => { hubs.leads = p; return <p>the Lead Hub table</p> } }))
-vi.mock("@/components/campaigns/MarketingContent", () => ({ MarketingContent: (p) => { hubs.ads = p; return <p>the Marketing Hub table</p> } }))
-vi.mock("@/components/callcenter/CallCentreContent", () => ({ CallCentreContent: (p) => { hubs.calls = p; return <p>the Sales Hub table</p> } }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "pd" }))
-vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: () => ({ clientGroups: [{ id: "a", name: "Aura", client_status: "Active", health: "Critical" }, { id: "b", name: "Beaulea Clinic", client_status: "Active" }], loading: false, error: null, datePreset: "last_7d", setDatePreset: vi.fn(), refresh: vi.fn(), invalidate: vi.fn() }) }))
+vi.mock("@/components/agency/client-tables", () => ({
+  LeadsTable: (p) => { hubs.leads = p; return <p>the leads table</p> },
+  AdsTable: (p) => { hubs.ads = p; return <p>the ads table</p> },
+  CallsTable: (p) => { hubs.calls = p; return <p>the calls table</p> },
+}))
+const tables = { client: null, preset: null }
+vi.mock("@/components/agency/use-client-tables", () => ({ useClientTables: (client, preset) => { Object.assign(tables, { client, preset }); return { leads: { rows: [{}, {}], total: 34 }, ads: { rows: [{}, {}] }, calls: { rows: [{}, {}, {}] } } } }))
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: () => ({ clientGroups: [{ id: "a", name: "Aura", client_status: "Active", health: "Critical", targets: { cpl: 6 }, call_log_provider: "hotprospector" }, { id: "b", name: "Beaulea Clinic", client_status: "Active" }], loading: false, error: null, datePreset: "last_7d", setDatePreset: vi.fn(), refresh: vi.fn(), invalidate: vi.fn() }) }))
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
@@ -63,31 +66,29 @@ describe("Agency Ops' Dashboard tab", () => {
 })
 
 describe("the Dashboard tab inside one client", () => {
-  it("opens on the client's Leads table, with Ads and Calls beside it, each fed only that client", () => {
+  it("opens on the client's Leads table, with Ads and Calls beside it and how many each holds", () => {
     route.search = "client=a"
     render(<DashboardTab />)
     expect(screen.getByText("Aura", { selector: "b" }).parentElement).toHaveTextContent("Scoped to Aura · At risk")
+    expect(tables.client.id).toBe("a")
     const views = screen.getByRole("tablist", { name: "Aura's tables" })
-    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Leads", "Ads", "Calls"])
-    expect(screen.getByText("the Lead Hub table")).toBeInTheDocument()
-    expect(hubs.leads.clientGroups.map((g) => g.id)).toEqual(["a"])
-    expect(hubs.leads.selectedClientGroup).toBe("a")
+    // The Leads count is the range's real total, not the capped list.
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Leads34", "Ads2", "Calls3"])
+    expect(screen.getByText("the leads table")).toBeInTheDocument()
     expect(screen.queryByText("the clients table")).not.toBeInTheDocument()
   })
 
-  it("shows the Marketing Hub table on Ads and the Sales Hub table on Calls", async () => {
+  it("shows the ads against the client's limit, and the calls", async () => {
     route.search = "client=a&view=ads"
     const ads = render(<DashboardTab />)
-    expect(screen.getByText("the Marketing Hub table")).toBeInTheDocument()
-    expect(hubs.ads).toMatchObject({ showGroupFilter: false, showHeader: false })
-    expect(hubs.ads.clientGroups.map((g) => g.id)).toEqual(["a"])
-    await userEvent.click(screen.getByRole("tab", { name: "Calls" }))
+    expect(screen.getByText("the ads table")).toBeInTheDocument()
+    expect(hubs.ads.cplTarget).toBe(6)
+    await userEvent.click(screen.getByRole("tab", { name: /^Calls/ }))
     expect(replace).toHaveBeenCalledWith("/dashboard/table?client=a&view=calls")
     ads.unmount()
     route.search = "client=a&view=calls"
     render(<DashboardTab />)
-    expect(screen.getByText("the Sales Hub table")).toBeInTheDocument()
-    expect(hubs.calls.clientGroups.map((g) => g.id)).toEqual(["a"])
+    expect(screen.getByText("the calls table")).toBeInTheDocument()
   })
 
   it("limits a question to this client, with a separate thread for each table", async () => {
