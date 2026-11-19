@@ -1,6 +1,6 @@
 # Birdy Redesign Design System Implementation Plan
 
-**Status:** in progress. Phases 1 to 3 done 2026-11-19; phase 4 next.
+**Status:** in progress. Phases 1 to 4 done 2026-11-19; phase 5 next.
 
 **Goal:** Build the `by-` tokens, the `by` component kit and the new app shell in `birdy-beta`, shown on a development-only `/kit` page, with no change to any existing page.
 
@@ -133,7 +133,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 
 **Verification:** `npx vitest run --dir src` and `npm run build` pass; screenshot and compare with option A on `07-data.html` and the tab pill on `06-controls.html`; confirm the popover and tooltip are not clipped by a scrolling parent; with reduced motion switched on, confirm the chip does not slide and the figures do not count up.
 
-### Phase 4: Shell
+### Phase 4: Shell (done)
 
 **Outcome:** the rail, client switcher and section header exist and `/kit/shell` shows them working together on sample data.
 
@@ -145,7 +145,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 
 - `src/components/by/shell/rail.jsx`: switcher tile, section tiles with the suggestion dot and tooltip, Settings, credits ring, user avatar. Agency Ops is the framed Birdy avatar. No edge bar.
 - `src/components/by/shell/client-switcher.jsx`: the panel with search, Add new client, Agency view and the A to Z list; opens from the tile and with ⌘K; typing filters, arrows move, Enter picks, Escape closes; loading, failed-with-retry and no-match states.
-- `src/components/by/shell/section-header.jsx`: one row at 1440px and wider, two rows below; the date range slot is shown only when passed; subtitle from props.
+- `src/components/by/shell/section-header.jsx`: one row at 1440px and wider, two rows below; the date range slot is shown only when passed; subtitle from props; a `more` slot puts the "More" menu trigger inside the pill (`TabPill` gained a `trailing` slot for it).
 - `src/components/by/shell/credits-ring.jsx`.
 - `src/components/by/shell/sections.js`: the section list (id, name, colour role, icon) with Creative Strategist flagged off.
 - `src/app/kit/shell/page.jsx` and `src/app/kit/shell/sample-data.js`: Media Buyer's Dashboard as on board 08, with controls on the page to switch the client list between loaded, loading, failed and empty-search, and to scope to one client.

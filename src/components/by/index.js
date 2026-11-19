@@ -9,7 +9,7 @@ export { AskBar } from "./ask-bar"
 export { Switch, Checkbox, RadioGroup, Radio } from "./choice"
 
 // Navigation
-export { TabPill, TabPanel } from "./tab-pill"
+export { TabPill, TabPanel, PILL_EXTRA } from "./tab-pill"
 export { Menu, MenuTrigger, MenuContent, MenuItem, MenuLabel, MenuSeparator } from "./popover-menu"
 export { Tooltip } from "./tooltip"
 
@@ -21,3 +21,10 @@ export { Card, EmptyState } from "./card"
 
 // Identity
 export { BirdyAvatar, ClientTile, UserAvatar } from "./avatar"
+
+// Shell
+export { SECTIONS, visibleSections } from "./shell/sections"
+export { Rail } from "./shell/rail"
+export { ClientSwitcher } from "./shell/client-switcher"
+export { SectionHeader } from "./shell/section-header"
+export { CreditsRing } from "./shell/credits-ring"

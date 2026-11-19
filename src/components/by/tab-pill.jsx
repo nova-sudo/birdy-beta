@@ -6,6 +6,14 @@ import { cn } from "./cn";
 import { FOCUS_RING } from "./motion";
 import { CountBadge } from "./pill";
 
+/** The look of one entry in the pill. Tabs use it; so should a `trailing` button. */
+export const PILL_EXTRA = cn(
+  "relative z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-by-md px-3.5",
+  "font-by-body text-by-body font-semibold text-by-text-2 transition-colors duration-(--by-dur-fast) ease-by-out",
+  "hover:text-by-text [&_svg]:size-3.5",
+  FOCUS_RING,
+);
+
 /**
  * The grey pill of tabs with a white chip that slides to the open one.
  *
@@ -13,9 +21,10 @@ import { CountBadge } from "./pill";
  * @param {string} props.value the open tab
  * @param {(value: string) => void} props.onValueChange
  * @param {string} props["aria-label"] what the tabs switch between
+ * @param {React.ReactNode} [props.trailing] sits inside the pill after the tabs, e.g. a "More" menu trigger (use PILL_EXTRA for its classes)
  * @param {React.ReactNode} [props.children] TabPanel elements, one per item
  */
-export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, className, children, ...props }) {
+export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, trailing, className, children, ...props }) {
   const listRef = useRef(null);
   const [chip, setChip] = useState(null);
 
@@ -52,17 +61,13 @@ export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, 
           <TabsPrimitive.Trigger
             key={item.value}
             value={item.value}
-            className={cn(
-              "relative z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-by-md px-3.5",
-              "font-by-body text-by-body font-semibold text-by-text-2 transition-colors duration-(--by-dur-fast) ease-by-out",
-              "hover:text-by-text data-[state=active]:text-by-text",
-              FOCUS_RING,
-            )}
+            className={cn(PILL_EXTRA, "data-[state=active]:text-by-text")}
           >
             {item.label}
             {item.count > 0 && <CountBadge>{item.count}</CountBadge>}
           </TabsPrimitive.Trigger>
         ))}
+        {trailing}
       </TabsPrimitive.List>
       {children}
     </TabsPrimitive.Root>
