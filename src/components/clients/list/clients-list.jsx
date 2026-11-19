@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronDown, Files, Plus, SearchX, Users } from "lucide-react";
+import { Calendar, ChevronDown, Files, Plus, SearchX, Tag, Users } from "lucide-react";
 import getSymbolFromCurrency from "currency-symbol-map";
 import {
   Button, Card, ColumnsMenu, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Notice, Pill,
@@ -106,7 +106,10 @@ export function ClientsList() {
     const seen = new Set();
     return [...built, ...custom]
       .filter((c) => !seen.has(c.id) && seen.add(c.id))
-      .map((c) => ({ ...c, label: COLUMN_LABELS[c.id] ?? c.label ?? c.id }));
+      // A tag column is named by the tag alone and marked with a tag icon, in the panel and in its header.
+      .map((c) => (c.type === "tag"
+        ? { ...c, label: String(c.label ?? c.tagName ?? c.id).replace(/^Tag:\s*/i, ""), icon: <Tag aria-hidden="true" /> }
+        : { ...c, label: COLUMN_LABELS[c.id] ?? c.label ?? c.id }));
   }, [clientGroups, customMetrics]);
   const known = useMemo(() => new Map(catalogue.map((c) => [c.id, c])), [catalogue]);
   const range = DATE_PRESETS.find((p) => p.value === datePreset) ?? DATE_PRESETS.find((p) => p.value === DEFAULT_DATE_PRESET);
@@ -226,7 +229,9 @@ export function ClientsList() {
                         <Th sort={sort?.id === "name" ? sort.dir : null} onSort={() => press("name")} className="sticky left-0 z-10 min-w-64 bg-by-surface">Client</Th>
                         <Th className="w-36">Status</Th>
                         {columns.map((c) => (
-                          <Th key={c.id} numeric sort={sort?.id === c.id ? sort.dir : null} onSort={() => press(c.id)}>{c.label}</Th>
+                          <Th key={c.id} numeric sort={sort?.id === c.id ? sort.dir : null} onSort={() => press(c.id)}>
+                            {c.icon ? <span className="inline-flex max-w-44 items-center gap-1 [&_svg]:size-3 [&_svg]:shrink-0" title={c.label}>{c.icon}<span className="truncate">{c.label}</span></span> : c.label}
+                          </Th>
                         ))}
                         <Th className="w-9"><span className="sr-only">Open</span></Th>
                       </tr>

@@ -14,7 +14,7 @@ const ROW = "flex h-8 w-full cursor-pointer items-center gap-2 rounded-by-md px-
  * The Columns button and its panel: saved views first (one click to a set of
  * columns), then every column by group.
  *
- * @param {{id: string, label: string, group?: string}[]} props.columns every column that can be shown, in the order they appear in the table; `group` adds a heading
+ * @param {{id: string, label: string, group?: string, icon?: React.ReactNode}[]} props.columns every column that can be shown, in the order they appear in the table; `group` adds a heading, `icon` sits before the label
  * @param {string[]} props.value ids of the columns shown
  * @param {(ids: string[]) => void} props.onChange
  * @param {{name: string, ids: string[]}[]} [props.views] saved views; the one matching `value` is marked
@@ -78,7 +78,20 @@ export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, 
             <div key={group || "all"} role="group" aria-label={group || "Columns"} className={cn((i > 0 || views.length > 0 || onSaveView) && "mt-1.5 border-t border-by-line pt-1.5")}>
               {group && <div className="px-2 pt-1.5 pb-1 text-by-caption font-semibold text-by-muted">{group}</div>}
               {columns.filter((c) => (c.group ?? "") === group).map((c) => (
-                <Checkbox key={c.id} label={c.label} checked={on.has(c.id)} onCheckedChange={(checked) => toggle(c.id, checked === true)} className={ROW} />
+                <Checkbox
+                  key={c.id}
+                  aria-label={c.label}
+                  // One line per column: a long name shortens with an ellipsis and shows in full on hover.
+                  label={
+                    <span className="flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-by-muted" title={c.label}>
+                      {c.icon}
+                      <span className="truncate">{c.label}</span>
+                    </span>
+                  }
+                  checked={on.has(c.id)}
+                  onCheckedChange={(checked) => toggle(c.id, checked === true)}
+                  className={ROW}
+                />
               ))}
             </div>
           ))}

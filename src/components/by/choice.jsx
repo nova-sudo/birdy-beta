@@ -14,7 +14,8 @@ const COLOURS = "transition-colors duration-(--by-dur-fast) ease-by-out";
 /** Wrap a control in its label when one is given, so the text is clickable. */
 function Labelled({ label, className, children }) {
   if (!label) return children;
-  return <label className={cn(LABEL, className)}>{children}<span>{label}</span></label>;
+  // min-w-0 lets a long label shorten with an ellipsis instead of pushing the row wider.
+  return <label className={cn(LABEL, className)}>{children}<span className="min-w-0">{label}</span></label>;
 }
 
 /**
