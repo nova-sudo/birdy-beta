@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "../cn";
-import { BirdyAvatar } from "../avatar";
 import { TabPill } from "../tab-pill";
 
 /**
@@ -28,13 +27,9 @@ export function SectionHeader({ section, subtitle, tabs, tab, onTabChange, more,
       {...props}
     >
       <div className="order-1 flex min-w-0 items-center gap-3">
-        {section.mascot ? (
-          <BirdyAvatar size={40} />
-        ) : (
-          <span aria-hidden="true" className={cn("grid size-10 shrink-0 place-items-center rounded-by-lg [&_svg]:size-[19px]", section.tile)}>
-            <Icon />
-          </span>
-        )}
+        <span aria-hidden="true" className={cn("grid size-10 shrink-0 place-items-center rounded-by-lg [&_svg]:size-[19px]", section.tile)}>
+          <Icon />
+        </span>
         <div className="min-w-0">
           <h1 className="truncate font-by-display text-by-title font-semibold tracking-[-0.01em] text-by-text">{section.name}</h1>
           <p className="truncate text-by-body-sm text-by-muted">{subtitle ?? section.description}</p>
