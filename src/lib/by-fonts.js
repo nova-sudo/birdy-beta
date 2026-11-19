@@ -3,9 +3,8 @@ import localFont from "next/font/local";
 // Poppins for the redesign's headings and figures. Self-hosted like the fonts
 // in pd-fonts.js (Google's loader broke production builds on 2026-11-12).
 //
-// It is applied by the /kit layout only, so pages that have not been rebuilt
-// yet do not download it. When the first rebuilt screen ships, move
-// `poppins.variable` onto <html> beside the others.
+// The root layout puts the variable on <html> beside the fonts from
+// pd-fonts.js, so portalled menus and dialogs resolve it too.
 //
 // Files: the latin 500 and 600 cuts from @fontsource/poppins 5.3.0 (OFL-1.1).
 export const poppins = localFont({

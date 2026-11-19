@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { poppins } from "@/lib/by-fonts";
 
 export const metadata = { title: "Birdy kit" };
 
@@ -10,7 +9,7 @@ export const metadata = { title: "Birdy kit" };
 export default function KitLayout({ children }) {
   if (process.env.NODE_ENV !== "development") notFound();
   return (
-    <div className={`${poppins.variable} min-h-screen bg-by-canvas font-by-body text-by-body text-by-text antialiased`}>
+    <div className="min-h-screen bg-by-canvas font-by-body text-by-body text-by-text antialiased">
       {children}
     </div>
   );
