@@ -39,6 +39,13 @@ export function activeRailId(pathname) {
   return null;
 }
 
+/**
+ * Pages already rebuilt in the redesign. They bring their own header and
+ * canvas, so the shell gives them the whole content area instead of the padded
+ * frame the older pages expect.
+ */
+export const isRebuilt = (pathname) => pathname === "/clients";
+
 /** The client a `/clients/<id>` page is showing, or null on any other page. */
 export function clientIdFromPath(pathname) {
   const match = /^\/clients\/([^/]+)/.exec(pathname);

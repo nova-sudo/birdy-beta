@@ -1,6 +1,6 @@
 # Birdy Redesign: Shell Go-Live, Add Client, Import and Clients List Implementation Plan
 
-**Status:** in progress. Phase 1 built 2026-11-19; phases 1 and 2 built. Phase 3 started and paused 2026-11-19 (session usage limit): only its first step is done, moving the old table's cell-value logic into `src/lib/client-rows.js` (user's decision; a small edit to `ui/table-container.jsx`). Still to do in phase 3: the kit's sortable header, columns menu, `src/lib/clients-list.js`, the list itself, and replacing `src/app/clients/page.jsx`. Note for the list: the existing `hp_connect_rate` value is already leads called divided by Hot Prospector leads, as a percentage, null with no call centre; use it for the Leads called column. Then phases 4 and 5.
+**Status:** in progress. Phases 1 to 3 built 2026-11-19; phase 4 (final verification) next.
 
 **Goal:** Put the new shell in front of every signed-in page, rebuild Add client and Import as kit dialogs, and rebuild the Clients list, on the redesign branch.
 
@@ -125,7 +125,14 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 
 **Verification:** `npx vitest run --dir src` and `npm run build` pass, with the onboarding review tests untouched. On the dev server: walk Add client through all four steps and through each skip, without submitting; trigger each failure state that can be reached without creating data (a list that fails to load, a taken name). Open Import and check the progress state, pre-ticks, search with hidden ticked rows, and the selection limit, without importing. Screenshot both against boards 10 and 11. Creating a real client or running a real import writes to the user's live account: do it only if the user says to.
 
-### Phase 3: Clients list
+### Phase 3: Clients list (built)
+
+**As built:**
+- The old table's cell-value logic moved to `src/lib/client-rows.js` (user's decision, 2026-11-19), with a small edit to `src/components/ui/table-container.jsx` so the old table calls it. This is the one exception to "ui is not edited".
+- "Leads called" uses the existing `hp_connect_rate` value, which is already leads called divided by Hot Prospector leads as a percentage, and empty for a client with no call centre.
+- Saved columns use `useColumnViews("clients")`: a user's existing saved view applies, and "Save as my view" in the Columns menu writes it. The old menu's several named views (`usePageViews`) are not offered in the new menu.
+- The old page's "N unassigned · Assign" prompt beside a client's name (campaigns of a shared Meta account that no client owns) is not in the new list. Assigning campaigns remains available from Settings, Integrations.
+- The kit gained a `toolbar` slot on the tab pill, a sortable header cell and a columns menu. The shell gives rebuilt pages the whole content area (`isRebuilt` in `src/components/shell/nav.js`).
 
 **Outcome:** `/clients` is the rebuilt list from board 09, and the old page's code is gone.
 

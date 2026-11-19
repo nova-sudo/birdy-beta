@@ -18,6 +18,7 @@ export { Pill, CplChip, CountBadge } from "./pill"
 export { KpiTile, Delta } from "./kpi-tile"
 export { Table, TableHead, TableBody, Tr, Th, Td, RowArrow } from "./table"
 export { Card, EmptyState } from "./card"
+export { ColumnsMenu } from "./columns-menu"
 
 // Identity
 export { BirdyAvatar, ClientTile, UserAvatar } from "./avatar"

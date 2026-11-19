@@ -7,6 +7,7 @@ import { MotionConfig } from "framer-motion";
 import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
 import { AppShell } from "@/components/shell/app-shell";
+import { isRebuilt } from "@/components/shell/nav";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
@@ -100,11 +101,15 @@ export default function RootLayout({ children }) {
                 <AgentRunBanner />
 
                 {/* Content */}
-                <main className="relative flex w-full flex-1 flex-col overflow-hidden bg-pd-canvas">
-                  <div className="mx-auto w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
-                    {children}
-                  </div>
-                </main>
+                {isRebuilt(pathname) ? (
+                  <main className="relative min-h-0 w-full flex-1 overflow-hidden">{children}</main>
+                ) : (
+                  <main className="relative flex w-full flex-1 flex-col overflow-hidden bg-pd-canvas">
+                    <div className="mx-auto w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
+                      {children}
+                    </div>
+                  </main>
+                )}
 
                 {/* Birdy Chat Modal — mounted only while open, so its chunk
                     is fetched on first use rather than on every page load.

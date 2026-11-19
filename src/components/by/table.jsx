@@ -1,4 +1,5 @@
-import { ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
+import { FOCUS_RING } from "./motion";
 import { cn } from "./cn";
 
 /** A data table. Put it inside a Card for the bordered look. */
@@ -27,18 +28,47 @@ export function Tr({ interactive = false, className, ...props }) {
   );
 }
 
-/** A header cell. @param {boolean} [props.numeric] right-aligned, for number columns */
-export function Th({ numeric = false, className, ...props }) {
+const SORT_LABEL = { asc: "ascending", desc: "descending" };
+
+/**
+ * A header cell.
+ *
+ * @param {boolean} [props.numeric] right-aligned, for number columns
+ * @param {"asc"|"desc"|null} [props.sort] this column's current sort; pass with `onSort` to make the header a sort button
+ * @param {() => void} [props.onSort] called when the header is pressed
+ */
+export function Th({ numeric = false, sort, onSort, className, children, ...props }) {
+  const Arrow = sort === "asc" ? ArrowUp : ArrowDown;
   return (
     <th
       scope="col"
+      aria-sort={onSort ? SORT_LABEL[sort] ?? "none" : undefined}
       className={cn(
         "h-10 whitespace-nowrap border-b border-by-line px-4 text-left text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted",
         numeric && "text-right",
         className,
       )}
       {...props}
-    />
+    >
+      {onSort ? (
+        <button
+          type="button"
+          onClick={onSort}
+          className={cn(
+            "-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-by-sm px-1.5 py-1 uppercase tracking-[0.07em] transition-colors duration-(--by-dur-fast) ease-by-out hover:text-by-text",
+            sort && "text-by-text",
+            FOCUS_RING,
+          )}
+        >
+          {/* The arrow keeps its space when the column is not sorted, so headers do not shift. */}
+          {numeric && <Arrow aria-hidden="true" className={cn("size-3", !sort && "opacity-0")} />}
+          {children}
+          {!numeric && <Arrow aria-hidden="true" className={cn("size-3", !sort && "opacity-0")} />}
+        </button>
+      ) : (
+        children
+      )}
+    </th>
   );
 }
 
