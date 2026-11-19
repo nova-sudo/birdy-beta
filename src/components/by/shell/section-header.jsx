@@ -32,7 +32,8 @@ export function SectionHeader({ section, subtitle, tabs, tab, onTabChange, more,
         </span>
         <div className="min-w-0">
           {/* Sizes measured on the reference: a 42px tile, a 23px bold title, a 13.5px line under it. */}
-          <h1 className="truncate font-by-display text-by-title leading-[1.2] font-bold tracking-[-0.01em] text-by-text">{section.name}</h1>
+          {/* `truncate` clips at the line box, and at this tight line height that shaved the bold letters. The padding gives them room; the negative margin keeps the block the same height. */}
+          <h1 className="-m-1 truncate p-1 font-by-display text-by-title leading-[1.2] font-bold tracking-[-0.01em] text-by-text">{section.name}</h1>
           <p className="truncate text-by-body text-by-muted">{subtitle ?? section.description}</p>
         </div>
       </div>
