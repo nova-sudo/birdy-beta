@@ -2,7 +2,7 @@
 
 import { Ellipsis, SlidersHorizontal } from "lucide-react";
 import { cn } from "../cn";
-import { FOCUS_RING, LIFT } from "../motion";
+import { FOCUS_RING, LIFT, SELECTION } from "../motion";
 import { Tooltip } from "../tooltip";
 import { Menu, MenuContent, MenuLabel, MenuTrigger } from "../popover-menu";
 import { BirdyAvatar, UserAvatar } from "../avatar";
@@ -53,7 +53,7 @@ function SectionButton({ section, active, count, onSelect }) {
  */
 export function Rail({ activeId, onSelect, counts = {}, switcher, credits, user, extra, account, sections = SECTIONS, className, ...props }) {
   return (
-    <aside className={cn("flex w-17 shrink-0 flex-col items-center gap-3 border-r border-by-line bg-by-rail pt-4 pb-3.5", className)} {...props}>
+    <aside className={cn("flex w-17 shrink-0 flex-col items-center gap-3 border-r border-by-line bg-by-rail pt-4 pb-3.5", SELECTION, className)} {...props}>
       {switcher}
       <span aria-hidden="true" className="my-0.5 h-px w-8 bg-by-line" />
       <nav aria-label="Sections" className="flex flex-col items-center gap-3">

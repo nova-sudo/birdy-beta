@@ -86,7 +86,7 @@ describe("ClientSwitcher", () => {
   it("lists the two actions, then every client A to Z, with the search focused", async () => {
     await open()
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Add new client", "Agency view3 clients", "Aura", "Fallon Physique", "Healthy Glow",
+      "Add new client", "Agency view3 clients", "Aura, at risk", "Fallon Physique, at risk", "Healthy Glow, on track",
     ])
     expect(screen.getByRole("combobox", { name: "Search clients" })).toHaveFocus()
   })
@@ -94,7 +94,7 @@ describe("ClientSwitcher", () => {
   it("filters as you type and picks the match with Enter", async () => {
     const onChange = await open()
     await userEvent.keyboard("fall")
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Fallon Physique"])
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Fallon Physique, at risk"])
     await userEvent.keyboard("{Enter}")
     expect(onChange).toHaveBeenCalledWith("fallon")
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument())

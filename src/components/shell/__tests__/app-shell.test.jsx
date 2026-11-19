@@ -103,8 +103,8 @@ describe("AppShell: the client switcher", () => {
   it("lists real clients and opens the one picked", async () => {
     shell()
     await userEvent.click(screen.getByRole("button", { name: "Switch client, showing all clients" }))
-    expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Aura", "Healthy Glow", "Old Clinic"])
-    await userEvent.click(screen.getByRole("option", { name: "Healthy Glow" }))
+    expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Aura, at risk", "Healthy Glow, on track", "Old Clinic, inactive"])
+    await userEvent.click(screen.getByRole("option", { name: /Healthy Glow/ }))
     expect(push).toHaveBeenCalledWith("/clients/b")
   })
 

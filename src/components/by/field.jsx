@@ -16,7 +16,7 @@ const SURFACE = cn(
   "[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-by-muted",
 );
 const INVALID = "border-by-danger-solid hover:border-by-danger-solid focus-within:border-by-danger-solid focus-within:outline-by-danger-solid";
-const INPUT = "min-w-0 flex-1 bg-transparent outline-none placeholder:text-by-muted";
+const INPUT = "min-w-0 flex-1 bg-transparent caret-by-accent outline-none placeholder:text-by-muted";
 
 function Message({ id, error, help }) {
   if (error) return <p id={id} className="mt-1.5 text-by-caption text-by-danger">{error}</p>;
@@ -69,7 +69,8 @@ export function DropdownTrigger({ children, leading, className, ...props }) {
       {...props}
     >
       {leading}
-      <span className="flex min-w-0 flex-1 items-baseline gap-2 truncate text-left">{children}</span>
+      {/* Inline, not flex: text-overflow only works on inline content. */}
+      <span className="min-w-0 flex-1 truncate text-left [&>*+*]:ml-2">{children}</span>
       <ChevronDown aria-hidden="true" />
     </button>
   );

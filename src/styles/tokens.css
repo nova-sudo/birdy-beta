@@ -94,7 +94,8 @@
   --by-clients-bg: var(--by-teal-bg);
 
   /* The Lifted primary button: a two-stop gradient, darker on hover. */
-  --by-primary-from: #7a5df4;
+  /* The lightest stop still gives white text 4.5:1 (4.58). */
+  --by-primary-from: #785bf3;
   --by-primary-to: #5c3be6;
   --by-primary-from-hover: #6d4ef0;
   --by-primary-to-hover: #4f2fd8;

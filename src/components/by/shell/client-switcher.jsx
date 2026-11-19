@@ -9,6 +9,8 @@ import { Button } from "../button";
 import { SearchField } from "../field";
 
 const DOT = { danger: "bg-by-danger-solid", warning: "bg-by-warning-solid", success: "bg-by-success-solid" };
+// Read out after the name, so status never depends on the dot's colour alone.
+const STATUS_WORDS = { danger: "at risk", warning: "at risk", success: "on track" };
 const ROW = "flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-by-md px-2.5 text-left font-medium [&_svg]:size-4 [&_svg]:shrink-0";
 
 /**
@@ -115,7 +117,7 @@ export function ClientSwitcher({ clients, value, onChange, status = "ready", onR
           side="right"
           align="start"
           sideOffset={12}
-          className="z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-by-lg bg-by-surface p-2 font-by-body text-by-body text-by-text shadow-by-floating outline-none motion-safe:animate-[by-menu_var(--by-dur-base)_var(--by-ease-spring)]"
+          className="z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-by-lg bg-by-surface p-2 font-by-body text-by-body text-by-text shadow-by-floating outline-none selection:bg-by-accent-line selection:text-by-text motion-safe:animate-[by-menu_var(--by-dur-base)_var(--by-ease-spring)]"
         >
           <SearchField
             autoFocus
@@ -129,7 +131,7 @@ export function ClientSwitcher({ clients, value, onChange, status = "ready", onR
             onKeyDown={onKeyDown}
           />
 
-          <div ref={listRef} id={listId} role="listbox" aria-label="Clients" className="mt-1.5 max-h-80 overflow-y-auto">
+          <div ref={listRef} id={listId} role="listbox" aria-label="Clients" className="mt-1.5 max-h-[min(26rem,60vh)] overflow-y-auto overscroll-contain">
             {option(rows[0], 0, <><Plus aria-hidden="true" />{typed && status === "ready" && matches.length === 0 ? `Add “${typed}” as a new client` : "Add new client"}</>, "text-by-accent")}
             {option(rows[1], 1, <>
               <LayoutGrid aria-hidden="true" />
@@ -164,6 +166,7 @@ export function ClientSwitcher({ clients, value, onChange, status = "ready", onR
               option(rows[i + 2], i + 2, <>
                 <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", DOT[client.status] ?? "bg-by-line-strong")} />
                 <span className="min-w-0 flex-1 truncate" title={client.name}>{client.name}</span>
+                <span className="sr-only">, {STATUS_WORDS[client.status] ?? "inactive"}</span>
               </>, client.id === value && "font-semibold text-by-accent"),
             )}
           </div>

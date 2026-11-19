@@ -124,13 +124,16 @@ describe("Clients list", () => {
     expect(names()).toEqual(["Fallon Physique", "Aura"])
   })
 
-  it("opens a client on click and on Enter, by its id", async () => {
+  it("opens a client from anywhere on its row, by its id", async () => {
     render(<ClientsList />)
-    await userEvent.click(screen.getByRole("row", { name: /Aura/ }))
+    await userEvent.click(within(screen.getByRole("row", { name: /Aura/ })).getByText("£50.00"))
     expect(push).toHaveBeenLastCalledWith("/clients/b")
-    screen.getByRole("row", { name: /Healthy Glow/ }).focus()
-    await userEvent.keyboard("{Enter}")
-    expect(push).toHaveBeenLastCalledWith("/clients/a")
+  })
+
+  it("makes the client's name a link, so keyboards and screen readers can open it and the row still reads its figures", () => {
+    render(<ClientsList />)
+    expect(screen.getByRole("link", { name: "Aura" })).toHaveAttribute("href", "/clients/b")
+    expect(screen.getByRole("row", { name: /Aura.*At risk.*£50\.00/ })).toBeInTheDocument()
   })
 
   it("opens the two ways of adding clients", async () => {
@@ -174,7 +177,8 @@ describe("Clients list: loading, failing and empty", () => {
   it("says the list could not load and retries", async () => {
     Object.assign(groupsState, { clientGroups: [], error: "HTTP 500" })
     render(<ClientsList />)
-    expect(screen.getByRole("alert")).toHaveTextContent("Couldn’t load your clients.")
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn’t load your clients. Check your connection and try again.")
+    expect(screen.getByRole("alert")).not.toHaveTextContent("HTTP 500")
     await userEvent.click(screen.getByRole("button", { name: "Retry" }))
     expect(refresh).toHaveBeenCalledOnce()
   })

@@ -4,6 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "./cn";
 import { Button } from "./button";
+import { SELECTION } from "./motion";
 
 // A centred dialog: header, scrolling body, footer strip. Radix keeps focus
 // inside it, closes it on Escape and returns focus to whatever opened it.
@@ -31,6 +32,7 @@ export function DialogContent({ title, description, size = "md", headerAside, cl
           "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-3rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden",
           "rounded-by-xl bg-by-surface font-by-body text-by-body text-by-text shadow-by-dialog outline-none",
           "motion-safe:animate-[by-dialog_var(--by-dur-base)_var(--by-ease-spring)]",
+          SELECTION,
           SIZES[size] ?? SIZES.md,
           className,
         )}

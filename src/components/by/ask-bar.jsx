@@ -34,7 +34,7 @@ export function AskBar({ placeholder, onSubmit, className, ...props }) {
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="min-w-0 flex-1 bg-transparent font-by-body text-by-body-lg text-by-text outline-none placeholder:text-by-muted"
+        className="min-w-0 flex-1 bg-transparent font-by-body text-by-body-lg text-by-text caret-by-accent outline-none placeholder:text-by-muted"
       />
       <button
         type="submit"

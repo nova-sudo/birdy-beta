@@ -217,7 +217,7 @@ export function ImportDialog({ open, onOpenChange, onImported }) {
                               aria-label={`Name in Birdy for ${row.name}`}
                               value={row.birdyName}
                               onChange={(e) => patch(id, { birdyName: e.target.value })}
-                              className="h-8 w-full truncate rounded-by-md border border-transparent bg-transparent px-2 font-semibold outline-none hover:border-by-line focus:border-by-accent focus:outline-2 focus:-outline-offset-1 focus:outline-by-accent"
+                              className="h-8 w-full truncate rounded-by-md border border-transparent bg-transparent px-2 font-semibold caret-by-accent outline-none hover:border-by-line focus:border-by-accent focus:outline-2 focus:-outline-offset-1 focus:outline-by-accent"
                             />
                           </Td>
                           <Td className="truncate px-2.5 text-by-body-sm text-by-text-2" title={row.name}>{row.name}</Td>

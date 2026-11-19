@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Calendar, ChevronDown, Files, Plus, SearchX, Tag, Users } from "lucide-react";
 import getSymbolFromCurrency from "currency-symbol-map";
@@ -25,6 +26,8 @@ import { useColumnViews } from "@/lib/useColumnViews";
 const RANGES = DATE_PRESETS.map((p) => p.value);
 const URL_OPTIONS = { ranges: RANGES, defaultRange: DEFAULT_DATE_PRESET };
 const PILL = { danger: ["danger", "At risk"], warning: ["warning", "At risk"], ok: ["success", "On track"] };
+/** "Last 7 Days" -> "Last 7 days": the app's shared labels are title case; this page writes in sentence case. */
+const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
 const EMPTY_TAB = { all: "No active clients", risk: "No clients at risk", ok: "No clients on track", off: "No inactive clients" };
 
 /** The agency's custom formula metrics that are switched on for the Clients list. */
@@ -113,7 +116,7 @@ export function ClientsList() {
   }, [clientGroups, customMetrics]);
   const known = useMemo(() => new Map(catalogue.map((c) => [c.id, c])), [catalogue]);
   const range = DATE_PRESETS.find((p) => p.value === datePreset) ?? DATE_PRESETS.find((p) => p.value === DEFAULT_DATE_PRESET);
-  const rangeLabel = range.label.charAt(0) + range.label.slice(1).toLowerCase();
+  const rangeLabel = sentence(range.label);
   const grouped = useMemo(() => groupColumns(catalogue, rangeLabel), [catalogue, rangeLabel]);
 
   // What is shown: the working set, else the saved view, else the defaults.
@@ -143,7 +146,7 @@ export function ClientsList() {
   }));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text">
+    <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text selection:bg-by-accent-line selection:text-by-text">
       <header className="flex shrink-0 items-center gap-2.5 border-b border-by-line bg-by-surface px-7 py-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="font-by-display text-by-title font-semibold tracking-[-0.01em]">Clients</h1>
@@ -156,13 +159,13 @@ export function ClientsList() {
         <Button kind="primary" onClick={openAddClient}><Plus aria-hidden="true" />Add client</Button>
         <Menu>
           <MenuTrigger asChild>
-            <DropdownTrigger leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${range.label}`}>
-              <span className="font-semibold">{range.label}</span>
+            <DropdownTrigger leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${rangeLabel}`}>
+              <span className="font-semibold">{rangeLabel}</span>
             </DropdownTrigger>
           </MenuTrigger>
           <MenuContent align="end" className="max-h-80 overflow-y-auto">
             {DATE_PRESETS.map((p) => (
-              <MenuItem key={p.value} selected={p.value === datePreset} onSelect={() => setDatePreset(p.value)}>{p.label}</MenuItem>
+              <MenuItem key={p.value} selected={p.value === datePreset} onSelect={() => setDatePreset(p.value)}>{sentence(p.label)}</MenuItem>
             ))}
           </MenuContent>
         </Menu>
@@ -204,7 +207,7 @@ export function ClientsList() {
           {TABS.map((t) => (
             <TabPanel key={t.key} value={t.key} className="mt-3.5">
               {error ? (
-                <Notice tone="danger" action={<Button size="sm" onClick={() => refresh()}>Retry</Button>}>Couldn’t load your clients. {error}</Notice>
+                <Notice tone="danger" action={<Button size="sm" onClick={() => refresh()}>Retry</Button>}>Couldn’t load your clients. Check your connection and try again.</Notice>
               ) : !loading && rows.length === 0 ? (
                 <Card>
                   <EmptyState icon={<Users />} title="No clients yet" action={<div className="flex gap-2"><Button onClick={openImport}><Files aria-hidden="true" />Import from GoHighLevel</Button><Button kind="primary" onClick={openAddClient}><Plus aria-hidden="true" />Add client</Button></div>}>
@@ -222,7 +225,7 @@ export function ClientsList() {
                   )}
                 </Card>
               ) : (
-                <Card className={`overflow-x-auto ${columnsOpen ? "min-[1100px]:mr-60" : ""}`}>
+                <Card className={`overflow-x-auto motion-safe:animate-[by-enter_var(--by-dur-enter)_var(--by-ease-spring)] ${columnsOpen ? "min-[1100px]:mr-60" : ""}`}>
                   <Table>
                     <TableHead>
                       <tr>
@@ -252,16 +255,16 @@ export function ClientsList() {
                               <Tr
                                 key={row.id}
                                 interactive
-                                tabIndex={0}
-                                aria-label={`Open ${row.name}`}
+                                // The whole row is a click target for the mouse; the name inside is the link keyboards and screen readers use.
                                 onClick={() => router.push(clientHref(row.id))}
-                                onKeyDown={(e) => e.key === "Enter" && router.push(clientHref(row.id))}
-                                className={`focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-by-accent ${row.listStatus === "off" ? "text-by-muted" : ""}`}
+                                className={row.listStatus === "off" ? "text-by-muted" : undefined}
                               >
                                 {/* Pinned, so the name stays in view when many columns scroll sideways. */}
-                                <Td className="sticky left-0 max-w-80 truncate bg-by-surface font-semibold transition-colors duration-(--by-dur-fast) ease-by-out group-hover:bg-by-canvas" title={row.name}>{row.name}</Td>
+                                <Td className="sticky left-0 max-w-80 truncate bg-by-surface font-semibold transition-colors duration-(--by-dur-fast) ease-by-out group-hover:bg-by-canvas" title={row.name}>
+                                  <Link href={clientHref(row.id)} onClick={(e) => e.stopPropagation()} className="rounded-by-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">{row.name}</Link>
+                                </Td>
                                 <Td>
-                                  {row.syncing ? <span className="text-by-body-sm text-by-muted">Loading {range.label.toLowerCase()}…</span> : pill ? <Pill tone={pill[0]}>{pill[1]}</Pill> : null}
+                                  {row.syncing ? <span className="text-by-body-sm text-by-muted">Loading {rangeLabel.toLowerCase()}…</span> : pill ? <Pill tone={pill[0]}>{pill[1]}</Pill> : null}
                                 </Td>
                                 {columns.map((c) => (
                                   <Td key={c.id} numeric>

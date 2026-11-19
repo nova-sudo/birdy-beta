@@ -16,6 +16,9 @@ export const LIFT_TRANSITION = `[transition:${COLOUR},transform_var(--by-dur-pre
 /** Lift a pixel on hover, squash slightly on press. */
 export const LIFT = `${LIFT_TRANSITION} motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0 motion-safe:active:scale-95`;
 
+/** Text selection in the palette's colours. Put it on the root of each surface the kit draws. */
+export const SELECTION = "selection:bg-by-accent-line selection:text-by-text";
+
 /** The 2px accent outline every focusable control shows for keyboard focus. */
 // No `outline-none` here: in Tailwind v4 it sets the outline style to none,
 // which would also cancel the focus-visible outline below.
