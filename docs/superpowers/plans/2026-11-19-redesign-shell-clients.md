@@ -1,6 +1,6 @@
 # Birdy Redesign: Shell Go-Live, Add Client, Import and Clients List Implementation Plan
 
-**Status:** in progress. Phase 1 built 2026-11-19; phases 1 and 2 built; phase 3 next.
+**Status:** in progress. Phase 1 built 2026-11-19; phases 1 and 2 built. Phase 3 started and paused 2026-11-19 (session usage limit): only its first step is done, moving the old table's cell-value logic into `src/lib/client-rows.js` (user's decision; a small edit to `ui/table-container.jsx`). Still to do in phase 3: the kit's sortable header, columns menu, `src/lib/clients-list.js`, the list itself, and replacing `src/app/clients/page.jsx`. Note for the list: the existing `hp_connect_rate` value is already leads called divided by Hot Prospector leads, as a percentage, null with no call centre; use it for the Leads called column. Then phases 4 and 5.
 
 **Goal:** Put the new shell in front of every signed-in page, rebuild Add client and Import as kit dialogs, and rebuild the Clients list, on the redesign branch.
 
