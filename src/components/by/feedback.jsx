@@ -4,12 +4,13 @@ const TONES = {
   info: "bg-by-accent-soft text-by-text-2 [&_svg]:text-by-accent",
   warning: "bg-by-warning-bg text-by-warning",
   danger: "bg-by-danger-bg text-by-danger",
+  success: "bg-by-success-bg text-by-success",
 };
 
 /**
  * A message inside a page or dialog: a hint, a warning, or what went wrong.
  *
- * @param {"info"|"warning"|"danger"} [props.tone]
+ * @param {"info"|"warning"|"danger"|"success"} [props.tone]
  * @param {React.ReactNode} [props.icon] a lucide icon element
  * @param {React.ReactNode} [props.action] a button on the right, e.g. Retry
  */

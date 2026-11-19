@@ -5,7 +5,9 @@ import "./jsdom"
 import {
   BirdyAvatar, Button, Card, ClientTile, CountBadge, CplChip, Delta, EmptyState, KpiTile, Menu, MenuContent, MenuItem, MenuTrigger,
   Pill, RowArrow, TabPanel, TabPill, Table, TableBody, TableHead, Td, Th, Tooltip, Tr, UserAvatar,
+  Funnel, LineChart, Notice, RankList,
 } from ".."
+import { niceMax } from "../line-chart"
 
 const TABS = [
   { value: "chat", label: "Chat" },
@@ -212,5 +214,56 @@ describe("Avatars", () => {
     render(<><ClientTile name="  beauty Hub MCR" /><UserAvatar name="Hadley" /></>)
     expect(screen.getByText("B")).toBeInTheDocument()
     expect(screen.getByRole("img", { name: "Hadley" })).toHaveTextContent("H")
+  })
+})
+
+describe("LineChart", () => {
+  it("names itself and lists every point for screen readers", () => {
+    render(<LineChart aria-label="Leads per day" values={[3, 5]} labels={["1 Nov", ""]} pointLabels={["1 Nov 2026", "2 Nov 2026"]} />)
+    expect(screen.getByRole("img", { name: "Leads per day" })).toBeInTheDocument()
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual(["1 Nov 2026: 3", "2 Nov 2026: 5"])
+  })
+
+  it("picks an axis top that divides into four round steps, whole ones for counts", () => {
+    expect(niceMax(158)).toBe(200)
+    expect(niceMax(410)).toBe(600)
+    expect(niceMax(0.8)).toBeCloseTo(0.8)
+    expect(niceMax(3, true)).toBe(4)
+    expect(niceMax(1, true)).toBe(4)
+    expect(niceMax(0, true)).toBe(4)
+    expect(niceMax(0)).toBe(1)
+  })
+})
+
+describe("Funnel and RankList", () => {
+  it("lists the funnel's steps in order with their counts", () => {
+    render(<Funnel stages={[{ key: "a", label: "Meta leads", icon: null, value: "962" }, { key: "b", label: "Called", icon: null, value: "—", muted: true, note: "No call centre" }]} />)
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Meta leads962", "Called—No call centre"])
+  })
+
+  it("links a ranked name when it has somewhere to go, and marks a row over its limit", () => {
+    render(<RankList items={[{ id: "1", name: "Aura", value: "£2.00", bar: 40, href: "/dashboard?client=a" }, { id: "2", name: "Timelapse", value: "£12.00", bar: 100, tone: "danger" }]} />)
+    expect(screen.getByRole("link", { name: "Aura" })).toHaveAttribute("href", "/dashboard?client=a")
+    expect(screen.queryByRole("link", { name: "Timelapse" })).not.toBeInTheDocument()
+    expect(screen.getByText("£12.00")).toHaveClass("text-by-danger")
+  })
+})
+
+describe("additions for Bird's Eye", () => {
+  it("shows a dash for a figure that does not exist, and a note under a tile", () => {
+    render(<KpiTile label="Leads called" value={null} note="No client has a call centre" />)
+    expect(screen.getByLabelText("No data")).toHaveTextContent("—")
+    expect(screen.getByText("No client has a call centre")).toBeInTheDocument()
+  })
+
+  it("greys a tab that is not built yet", () => {
+    render(<TabPill aria-label="Views" value="a" onValueChange={() => {}} items={[{ value: "a", label: "Bird's Eye" }, { value: "b", label: "Dashboard", disabled: true }]} />)
+    expect(screen.getByRole("tab", { name: "Dashboard" })).toBeDisabled()
+    expect(screen.getByRole("tab", { name: "Dashboard" })).toHaveAttribute("title", "Coming soon")
+  })
+
+  it("has a success notice", () => {
+    render(<Notice tone="success">All looking good</Notice>)
+    expect(screen.getByRole("status")).toHaveClass("bg-by-success-bg")
   })
 })

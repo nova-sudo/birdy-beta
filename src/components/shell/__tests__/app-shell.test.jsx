@@ -12,7 +12,7 @@ const groups = { clientGroups: [], loading: false, error: null }
 const confirm = vi.fn(() => Promise.resolve(false))
 const clearSession = vi.fn()
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => route.pathname }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams(route.search ?? "") }))
 // The dialogs are loaded lazily and are covered by their own tests.
 vi.mock("next/dynamic", () => ({ default: () => () => null }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => credits }))
@@ -105,7 +105,7 @@ describe("AppShell: the client switcher", () => {
     await userEvent.click(screen.getByRole("button", { name: "Switch client, showing all clients" }))
     expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Aura, at risk", "Healthy Glow, on track", "Old Clinic, inactive"])
     await userEvent.click(screen.getByRole("option", { name: /Healthy Glow/ }))
-    expect(push).toHaveBeenCalledWith("/clients/b")
+    expect(push).toHaveBeenCalledWith("/dashboard?client=b")
   })
 
   it("shows the client whose page is open, and returns to the list for the agency view", async () => {
@@ -114,6 +114,15 @@ describe("AppShell: the client switcher", () => {
     await userEvent.click(screen.getByRole("button", { name: "Switch client, showing Aura" }))
     await userEvent.click(await screen.findByRole("option", { name: /Agency view/ }))
     expect(push).toHaveBeenCalledWith("/clients")
+  })
+
+  it("follows the client Agency Ops is narrowed to, and returns to the whole agency there", async () => {
+    Object.assign(route, { pathname: "/dashboard", search: "client=a" })
+    shell()
+    await userEvent.click(screen.getByRole("button", { name: "Switch client, showing Aura" }))
+    await userEvent.click(await screen.findByRole("option", { name: /Agency view/ }))
+    expect(push).toHaveBeenCalledWith("/dashboard")
+    route.search = ""
   })
 
   it("shows the loading and failed states of the client list", async () => {

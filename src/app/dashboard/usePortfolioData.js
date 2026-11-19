@@ -62,6 +62,8 @@ export function usePortfolioData({
   preset = DEFAULT_DATE_PRESET,
   granularity = "Daily",
   chartMetric = "leads",
+  // One client's id narrows every figure to that client; null is the whole agency.
+  clientId = null,
 } = {}) {
   // useClientGroups takes its argument as an *initial* value — it holds the
   // preset in its own state and expects callers to move it with setDatePreset.
@@ -69,7 +71,7 @@ export function usePortfolioData({
   // pushed in explicitly or the client groups stay on whatever was asked for
   // first while everything fetched here quietly moves on without them.
   const {
-    clientGroups,
+    clientGroups: allGroups,
     loading: groupsLoading,
     error: groupsError,
     datePreset,
@@ -79,6 +81,13 @@ export function usePortfolioData({
   useEffect(() => {
     if (datePreset !== preset) setDatePreset(preset);
   }, [preset, datePreset, setDatePreset]);
+
+  // Everything below is computed from this list, so narrowing it here narrows
+  // the tiles, the chart, the funnel and the per-day requests together.
+  const clientGroups = useMemo(
+    () => (clientId ? (allGroups ?? []).filter((g) => g.id === clientId) : allGroups),
+    [allGroups, clientId]
+  );
 
   // The lead fetch keys off this rather than the array itself: which clients
   // are in the portfolio is what the request depends on, and an identity check
@@ -135,7 +144,8 @@ export function usePortfolioData({
         const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`);
         if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setPreviousGroups(data.client_groups ?? []);
+        const groups = data.client_groups ?? [];
+        if (!cancelled) setPreviousGroups(clientId ? groups.filter((g) => g.id === clientId) : groups);
       } catch {
         // No comparison is a fine outcome — the pills just don't render.
         if (!cancelled) setPreviousGroups(null);
@@ -145,7 +155,7 @@ export function usePortfolioData({
     return () => {
       cancelled = true;
     };
-  }, [preset]);
+  }, [preset, clientId]);
 
   // ── Lead rows, for the trend chart and its closes series ────────────────
   useEffect(() => {
@@ -354,7 +364,27 @@ export function usePortfolioData({
       callsCapped
     );
 
+    // Cost per lead for each day: that day's spend over that day's leads. A
+    // day with no leads has no cost per lead, drawn as zero.
+    const spendByDay = new Map(spendDays.map((d) => [d.date, Number(d.spend) || 0]));
+    const cplDays = leadDays.map((d) => ({
+      date: d.date,
+      cpl: d.leads > 0 ? (spendByDay.get(d.date) ?? 0) / d.leads : 0,
+    }));
+    const cplSeries = {
+      ...bucketSeries(cplDays, (d) => d.date, "Daily", (d) => d.cpl),
+      estimated: false,
+    };
+
     return {
+      cpl: {
+        tab: "CPL",
+        title: "Cost per lead",
+        subtitle: "Spend over leads, day by day",
+        total: formatMoney(current.cpl, 2),
+        valuePrefix: currencySymbol,
+        ...cplSeries,
+      },
       leads: {
         tab: "Leads",
         title: "Total leads",
@@ -417,6 +447,11 @@ export function usePortfolioData({
   return {
     clientCount: current.clientCount,
     dateRangeLabel,
+    // The totals behind every figure, for screens that lay them out their own way.
+    current,
+    previous,
+    // The client the figures are narrowed to, when they are.
+    client: clientId ? (allGroups ?? []).find((g) => g.id === clientId) ?? null : null,
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),

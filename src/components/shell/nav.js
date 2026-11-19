@@ -44,7 +44,7 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients";
+export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/dashboard";
 
 /** The client a `/clients/<id>` page is showing, or null on any other page. */
 export function clientIdFromPath(pathname) {
@@ -57,5 +57,19 @@ export function clientIdFromPath(pathname) {
   }
 }
 
-/** The page for one client. Until scoped section views exist this is the client's detail page. */
-export const clientHref = (id) => `/clients/${encodeURIComponent(id)}`;
+/**
+ * The client a page is showing: `/clients/<id>`, or Agency Ops narrowed to one
+ * client with `?client=<id>`. Null on any other page.
+ */
+export function clientIdFromLocation(pathname, search = "") {
+  const fromPath = clientIdFromPath(pathname);
+  if (fromPath) return fromPath;
+  if (!under(pathname, "/dashboard")) return null;
+  return new URLSearchParams(search).get("client") || null;
+}
+
+/** The page for one client: Agency Ops' Bird's Eye, narrowed to that client. */
+export const clientHref = (id) => `${DESTINATIONS.ops}?client=${encodeURIComponent(id)}`;
+
+/** The older, full client page. Still the only place for a client's settings, notes and tracking. */
+export const clientDetailHref = (id) => `/clients/${encodeURIComponent(id)}`;

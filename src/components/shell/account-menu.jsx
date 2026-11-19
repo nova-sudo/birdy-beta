@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/api";
 import { clearSession } from "@/lib/session";
 
 /** The signed-in user's name and email, read from the stored user record. */
-function useStoredUser() {
+export function useStoredUser() {
   const [user, setUser] = useState({ name: "", email: "" });
   useEffect(() => {
     const read = () => {

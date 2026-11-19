@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHref, clientIdFromPath, isRebuilt } from "../nav"
+import { DESTINATIONS, OTHER_PAGES, activeRailId, clientDetailHref, clientHref, clientIdFromLocation, clientIdFromPath, isRebuilt } from "../nav"
 
 describe("activeRailId", () => {
   it.each([
@@ -38,8 +38,18 @@ describe("destinations", () => {
 
 describe("client paths", () => {
   it("round-trips an id with characters that need encoding", () => {
-    const id = "hello@agency.com_17898/x"
-    expect(clientIdFromPath(clientHref(id))).toBe(id)
+    const id = "a b/c?d"
+    expect(clientIdFromPath(clientDetailHref(id))).toBe(id)
+    const [path, search] = clientHref(id).split("?")
+    expect(path).toBe("/dashboard")
+    expect(clientIdFromLocation(path, search)).toBe(id)
+  })
+
+  it("reads the client from the path, or from Agency Ops' address, and from nowhere else", () => {
+    expect(clientIdFromLocation("/clients/abc", "")).toBe("abc")
+    expect(clientIdFromLocation("/dashboard", "client=abc&range=last_30d")).toBe("abc")
+    expect(clientIdFromLocation("/dashboard", "")).toBeNull()
+    expect(clientIdFromLocation("/campaigns", "client=abc")).toBeNull()
   })
 
   it("reads the client from nested client pages and nothing from other pages", () => {
@@ -54,9 +64,10 @@ describe("client paths", () => {
 })
 
 describe("isRebuilt", () => {
-  it("is true for the Clients list only, not a client's own page", () => {
+  it("is true for the rebuilt pages only: the Clients list and Agency Ops, not a client's own page", () => {
     expect(isRebuilt("/clients")).toBe(true)
+    expect(isRebuilt("/dashboard")).toBe(true)
     expect(isRebuilt("/clients/abc")).toBe(false)
-    expect(isRebuilt("/dashboard")).toBe(false)
+    expect(isRebuilt("/campaigns")).toBe(false)
   })
 })

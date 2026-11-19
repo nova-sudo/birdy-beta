@@ -33,14 +33,16 @@ export function Delta({ value, goodWhen = "neither", className, ...props }) {
   );
 }
 
-/** Counts from zero to `target` once, when the component first appears. */
+/** Counts from zero to `target` once, the first time there is a figure to show. After that it follows `target` directly. */
 function useCountUp(target, enabled) {
   const [shown, setShown] = useState(target);
-  const ran = useRef(false);
+  const done = useRef(false);
   useEffect(() => {
-    if (ran.current || !enabled || !Number.isFinite(target)) return;
-    ran.current = true;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const still = done.current || !enabled || !Number.isFinite(target) || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (still) {
+      setShown(target);
+      return;
+    }
     const start = performance.now();
     const duration = 700;
     let frame;
@@ -48,10 +50,11 @@ function useCountUp(target, enabled) {
       const t = Math.min(1, (now - start) / duration);
       setShown(target * (1 - Math.pow(1 - t, 3)));
       if (t < 1) frame = requestAnimationFrame(tick);
-      else setShown(target);
+      else done.current = true;
     };
     setShown(0);
     frame = requestAnimationFrame(tick);
+    // Only a finished count marks it done, so an interrupted one (a re-render, a changed figure) starts again instead of freezing.
     return () => cancelAnimationFrame(frame);
   }, [target, enabled]);
   return shown;
@@ -61,23 +64,30 @@ function useCountUp(target, enabled) {
  * One headline figure with its change beside it.
  *
  * @param {string} props.label
- * @param {number} props.value
+ * @param {number|null} props.value a missing figure (null) shows as a dash
  * @param {(n: number) => string} [props.format] turns the number into text, e.g. money; whole numbers by default
  * @param {React.ReactNode} [props.delta] usually a Delta
+ * @param {React.ReactNode} [props.note] one line under the figure, e.g. "vs previous 7 days"
  * @param {boolean} [props.countUp] count up from zero once on first appearance; on by default
  */
-export function KpiTile({ label, value, format = (n) => Math.round(n).toLocaleString("en-GB"), delta, countUp = true, className, ...props }) {
-  const shown = useCountUp(value, countUp);
+export function KpiTile({ label, value, format = (n) => Math.round(n).toLocaleString("en-GB"), delta, note, countUp = true, className, ...props }) {
+  const known = Number.isFinite(value);
+  const shown = useCountUp(known ? value : 0, countUp && known);
   return (
     <Card className={cn("px-4 py-3.5", className)} {...props}>
       <div className="text-by-body-sm text-by-text-2">{label}</div>
       <div className="mt-1 flex items-baseline gap-2">
         {/* Screen readers get the final figure, not the counting. */}
-        <span className="font-by-display text-by-title font-semibold tabular-nums text-by-text" aria-label={format(value)}>
-          <span aria-hidden="true">{format(shown)}</span>
-        </span>
-        {delta}
+        {known ? (
+          <span className="font-by-display text-by-title font-semibold tabular-nums text-by-text" aria-label={format(value)}>
+            <span aria-hidden="true">{format(shown)}</span>
+          </span>
+        ) : (
+          <span className="font-by-display text-by-title font-semibold text-by-muted" aria-label="No data">—</span>
+        )}
+        {known && delta}
       </div>
+      {note && <div className="mt-1 text-by-body-sm text-by-text-2">{note}</div>}
     </Card>
   );
 }

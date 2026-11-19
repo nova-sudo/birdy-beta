@@ -10,7 +10,7 @@ import { TabPill } from "../tab-pill";
  *
  * @param {object} props.section an entry from SECTIONS
  * @param {string} [props.subtitle] defaults to the section's description; pass the client's name and status when scoped
- * @param {{value: string, label: string, count?: number}[]} props.tabs
+ * @param {{value: string, label: string, count?: number, disabled?: boolean}[]} props.tabs
  * @param {string} props.tab the open tab
  * @param {(value: string) => void} props.onTabChange
  * @param {React.ReactNode} [props.more] the "More" menu trigger, shown inside the pill after the tabs

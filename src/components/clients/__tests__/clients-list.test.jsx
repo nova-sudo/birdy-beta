@@ -127,12 +127,12 @@ describe("Clients list", () => {
   it("opens a client from anywhere on its row, by its id", async () => {
     render(<ClientsList />)
     await userEvent.click(within(screen.getByRole("row", { name: /Aura/ })).getByText("£50.00"))
-    expect(push).toHaveBeenLastCalledWith("/clients/b")
+    expect(push).toHaveBeenLastCalledWith("/dashboard?client=b")
   })
 
   it("makes the client's name a link, so keyboards and screen readers can open it and the row still reads its figures", () => {
     render(<ClientsList />)
-    expect(screen.getByRole("link", { name: "Aura" })).toHaveAttribute("href", "/clients/b")
+    expect(screen.getByRole("link", { name: "Aura" })).toHaveAttribute("href", "/dashboard?client=b")
     expect(screen.getByRole("row", { name: /Aura.*At risk.*£50\.00/ })).toBeInTheDocument()
   })
 

@@ -18,6 +18,9 @@ export { Pill, CplChip, CountBadge } from "./pill"
 export { KpiTile, Delta } from "./kpi-tile"
 export { Table, TableHead, TableBody, TableScroll, Tr, Th, Td, RowArrow } from "./table"
 export { Card, EmptyState } from "./card"
+export { LineChart } from "./line-chart"
+export { Funnel } from "./funnel"
+export { RankList } from "./rank-list"
 export { ColumnsMenu } from "./columns-menu"
 
 // Identity

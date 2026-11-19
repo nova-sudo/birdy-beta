@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ClientSwitcher, MenuItem, Rail, RailMenuTile } from "@/components/by";
 import { useCredits } from "@/hooks/useCredits";
 import { useAgentWorkCount } from "@/lib/agents-api";
@@ -10,7 +10,7 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHref, clientIdFromPath } from "./nav";
+import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHref, clientIdFromLocation, clientIdFromPath } from "./nav";
 
 // Hand-set health -> the switcher's dot. An inactive client gets no colour.
 const HEALTH_DOT = { Critical: "danger", Warning: "warning", Healthy: "success" };
@@ -55,13 +55,16 @@ export function AppShell({ children }) {
         counts={{ buyer: openWork ?? 0 }}
         credits={hasCredits ? { left: credits.balance, percent: (credits.remainingAllowance / credits.allowance) * 100 } : undefined}
         switcher={
-          <WiredSwitcher
-            clients={clients}
-            value={clientIdFromPath(pathname)}
-            onChange={(id) => router.push(id ? clientHref(id) : DESTINATIONS.clients)}
-            status={error ? "error" : loading ? "loading" : "ready"}
-            onRetry={refresh}
-          />
+          // Reading the address's query needs a Suspense boundary; until it resolves the switcher shows the path's client.
+          <Suspense fallback={<WiredSwitcher clients={clients} value={clientIdFromPath(pathname)} onChange={() => {}} status="loading" />}>
+            <LocatedSwitcher
+              clients={clients}
+              // Leaving a client from Agency Ops returns to the whole agency there; anywhere else it opens the Clients list.
+              onChange={(id) => router.push(id ? clientHref(id) : activeId === "ops" ? DESTINATIONS.ops : DESTINATIONS.clients)}
+              status={error ? "error" : loading ? "loading" : "ready"}
+              onRetry={refresh}
+            />
+          </Suspense>
         }
         extra={
           <RailMenuTile label="Other pages" active={activeId === "other"}>
@@ -79,6 +82,13 @@ export function AppShell({ children }) {
     </div>
     </ClientActionsProvider>
   );
+}
+
+/** The switcher, showing whichever client the current address is narrowed to. */
+function LocatedSwitcher(props) {
+  const pathname = usePathname();
+  const search = useSearchParams();
+  return <WiredSwitcher value={clientIdFromLocation(pathname, search.toString())} {...props} />;
 }
 
 /** The switcher with "Add new client" wired to the shell's Add client dialog. */
