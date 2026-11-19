@@ -73,14 +73,16 @@ describe("Bird's Eye for the agency", () => {
     expect(screen.getByText("down from 62")).toBeInTheDocument()
   })
 
-  it("greys the tabs that are not built, and opens Chat", async () => {
+  it("greys the tab that is not built, and opens Chat and Dashboard", async () => {
     render(<BirdsEye />)
     const views = screen.getByRole("tablist", { name: "Agency Ops views" })
     expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
-    expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeDisabled()
+    expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeEnabled()
     expect(within(views).getByRole("tab", { name: "Suggestions" })).toBeDisabled()
     await userEvent.click(within(views).getByRole("tab", { name: "Chat" }))
     expect(push).toHaveBeenCalledWith("/dashboard/chat")
+    await userEvent.click(within(views).getByRole("tab", { name: "Dashboard" }))
+    expect(push).toHaveBeenCalledWith("/dashboard/table")
   })
 
   it("switches the chart between leads, spend, calls and closed", async () => {

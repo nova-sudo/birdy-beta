@@ -44,7 +44,7 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/dashboard" || pathname === "/dashboard/chat";
+export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/dashboard" || pathname === "/dashboard/chat" || pathname === "/dashboard/table";
 
 /** The client a `/clients/<id>` page is showing, or null on any other page. */
 export function clientIdFromPath(pathname) {

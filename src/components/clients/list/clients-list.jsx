@@ -66,14 +66,22 @@ function useCurrencySymbol() {
   return symbol;
 }
 
-/** Every client: tabs by status, sort, search, columns, and the two ways of adding more. */
-export function ClientsList() {
+/**
+ * Every client: tabs by status, sort, search, columns, and the two ways of adding more.
+ *
+ * Agency Ops' Dashboard tab shows this same table under its own header:
+ * @param {(range: {datePreset: string, rangeLabel: string, setDatePreset: (value: string) => void, dateMenu: React.ReactNode}) => React.ReactNode} [props.header]
+ *   replaces the "Clients" header; it is handed the date range and a ready-made date menu
+ * @param {React.ReactNode} [props.footer] sits under the table and stays in place, e.g. an ask bar
+ * @param {string} [props.viewKey] which saved column view this table reads and writes
+ */
+export function ClientsList({ header, footer, viewKey = "clients" } = {}) {
   const router = useRouter();
   const { openAddClient, openImport } = useClientActions();
   const { clientGroups, loading, error, refresh, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
   const customMetrics = useCustomMetrics();
   const currencySymbol = useCurrencySymbol();
-  const { savedColumns, saveView, viewsLoaded } = useColumnViews("clients");
+  const { savedColumns, saveView, viewsLoaded } = useColumnViews(viewKey);
 
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
@@ -145,8 +153,24 @@ export function ClientsList() {
     label: <>{t.label}<span className="font-medium text-by-muted tabular-nums">{loading ? "" : counts[t.key]}</span></>,
   }));
 
+  const dateMenu = (
+    <Menu>
+      <MenuTrigger asChild>
+        <DropdownTrigger leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${rangeLabel}`}>
+          <span className="font-semibold">{rangeLabel}</span>
+        </DropdownTrigger>
+      </MenuTrigger>
+      <MenuContent align="end" className="max-h-80 overflow-y-auto">
+        {DATE_PRESETS.map((p) => (
+          <MenuItem key={p.value} selected={p.value === datePreset} onSelect={() => setDatePreset(p.value)}>{sentence(p.label)}</MenuItem>
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text selection:bg-by-accent-line selection:text-by-text">
+      {header ? header({ datePreset, rangeLabel, setDatePreset, dateMenu }) : (
       <header className="flex shrink-0 items-center gap-2.5 border-b border-by-line bg-by-surface px-7 py-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="font-by-display text-by-title font-semibold tracking-[-0.01em]">Clients</h1>
@@ -157,22 +181,12 @@ export function ClientsList() {
         {synced && <span className="mx-1 hidden text-by-body-sm text-by-muted min-[1200px]:inline">Synced {synced}</span>}
         <Button onClick={openImport}><Files aria-hidden="true" />Import</Button>
         <Button kind="primary" onClick={openAddClient}><Plus aria-hidden="true" />Add client</Button>
-        <Menu>
-          <MenuTrigger asChild>
-            <DropdownTrigger leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${rangeLabel}`}>
-              <span className="font-semibold">{rangeLabel}</span>
-            </DropdownTrigger>
-          </MenuTrigger>
-          <MenuContent align="end" className="max-h-80 overflow-y-auto">
-            {DATE_PRESETS.map((p) => (
-              <MenuItem key={p.value} selected={p.value === datePreset} onSelect={() => setDatePreset(p.value)}>{sentence(p.label)}</MenuItem>
-            ))}
-          </MenuContent>
-        </Menu>
+        {dateMenu}
       </header>
+      )}
 
       {/* Nothing here scrolls: the tabs and toolbar stay put and only the table scrolls, inside its card. */}
-      <div className="flex min-h-0 flex-1 flex-col px-7 pt-4.5 pb-6">
+      <div className={`flex min-h-0 flex-1 flex-col px-7 pt-4.5 ${footer ? "pb-3" : "pb-6"}`}>
         <TabPill
           items={tabs}
           value={tab}
@@ -291,6 +305,7 @@ export function ClientsList() {
           ))}
         </TabPill>
       </div>
+      {footer && <div className="shrink-0 px-7 pb-5">{footer}</div>}
     </div>
   );
 }
