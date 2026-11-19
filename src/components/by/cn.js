@@ -11,7 +11,7 @@ const twMerge = extendTailwindMerge({
     theme: {
       text: ["by-label", "by-caption", "by-body-sm", "by-body", "by-body-lg", "by-heading", "by-title", "by-display"],
       radius: ["by-sm", "by-md", "by-lg", "by-xl"],
-      shadow: ["by-card", "by-raised", "by-floating", "by-primary", "by-primary-hover", "by-field"],
+      shadow: ["by-card", "by-raised", "by-floating", "by-primary", "by-primary-hover", "by-field", "by-dialog"],
       font: ["by-display", "by-body"],
       ease: ["by-out", "by-spring"],
     },

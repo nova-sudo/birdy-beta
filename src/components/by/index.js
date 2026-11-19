@@ -28,3 +28,9 @@ export { Rail, RailMenuTile, RailAccount } from "./shell/rail"
 export { ClientSwitcher } from "./shell/client-switcher"
 export { SectionHeader } from "./shell/section-header"
 export { CreditsRing } from "./shell/credits-ring"
+
+// Overlays, flows and feedback
+export { Dialog, DialogContent, DialogBody, DialogFooter } from "./dialog"
+export { Stepper } from "./stepper"
+export { OptionCard } from "./option-card"
+export { Notice, Skeleton } from "./feedback"

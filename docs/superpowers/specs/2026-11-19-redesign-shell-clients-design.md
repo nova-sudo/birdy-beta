@@ -162,7 +162,7 @@ When Agency Ops' Bird's Eye exists, the same click lands there with the client s
 ### Dropped
 
 - CSV export.
-- The per-row active/inactive toggle. A client is marked inactive from its own page.
+- The per-row active/inactive toggle. Marking a client inactive belongs to its own page, whose settings are hidden until that page is rebuilt (see Known consequences).
 - The Healthy / Warning / Critical / All tabs, replaced by the four above.
 
 ## Part 3: Add client and Import
@@ -175,12 +175,15 @@ When Agency Ops' Bird's Eye exists, the same click lands there with the client s
 
 A stepper dialog with the steps across the top.
 
-| Step | What the user does | Can skip |
+| Step | What the user does | Required |
 |---|---|---|
-| 1 Name | Names the client. A hint offers Import when adding several. | No |
-| 2 GoHighLevel | Searches and picks the sub-account. | Yes |
-| 3 Meta | Searches and picks the ad account. If another client already uses it, picks the campaigns that belong to this one; at least one is required. | Yes |
+| 1 Name | Names the client. A hint offers Import when adding several. | Yes |
+| 2 GoHighLevel | Searches and picks the sub-account. | Yes, when the account has any sub-accounts |
+| 3 Meta | Searches and picks the ad account. If another client already uses it, picks the campaigns that belong to this one; at least one is required. | Yes, when the account has any ad accounts |
 | 4 Calls | Chooses GoHighLevel or Hot Prospector as the source of calls. | Yes |
+| 5 Leads | Says how the client gets leads: Meta Instant Forms, a form tool that sends to GoHighLevel, the client's own landing page, or "Ask later" (the default). | Has a default |
+
+These are today's rules. Board 10 showed four steps and a Skip button; reading the old wizard showed five steps and no skipping, and the user chose to keep today's rules (2026-11-19).
 
 - An account another client already uses is labelled "Used by …" before it is picked.
 - Back keeps earlier answers. Closing the dialog discards them.
@@ -191,9 +194,9 @@ When adding fails:
 
 | Problem | What the user sees |
 |---|---|
-| The name is already taken | Back on step 1 with the message on the name field |
+| The chosen GoHighLevel location or Meta ad account is already linked to another client | A message naming that client, on the step it concerns |
 | The plan's client limit is reached | A message in the dialog with a button to the billing page |
-| A list will not load (sub-accounts, ad accounts, campaigns) | A message with Retry inside that step; the step can still be skipped |
+| A list will not load (sub-accounts, ad accounts, campaigns) | A message with Retry inside that step |
 | Anything else | The dialog stays open with the choices kept and says what went wrong |
 
 ### Import (board 11, option A)
@@ -229,7 +232,8 @@ A wide dialog with one table.
 
 ## Known consequences
 
-- Old pages lose the controls they kept in the top bar until they are rebuilt. The clearest case is the old dashboard's date-range and granularity controls.
+- Old pages lose the controls they kept in the top bar until they are rebuilt (user's decision, confirmed again on 2026-11-19 once the full list was known): Dashboard (date range, granularity); Marketing, Sales Hub and Leads (client picker, date range, granularity); the client detail page (date range, Client settings); Metrics (search, Create a custom metric); Alerts (create alert); Ask Birdy (new chat, view switch); Dashboards (new dashboard; a dashboard's tabs, save status and buttons).
+- Because the client page's settings button is hidden, a client's health and active status cannot be changed on this branch until the client page is rebuilt. The Clients list shows whatever is stored.
 - Fired alerts no longer surface anywhere but the Alerts page under "Other pages".
 - Running syncs are no longer shown in the navigation; the Clients list's "synced" line and each row's syncing state are the remaining signals.
 - The Clients list cannot say why a client is at risk until status is derived from the agents.

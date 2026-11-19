@@ -1,6 +1,6 @@
 # Birdy Redesign: Shell Go-Live, Add Client, Import and Clients List Implementation Plan
 
-**Status:** in progress. Phase 1 built 2026-11-19; paused on a finding about lost header controls (see phase 1) before phase 2.
+**Status:** in progress. Phase 1 built 2026-11-19; phases 1 and 2 built; phase 3 next.
 
 **Goal:** Put the new shell in front of every signed-in page, rebuild Add client and Import as kit dialogs, and rebuild the Clients list, on the redesign branch.
 
@@ -74,7 +74,7 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 
 ### Phase 1: Shell swap (built)
 
-**Finding, 2026-11-19.** Removing the top bar hides working controls, not only titles. Pages publish these to it: Dashboard (date range, granularity); Marketing, Sales Hub and Leads (client picker, date range, granularity); the client detail page (date range and the Client settings button, which is how a client is marked inactive or its health set); Metrics (search, Create a custom metric); Alerts (create alert); Ask Birdy (new chat, view switch); Dashboards (new dashboard; a dashboard's tabs, save status and buttons). The spec's claim that a client can still be marked inactive from its own page does not hold without a header. Raised with the user before phase 2.
+**Finding, 2026-11-19.** Removing the top bar hides working controls, not only titles. Pages publish these to it: Dashboard (date range, granularity); Marketing, Sales Hub and Leads (client picker, date range, granularity); the client detail page (date range and the Client settings button, which is how a client is marked inactive or its health set); Metrics (search, Create a custom metric); Alerts (create alert); Ask Birdy (new chat, view switch); Dashboards (new dashboard; a dashboard's tabs, save status and buttons). The spec's claim that a client can still be marked inactive from its own page does not hold without a header. Raised with the user before phase 2. **Decision (user, 2026-11-19): leave it as it is.** Every listed control stays hidden until its page is rebuilt, including the client page's settings button.
 
 **Outcome:** every signed-in page renders inside the new rail, with real clients, credits and work count; old pages work without their header.
 
@@ -101,7 +101,9 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 
 **Verification:** `npx vitest run --dir src` and `npm run build` pass. On the dev server, signed in: each of the eleven old pages loads inside the new rail with no console error; the rail marks the right item open on each; "Other pages" and the avatar menu open and navigate; log out works; ⌘K opens the switcher; picking a client opens its detail page and the switcher shows it; "Agency view" returns to `/clients`. Signed out: login, register and onboarding look as before. `/kit` and `/kit/shell` still render. Write down which header controls each old page lost and report them to the user at the end.
 
-### Phase 2: Dialogs, Add client and Import
+### Phase 2: Dialogs, Add client and Import (built)
+
+**As built:** the kit also gained a stepper, an option card, a notice and a skeleton, which the dialogs need. The dialogs are mounted once in the shell (`src/components/shell/client-actions.jsx`) and opened through a context, so the switcher and the page share them. In the old Clients page only the two buttons were repointed; its inline wizard is left unreachable and goes with the page in phase 3. The Meta ad account cell in Import is a plain menu (type a letter to jump) rather than a menu with its own search box.
 
 **Outcome:** adding one client and importing several both happen in kit dialogs, opened from the still-old Clients page and from the switcher.
 
@@ -112,7 +114,8 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 **Files:**
 
 - Create `src/components/by/dialog.jsx`: the kit dialog on `@radix-ui/react-dialog` (header, scrolling body, footer strip; sizes for the 600px stepper and the 1040px import table). Export from the barrel.
-- Create `src/components/clients/add-client-dialog.jsx` and step files beside it: the four steps from the spec, their lists, "Used by …" labels, the campaign picker step, and each failure from the spec's table. It sends the requests the inline wizard sends today: `/api/subaccount/locations`, `/api/facebook/adaccounts`, the campaign and Hot Prospector lookups the wizard already makes, and `POST /api/client-groups`.
+- **Corrections found while reading the old wizard (2026-11-19):** it has five steps (a fifth, "Leads", sets how the client gets leads and is sent as `lead_collection_method`); nothing can be skipped today; and the 409 error means the chosen GoHighLevel location or Meta ad account is already linked to another client, not that the name is taken. **User decision:** keep today's rules, so no Skip button. The spec is corrected to match.
+- Create `src/components/clients/add-client-dialog.jsx` and step files beside it: the five steps from the spec, their lists, "Used by …" labels, the campaign picker step, and each failure from the spec's table. It sends the requests the inline wizard sends today: `/api/subaccount/locations`, `/api/facebook/adaccounts`, the campaign and Hot Prospector lookups the wizard already makes, and `POST /api/client-groups`.
 - Create `src/lib/import-review.js`: the import rules now inside `src/app/onboarding/ReviewStep.jsx` (which rows are pre-ticked, the 25-row limit, row status, the suggested-match rule, search matching that never unticks hidden rows), as pure functions.
 - Modify `src/app/onboarding/ReviewStep.jsx`: use those functions. No change to what it renders or does; `src/app/onboarding/__tests__/ReviewStep.test.jsx` must pass unchanged.
 - Create `src/components/clients/import-dialog.jsx`: the wide dialog from board 11 on the shared rules, sending what `BulkImportDialog.jsx` sends today (`/api/onboarding/subaccounts-review`, `/api/onboarding/prepare-review`, `/api/onboarding/import-subaccounts`).

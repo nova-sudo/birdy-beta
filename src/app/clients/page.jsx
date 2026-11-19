@@ -73,7 +73,7 @@ import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { isAwaitingFirstData } from "@/lib/client-loading"
-import BulkImportDialog from "@/components/clients/BulkImportDialog"
+import { useClientActions } from "@/components/shell/client-actions"
 import { MetaCampaignPicker } from "@/components/clients/MetaCampaignPicker"
 import { MetaCampaignsDialog } from "@/components/clients/MetaCampaignsDialog"
 import { sharesMetaAccount, remainderOwner, unassignedText } from "@/lib/meta-scope"
@@ -105,6 +105,9 @@ export default function ClientsPage() {
   } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
+  // Adding and importing clients now happen in the shell's dialogs. The old
+  // inline wizard below is unreachable and goes when this page is rebuilt.
+  const { openAddClient, openImport } = useClientActions()
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   // The client whose unassigned Meta campaigns the list's "Assign" opened.
@@ -1308,7 +1311,7 @@ export default function ClientsPage() {
               Client wizard instead — where there is now a link to it too. */}
           <Button
             variant="outline"
-            onClick={() => setBulkImportOpen(true)}
+            onClick={openImport}
             aria-label="Import clients from GoHighLevel"
             className="h-[38px] shrink-0 gap-2 px-3 text-[13px]"
           >
@@ -1318,7 +1321,7 @@ export default function ClientsPage() {
 
           <Button
             size="icon"
-            onClick={() => setWizardOpen(true)}
+            onClick={openAddClient}
             aria-label="Add client"
             className="size-[38px] shrink-0"
           >
@@ -1326,18 +1329,6 @@ export default function ClientsPage() {
           </Button>
         </div>
       </StaggerItem>
-
-      <BulkImportDialog
-        open={bulkImportOpen}
-        onOpenChange={setBulkImportOpen}
-        onImported={() => {
-          // Freshly imported clients have no figures yet; invalidate so the
-          // table picks them up as loading rows rather than leaving the user
-          // on a list that doesn't show what they just imported.
-          invalidateClientGroups?.()
-          refreshClientGroups?.()
-        }}
-      />
 
       <MetaCampaignsDialog
         open={!!assignGroup}

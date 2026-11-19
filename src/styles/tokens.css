@@ -121,6 +121,12 @@
   from { opacity: 0; transform: translateY(-6px) scale(0.94); }
 }
 
+/* A dialog arriving over the page. Scale only: the dialog is centred with
+   `translate`, which a transform keyframe leaves alone. */
+@keyframes by-dialog {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
 /* A tooltip appearing. */
 @keyframes by-fade {
   from { opacity: 0; }
@@ -213,6 +219,7 @@
   --shadow-by-primary: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 2px 6px -1px rgb(101 68 238 / 0.5);
   --shadow-by-primary-hover: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 8px 18px -6px rgb(101 68 238 / 0.7);
   --shadow-by-field: inset 0 1px 2px rgb(22 20 29 / 0.07);
+  --shadow-by-dialog: 0 0 0 1px rgb(22 20 29 / 0.08), 0 24px 60px -16px rgb(22 20 29 / 0.35);
 
   /* Motion curves */
   --ease-by-out: var(--by-ease-out);
