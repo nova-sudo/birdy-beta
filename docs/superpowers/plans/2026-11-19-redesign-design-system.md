@@ -1,6 +1,6 @@
 # Birdy Redesign Design System Implementation Plan
 
-**Status:** in progress. Phase 1 done 2026-11-19; phase 2 next.
+**Status:** in progress. Phases 1 and 2 done 2026-11-19; phase 3 next.
 
 **Goal:** Build the `by-` tokens, the `by` component kit and the new app shell in `birdy-beta`, shown on a development-only `/kit` page, with no change to any existing page.
 
@@ -91,7 +91,7 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 
 **Verification:** `npx vitest run src` passes; `npm run build` passes; on the dev server `/kit` renders without the old sidebar or top bar; a production build serves "not found" for `/kit`; a screenshot of `/kit` shows Poppins headings and the token values from the spec.
 
-### Phase 2: Actions and inputs
+### Phase 2: Actions and inputs (done)
 
 **Outcome:** the controls from board 06 (Lifted) exist in the kit and appear on `/kit` in every state.
 
@@ -104,9 +104,11 @@ Out of scope (from the spec): rebuilding any screen, replacing the live sidebar,
 - `button.jsx`: kinds primary, secondary, soft, ghost, danger; sizes sm, md, lg; icon-only; loading.
 - `field.jsx`: text field, search field and dropdown trigger sharing one surface; error state with a message.
 - `ask-bar.jsx`.
-- `switch.jsx`, `checkbox.jsx`, `radio.jsx` on Radix.
+- `choice.jsx`: switch, checkbox and radio on Radix, in one file because they share the label wrapper and the pop animation.
+- `motion.js`: the shared transition, lift and focus-ring class recipes.
+- `src/app/kit/sections/controls.jsx`: the preview section (the page stays a server component).
 - Modify `package.json`: add `@radix-ui/react-radio-group`.
-- Modify `src/app/kit/page.jsx`: a section per control showing rest, hover, press, keyboard focus, disabled, loading and error where they apply.
+- Modify `src/app/kit/page.jsx`: mount the section. It shows rest, with-icon, loading, disabled and error; hover, press and keyboard focus are live states, checked by driving the page (hover, Tab, Space, arrow keys) rather than frozen copies.
 
 **Verification:** `npx vitest run src` and `npm run build` pass; screenshot the controls section and compare with option C on `06-controls.html`; tab through the section with the keyboard and confirm every control shows the 2px accent focus outline and operates with Space, Enter and arrow keys.
 
