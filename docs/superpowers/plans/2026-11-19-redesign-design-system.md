@@ -1,6 +1,6 @@
 # Birdy Redesign Design System Implementation Plan
 
-**Status:** in progress. Phases 1 to 5 done and the pull request opened 2026-11-19. Phase 6 (tests) follows the pull request's review.
+**Status:** in progress. All six phases done 2026-11-19. Pull request #175 is open and includes the tests.
 
 **Goal:** Build the `by-` tokens, the `by` component kit and the new app shell in `birdy-beta`, shown on a development-only `/kit` page, with no change to any existing page.
 
@@ -174,9 +174,11 @@ Everything in the shell takes its data as props. Nothing here calls the API.
 - Open the pull request against `main` when the user says to push, using the `nova-sudo` login.
 - After the shell review (user, 2026-11-19): the Agency Ops section header shows a sparkle icon tile instead of the mascot; on the rail the mascot keeps its 40px frame with the bird scaled up 18% inside it.
 
-### Phase 6: Tests
+### Phase 6: Tests (done)
 
-Entered only after the pull request is opened and reviewed.
+Planned for after the pull request's review. The user chose to start it once the pull request was open (2026-11-19), so the tests ship in the same pull request.
+
+Written as five files: `__tests__/by-hygiene.test.js`, `cn.test.js`, `controls.test.jsx`, `display.test.jsx` and `shell/__tests__/shell.test.jsx` (79 tests), with `__tests__/jsdom.js` holding the polyfills Radix needs.
 
 **Covers:**
 
