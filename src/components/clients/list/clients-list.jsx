@@ -174,8 +174,8 @@ export function ClientsList({ header, footer, viewKey = "clients", column = fals
       {header ? header({ datePreset, rangeLabel, setDatePreset, dateMenu }) : (
       <header className="flex shrink-0 items-center gap-2.5 border-b border-by-line bg-by-surface px-7 py-3.5">
         <div className="min-w-0 flex-1">
-          <h1 className="font-by-display text-by-title font-semibold tracking-[-0.01em]">Clients</h1>
-          <p className="truncate text-by-body-sm text-by-muted">
+          <h1 className="font-by-display text-by-title leading-[1.2] font-bold tracking-[-0.01em]">Clients</h1>
+          <p className="truncate text-by-body text-by-muted">
             {loading ? "Loading your clients" : `${counts.risk} ${counts.risk === 1 ? "client" : "clients"} at risk · ${counts.all} active`}
           </p>
         </div>

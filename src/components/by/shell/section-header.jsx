@@ -27,12 +27,13 @@ export function SectionHeader({ section, subtitle, tabs, tab, onTabChange, more,
       {...props}
     >
       <div className="order-1 flex min-w-0 items-center gap-3">
-        <span aria-hidden="true" className={cn("grid size-10 shrink-0 place-items-center rounded-by-lg [&_svg]:size-[19px]", section.tile)}>
+        <span aria-hidden="true" className={cn("grid size-[2.7rem] shrink-0 place-items-center rounded-by-lg [&_svg]:size-[21px]", section.tile)}>
           <Icon />
         </span>
         <div className="min-w-0">
-          <h1 className="truncate font-by-display text-by-title font-semibold tracking-[-0.01em] text-by-text">{section.name}</h1>
-          <p className="truncate text-by-body-sm text-by-muted">{subtitle ?? section.description}</p>
+          {/* Sizes measured on the reference: a 42px tile, a 23px bold title, a 13.5px line under it. */}
+          <h1 className="truncate font-by-display text-by-title leading-[1.2] font-bold tracking-[-0.01em] text-by-text">{section.name}</h1>
+          <p className="truncate text-by-body text-by-muted">{subtitle ?? section.description}</p>
         </div>
       </div>
       <div className="order-3 col-span-2 min-[1440px]:order-2 min-[1440px]:col-span-1">
