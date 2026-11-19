@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Button, Checkbox, Dialog, DialogBody, DialogContent, DialogFooter, DropdownTrigger, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger,
-  Notice, Pill, SearchField, Switch, Table, TableBody, TableHead, Td, Th, Tr,
+  Notice, Pill, SearchField, Switch, Table, TableBody, TableHead, TableScroll, Td, Th, Tr,
 } from "@/components/by";
 import { apiRequest } from "@/lib/api";
 import { MAX_IMPORT_SELECTION, autoCheckedIds, importPayload, listedAccounts, orderRows, resolveRows, rowMatches } from "@/lib/import-review";
@@ -165,7 +165,8 @@ export function ImportDialog({ open, onOpenChange, onImported }) {
         title="Import clients from GoHighLevel"
         description={reading ? "Reading your sub-accounts and matching them to your Meta ad accounts." : hasRecency ? "We ticked the sub-accounts with a lead in the last 7 days. Check the names and ad accounts, then import." : "These are the sub-accounts you haven’t imported yet. Check the names and ad accounts, then import."}
       >
-        <DialogBody className="min-h-[26rem]">
+        {/* The body does not scroll: the figures and search stay put and only the table scrolls. */}
+        <DialogBody className="flex min-h-[26rem] flex-col overflow-hidden">
           {reading ? (
             <div role="status" className="mx-auto flex max-w-sm flex-col items-center gap-3 py-20 text-center">
               <div className="font-by-display text-by-heading font-semibold">Analysing your sub-accounts</div>
@@ -181,17 +182,17 @@ export function ImportDialog({ open, onOpenChange, onImported }) {
           ) : (
             <>
               {failure && <Notice tone="danger" className="mb-3">{failure}</Notice>}
-              <div className="flex gap-2.5">
+              <div className="flex shrink-0 gap-2.5">
                 <Stat value={unimported.length} label="Sub-accounts found" />
                 <Stat value={hasRecency ? unimported.filter((a) => a.leads_recent_90 === true).length : "—"} label="With leads in 90 days" />
                 <Stat value={activeCount} label="Active" />
                 <Stat value={resolved.length - activeCount} label="Inactive" />
               </div>
-              <div className="my-3 flex items-center gap-3">
+              <div className="my-3 flex shrink-0 items-center gap-3">
                 <SearchField className="flex-1" placeholder={`Search ${plural(resolved.length, "sub-account")} or ad accounts`} value={search} onChange={(e) => setSearch(e.target.value)} />
                 <Switch label="Hide inactive" checked={hideInactive} onCheckedChange={setHideInactive} />
               </div>
-              <div className="overflow-hidden rounded-by-lg border border-by-line">
+              <TableScroll className="shadow-none">
                 <Table className="table-fixed">
                   <colgroup><col className="w-10" /><col className="w-[23%]" /><col className="w-[20%]" /><col /><col className="w-44" /><col className="w-28" /></colgroup>
                   <TableHead>
@@ -259,8 +260,8 @@ export function ImportDialog({ open, onOpenChange, onImported }) {
                   </TableBody>
                 </Table>
                 {visible.length === 0 && <p className="px-4 py-6 text-center text-by-body-sm text-by-text-2">No sub-account or ad account matches “{search.trim()}”.</p>}
-              </div>
-              <p className="mt-2 text-by-caption text-by-muted" aria-live="polite">
+              </TableScroll>
+              <p className="mt-2 shrink-0 text-by-caption text-by-muted" aria-live="polite">
                 {plural(selected.length, "sub-account")} selected, up to {MAX_IMPORT_SELECTION} at once
                 {hiddenChecked > 0 && ` · ${plural(hiddenChecked, "selected row")} hidden by this search`}
                 {hiddenInactive > 0 && ` · ${hiddenInactive} inactive hidden`}

@@ -23,9 +23,10 @@ export const PILL_EXTRA = cn(
  * @param {string} props["aria-label"] what the tabs switch between
  * @param {React.ReactNode} [props.trailing] sits inside the pill after the tabs, e.g. a "More" menu trigger (use PILL_EXTRA for its classes)
  * @param {React.ReactNode} [props.toolbar] controls on the same row as the pill, pushed to the right (sort, search, columns)
+ * @param {boolean} [props.fill] take the remaining height of a flex column, so a panel can hold a table that scrolls inside itself
  * @param {React.ReactNode} [props.children] TabPanel elements, one per item
  */
-export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, trailing, toolbar, className, children, ...props }) {
+export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, trailing, toolbar, fill = false, className, children, ...props }) {
   const listRef = useRef(null);
   const [chip, setChip] = useState(null);
 
@@ -45,8 +46,8 @@ export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, 
   }, [value, items]);
 
   return (
-    <TabsPrimitive.Root value={value} onValueChange={onValueChange} {...props}>
-      <div className={toolbar ? "flex flex-wrap items-center gap-x-4 gap-y-2.5" : undefined}>
+    <TabsPrimitive.Root value={value} onValueChange={onValueChange} className={fill ? "flex min-h-0 flex-1 flex-col" : undefined} {...props}>
+      <div className={toolbar ? "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2.5" : undefined}>
       <TabsPrimitive.List
         ref={listRef}
         aria-label={ariaLabel}

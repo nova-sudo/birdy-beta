@@ -7,7 +7,7 @@ import { Calendar, ChevronDown, Files, Plus, SearchX, Tag, Users } from "lucide-
 import getSymbolFromCurrency from "currency-symbol-map";
 import {
   Button, Card, ColumnsMenu, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Notice, Pill,
-  RowArrow, SearchField, Skeleton, TabPanel, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
+  RowArrow, SearchField, Skeleton, TabPanel, TabPill, Table, TableBody, TableHead, TableScroll, Td, Th, Tr,
 } from "@/components/by";
 import { clientHref } from "@/components/shell/nav";
 import { useClientActions } from "@/components/shell/client-actions";
@@ -171,11 +171,13 @@ export function ClientsList() {
         </Menu>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-7 pt-4.5 pb-8">
+      {/* Nothing here scrolls: the tabs and toolbar stay put and only the table scrolls, inside its card. */}
+      <div className="flex min-h-0 flex-1 flex-col px-7 pt-4.5 pb-6">
         <TabPill
           items={tabs}
           value={tab}
           onValueChange={setTab}
+          fill
           aria-label="Clients by status"
           toolbar={
             <>
@@ -205,7 +207,7 @@ export function ClientsList() {
           }
         >
           {TABS.map((t) => (
-            <TabPanel key={t.key} value={t.key} className="mt-3.5">
+            <TabPanel key={t.key} value={t.key} className="mt-3.5 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
               {error ? (
                 <Notice tone="danger" action={<Button size="sm" onClick={() => refresh()}>Retry</Button>}>Couldn’t load your clients. Check your connection and try again.</Notice>
               ) : !loading && rows.length === 0 ? (
@@ -225,11 +227,11 @@ export function ClientsList() {
                   )}
                 </Card>
               ) : (
-                <Card className={`overflow-x-auto motion-safe:animate-[by-enter_var(--by-dur-enter)_var(--by-ease-spring)] ${columnsOpen ? "min-[1100px]:mr-60" : ""}`}>
+                <TableScroll className={`motion-safe:animate-[by-enter_var(--by-dur-enter)_var(--by-ease-spring)] ${columnsOpen ? "min-[1100px]:mr-60" : ""}`}>
                   <Table>
                     <TableHead>
                       <tr>
-                        <Th sort={sort?.id === "name" ? sort.dir : null} onSort={() => press("name")} className="sticky left-0 z-10 min-w-64 bg-by-surface">Client</Th>
+                        <Th sort={sort?.id === "name" ? sort.dir : null} onSort={() => press("name")} className="left-0 z-20 min-w-64">Client</Th>
                         <Th className="w-36">Status</Th>
                         {columns.map((c) => (
                           <Th key={c.id} numeric sort={sort?.id === c.id ? sort.dir : null} onSort={() => press(c.id)}>
@@ -259,8 +261,8 @@ export function ClientsList() {
                                 onClick={() => router.push(clientHref(row.id))}
                                 className={row.listStatus === "off" ? "text-by-muted" : undefined}
                               >
-                                {/* Pinned, so the name stays in view when many columns scroll sideways. */}
-                                <Td className="sticky left-0 max-w-80 truncate bg-by-surface font-semibold transition-colors duration-(--by-dur-fast) ease-by-out group-hover:bg-by-canvas" title={row.name}>
+                                {/* Pinned, so the name stays in view when many columns scroll sideways. Its divider is an inset shadow: a collapsed border does not travel with a pinned cell. */}
+                                <Td className="sticky left-0 max-w-80 truncate border-b-0 bg-by-surface font-semibold shadow-[inset_0_-1px_0_var(--by-line-soft)] transition-colors duration-(--by-dur-fast) ease-by-out group-hover:bg-by-canvas" title={row.name}>
                                   <Link href={clientHref(row.id)} onClick={(e) => e.stopPropagation()} className="rounded-by-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">{row.name}</Link>
                                 </Td>
                                 <Td>
@@ -283,7 +285,7 @@ export function ClientsList() {
                           })}
                     </TableBody>
                   </Table>
-                </Card>
+                </TableScroll>
               )}
             </TabPanel>
           ))}

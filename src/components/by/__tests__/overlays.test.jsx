@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import "./jsdom"
-import { Button, ColumnsMenu, Dialog, DialogBody, DialogContent, DialogFooter, Notice, OptionCard, Skeleton, Stepper, Table, TableHead, Th } from ".."
+import { Button, ColumnsMenu, Dialog, DialogBody, DialogContent, DialogFooter, Notice, OptionCard, Skeleton, Stepper, Table, TableHead, TableScroll, Th } from ".."
 
 function Harness({ onOpenChange = () => {} }) {
   const [open, setOpen] = useState(false)
@@ -115,6 +115,14 @@ describe("sortable header", () => {
     expect(onSort).toHaveBeenCalledOnce()
     rerender(<Table><TableHead><tr><Th onSort={onSort} sort="desc">Spend</Th></tr></TableHead></Table>)
     expect(screen.getByRole("columnheader", { name: "Spend" })).toHaveAttribute("aria-sort", "descending")
+  })
+})
+
+describe("tables scroll inside themselves", () => {
+  it("keeps the header row in place and scrolls only the table's own container", () => {
+    render(<TableScroll data-testid="scroll"><Table><TableHead><tr><Th>Client</Th></tr></TableHead></Table></TableScroll>)
+    expect(screen.getByTestId("scroll")).toHaveClass("min-h-0", "overflow-auto")
+    expect(screen.getByRole("columnheader", { name: "Client" })).toHaveClass("sticky", "top-0", "bg-by-surface")
   })
 })
 

@@ -2,7 +2,13 @@ import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import { FOCUS_RING } from "./motion";
 import { cn } from "./cn";
 
-/** A data table. Put it inside a Card for the bordered look. */
+/**
+ * A data table.
+ *
+ * Tables scroll inside themselves: put the table in a TableScroll (or any
+ * height-bounded element with overflow) and its header row stays in place
+ * while the rows move under it. The page around it does not scroll.
+ */
 export function Table({ className, ...props }) {
   return <table className={cn("w-full border-collapse font-by-body text-by-body text-by-text", className)} {...props} />;
 }
@@ -44,7 +50,9 @@ export function Th({ numeric = false, sort, onSort, className, children, ...prop
       scope="col"
       aria-sort={onSort ? SORT_LABEL[sort] ?? "none" : undefined}
       className={cn(
-        "h-10 whitespace-nowrap border-b border-by-line px-4 text-left text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted",
+        // Sticky, so the header stays put while the rows scroll beneath it. The rule under it is an inset
+        // shadow, not a border: a collapsed border does not travel with a sticky cell.
+        "sticky top-0 z-10 h-10 whitespace-nowrap bg-by-surface px-4 text-left text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted shadow-[inset_0_-1px_0_var(--by-line)]",
         numeric && "text-right",
         className,
       )}
@@ -75,6 +83,20 @@ export function Th({ numeric = false, sort, onSort, className, children, ...prop
 /** A body cell. @param {boolean} [props.numeric] right-aligned with figures that line up in columns */
 export function Td({ numeric = false, className, ...props }) {
   return <td className={cn("h-12 whitespace-nowrap border-b border-by-line-soft px-4", numeric && "text-right tabular-nums", className)} {...props} />;
+}
+
+/**
+ * The bordered card a table scrolls inside. It takes the height its parent
+ * leaves it (the parent must be a flex column with a bounded height) and
+ * scrolls both ways; a short table stays its own height.
+ */
+export function TableScroll({ className, ...props }) {
+  return (
+    <div
+      className={cn("min-h-0 overflow-auto overscroll-contain rounded-by-lg border border-by-line bg-by-surface shadow-by-card", className)}
+      {...props}
+    />
+  );
 }
 
 /** The trailing arrow on an interactive row. It nudges right when the row is hovered. */
