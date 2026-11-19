@@ -122,3 +122,42 @@ export function rankCampaigns(campaigns, { cplTarget = null, limit = 6, money = 
 
 /** "Good morning" / "Good afternoon" / "Good evening" for an hour of the day. */
 export const greeting = (hour) => (hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+
+// ── The period before, for the chart's dashed line ─────────────────────────
+
+const DAY_MS = 86_400_000;
+const toDay = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+const fromDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+/** `iso` moved by a number of days (negative for earlier). Dates are yyyy-mm-dd. */
+export const shiftDay = (iso, days) => fromDay(toDay(iso) + days * DAY_MS);
+
+/**
+ * The window of the same length immediately before `start`..`end`.
+ * @returns {{start: string, end: string, days: number} | null} null for an open-ended range, or one too long to be worth comparing
+ */
+export function previousWindow(start, end) {
+  if (!start || !end) return null;
+  const days = Math.round((toDay(end) - toDay(start)) / DAY_MS) + 1;
+  if (!(days >= 2) || days > 92) return null;
+  return { start: shiftDay(start, -days), end: shiftDay(start, -1), days };
+}
+
+/**
+ * For each day the chart plots, the figure from the matching day one window earlier.
+ * A day with nothing recorded counts as zero. Null when the earlier window has no data at all.
+ *
+ * @param {string[]} dates the plotted days, in order
+ * @param {{date: string}[]} rows per-day rows covering the earlier window
+ * @param {number} days the window's length
+ * @param {(row: object) => number} valueOf
+ */
+export function previousValues(dates, rows, days, valueOf) {
+  const earliest = dates.length ? shiftDay(dates[0], -days) : null;
+  const byDate = new Map();
+  for (const row of rows ?? []) {
+    if (row?.date) byDate.set(row.date, (byDate.get(row.date) ?? 0) + (Number(valueOf(row)) || 0));
+  }
+  if (!earliest || ![...byDate.keys()].some((d) => d >= earliest && d < dates[0])) return null;
+  return dates.map((d) => byDate.get(shiftDay(d, -days)) ?? 0);
+}

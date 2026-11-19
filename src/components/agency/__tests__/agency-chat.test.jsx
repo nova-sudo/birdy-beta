@@ -27,7 +27,7 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }))
 
 const ok = (body) => Promise.resolve({ ok: true, json: () => Promise.resolve(body) })
 const LIST = [
-  { session_id: "s1", title: "Which call centre is furthest behind?", scope: "client", client_name: "Beaulea Clinic", updated_at: new Date().toISOString() },
+  { session_id: "s1", title: "Which call centre is furthest behind?", scope: "client", client_name: "Beaulea Clinic", client_group_id: "b", updated_at: new Date().toISOString() },
   { session_id: "s2", title: "Best creatives this month", scope: "global", updated_at: new Date(Date.now() - 40 * 864e5).toISOString() },
 ]
 
@@ -58,13 +58,13 @@ describe("Agency Ops chat", () => {
   it("sends what is typed, about the whole agency", async () => {
     render(<AgencyChat />)
     await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "Why did closes drop?{Enter}")
-    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat", expect.objectContaining({ text: "Why did closes drop?", clientGroupId: null }), expect.any(Object))
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ text: "Why did closes drop?", page: null, clientGroupId: null }), expect.any(Object))
   })
 
   it("opens a saved conversation and marks it", async () => {
     const view = render(<AgencyChat />)
     await userEvent.click(await screen.findByRole("button", { name: /^Which call centre/ }))
-    await waitFor(() => expect(hydrateChat).toHaveBeenCalledWith("by_ops_chat", expect.objectContaining({ sessionId: "s1" })))
+    await waitFor(() => expect(hydrateChat).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ sessionId: "s1" })))
     view.rerender(<AgencyChat />)
     expect(screen.getByText("Beaulea Clinic.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Which call centre/ })).toHaveAttribute("aria-current", "true")
@@ -89,9 +89,21 @@ describe("Agency Ops chat", () => {
     expect(screen.getByText("Aura", { selector: "b" }).parentElement).toHaveTextContent("Scoped to Aura · At risk")
     resetChat.mockClear()
     await userEvent.click(screen.getByRole("button", { name: "New chat" }))
-    expect(resetChat).toHaveBeenCalledWith("by_ops_chat")
+    expect(resetChat).toHaveBeenCalledWith("by_ops_chat_a")
     await userEvent.click(screen.getByRole("tab", { name: "Bird's Eye" }))
     expect(push).toHaveBeenCalledWith("/dashboard?client=a")
+  })
+
+  it("inside a client: its own thread, only its saved conversations, and every question limited to it", async () => {
+    route.search = "client=a"
+    apiRequest.mockImplementation(() => ok({ conversations: [...LIST, { session_id: "s3", title: "Aura's CPL", scope: "client", client_name: "Aura", client_group_id: "a", updated_at: new Date().toISOString() }] }))
+    render(<AgencyChat />)
+    const list = screen.getByRole("navigation", { name: "Conversations" })
+    expect(await within(list).findByText("Aura's CPL")).toBeInTheDocument()
+    expect(within(list).queryByText("Which call centre is furthest behind?")).not.toBeInTheDocument()
+    expect(within(list).queryByText("Best creatives this month")).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "How are they doing?{Enter}")
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
   })
 
   it("says so when the saved conversations cannot be loaded, and retries", async () => {

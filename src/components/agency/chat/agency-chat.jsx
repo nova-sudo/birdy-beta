@@ -20,7 +20,6 @@ import { ChatThread } from "./thread";
 import { useAgentChat } from "./use-agent-chat";
 
 const OPS = SECTIONS.find((s) => s.id === "ops");
-const SESSION_KEY = "by_ops_chat";
 const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
 
 /**
@@ -34,6 +33,8 @@ export function AgencyChat() {
   const search = useSearchParams();
   const clientId = search.get("client") || null;
   const wanted = search.get("c") || null;
+  // Each client has its own thread, so one client's conversation never shows under another.
+  const SESSION_KEY = `by_ops_chat_${clientId ?? "agency"}`;
 
   const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
   const client = useMemo(() => (clientId ? clientGroups.find((g) => g.id === clientId) ?? null : null), [clientGroups, clientId]);
@@ -71,7 +72,7 @@ export function AgencyChat() {
   const newChat = useCallback(() => {
     resetChat(SESSION_KEY);
     setActiveId(null);
-  }, []);
+  }, [SESSION_KEY]);
 
   const open = useCallback(async (sessionId) => {
     setOpening(true);
@@ -87,7 +88,7 @@ export function AgencyChat() {
     } finally {
       setOpening(false);
     }
-  }, []);
+  }, [SESSION_KEY]);
 
   // Arriving with ?c=<id> (from a page's conversation column) opens that conversation; otherwise a fresh chat.
   const arrived = useRef(false);
@@ -115,7 +116,11 @@ export function AgencyChat() {
     }
   };
 
-  const groups = useMemo(() => groupConversations(conversations), [conversations]);
+  // Inside a client only that client's saved conversations are listed.
+  const groups = useMemo(
+    () => groupConversations(clientId ? conversations.filter((c) => c.scope === "client" && c.client_group_id === clientId) : conversations),
+    [conversations, clientId],
+  );
   const empty = chat.messages.length === 0 && !chat.loading;
   const starters = startersFor(client ? "client_detail" : "dashboard").slice(0, 3);
   const subtitle = client ? <>Scoped to <b className="font-semibold text-by-text">{client.name}</b> · {STATUS_WORDS[statusOf(client)]}</> : undefined;
@@ -143,7 +148,7 @@ export function AgencyChat() {
             ) : listState === "error" ? (
               <Notice tone="danger" action={<Button size="sm" onClick={loadList}>Retry</Button>}>Couldn’t load your conversations.</Notice>
             ) : groups.length === 0 ? (
-              <p className="px-2.5 pt-2 text-by-body-sm text-by-muted">Your conversations are saved here.</p>
+              <p className="px-2.5 pt-2 text-by-body-sm text-by-muted">{client ? `Conversations about ${client.name} are saved here.` : "Your conversations are saved here."}</p>
             ) : groups.map((group) => (
               <section key={group.label} aria-label={group.label}>
                 <h3 className="px-2.5 pt-3 pb-1.5 text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted">{group.label}</h3>

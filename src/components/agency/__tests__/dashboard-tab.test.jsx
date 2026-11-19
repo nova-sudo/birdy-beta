@@ -9,7 +9,15 @@ const sendChatMessage = vi.fn()
 const list = { props: null }
 
 vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 5 }))
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/dashboard/table", useSearchParams: () => new URLSearchParams("") }))
+const route = { search: "" }
+const replace = vi.fn()
+const hubs = { leads: null, ads: null, calls: null }
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => "/dashboard/table", useSearchParams: () => new URLSearchParams(route.search) }))
+vi.mock("@/components/contacts/LeadsContent", () => ({ LeadsContent: (p) => { hubs.leads = p; return <p>the Lead Hub table</p> } }))
+vi.mock("@/components/campaigns/MarketingContent", () => ({ MarketingContent: (p) => { hubs.ads = p; return <p>the Marketing Hub table</p> } }))
+vi.mock("@/components/callcenter/CallCentreContent", () => ({ CallCentreContent: (p) => { hubs.calls = p; return <p>the Sales Hub table</p> } }))
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "pd" }))
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: () => ({ clientGroups: [{ id: "a", name: "Aura", client_status: "Active", health: "Critical" }, { id: "b", name: "Beaulea Clinic", client_status: "Active" }], loading: false, error: null, datePreset: "last_7d", setDatePreset: vi.fn(), refresh: vi.fn(), invalidate: vi.fn() }) }))
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
@@ -21,7 +29,10 @@ vi.mock("@/components/clients/list/clients-list", () => ({
   },
 }))
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  route.search = ""
+})
 
 describe("Agency Ops' Dashboard tab", () => {
   it("is the Clients table under the Agency Ops header, with the date range and the ask bar", () => {
@@ -48,5 +59,48 @@ describe("Agency Ops' Dashboard tab", () => {
     render(<DashboardTab />)
     await userEvent.click(within(screen.getByRole("tablist", { name: "Agency Ops views" })).getByRole("tab", { name: "Bird's Eye" }))
     expect(push).toHaveBeenCalledWith("/dashboard")
+  })
+})
+
+describe("the Dashboard tab inside one client", () => {
+  it("opens on the client's Leads table, with Ads and Calls beside it, each fed only that client", () => {
+    route.search = "client=a"
+    render(<DashboardTab />)
+    expect(screen.getByText("Aura", { selector: "b" }).parentElement).toHaveTextContent("Scoped to Aura · At risk")
+    const views = screen.getByRole("tablist", { name: "Aura's tables" })
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Leads", "Ads", "Calls"])
+    expect(screen.getByText("the Lead Hub table")).toBeInTheDocument()
+    expect(hubs.leads.clientGroups.map((g) => g.id)).toEqual(["a"])
+    expect(hubs.leads.selectedClientGroup).toBe("a")
+    expect(screen.queryByText("the clients table")).not.toBeInTheDocument()
+  })
+
+  it("shows the Marketing Hub table on Ads and the Sales Hub table on Calls", async () => {
+    route.search = "client=a&view=ads"
+    const ads = render(<DashboardTab />)
+    expect(screen.getByText("the Marketing Hub table")).toBeInTheDocument()
+    expect(hubs.ads).toMatchObject({ showGroupFilter: false, showHeader: false })
+    expect(hubs.ads.clientGroups.map((g) => g.id)).toEqual(["a"])
+    await userEvent.click(screen.getByRole("tab", { name: "Calls" }))
+    expect(replace).toHaveBeenCalledWith("/dashboard/table?client=a&view=calls")
+    ads.unmount()
+    route.search = "client=a&view=calls"
+    render(<DashboardTab />)
+    expect(screen.getByText("the Sales Hub table")).toBeInTheDocument()
+    expect(hubs.calls.clientGroups.map((g) => g.id)).toEqual(["a"])
+  })
+
+  it("limits a question to this client, with a separate thread for each table", async () => {
+    route.search = "client=a&view=calls"
+    render(<DashboardTab />)
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about Aura's calls" }), "How many were answered?{Enter}")
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_calls_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
+    expect(screen.getByRole("complementary", { name: "Agency Ops · Aura conversation" })).toBeInTheDocument()
+  })
+
+  it("says so for a client that is not in the account", () => {
+    route.search = "client=zzz"
+    render(<DashboardTab />)
+    expect(screen.getByRole("heading", { name: "This client isn’t in your account" })).toBeInTheDocument()
   })
 })

@@ -14,7 +14,8 @@ import { markUISubmitted, sendChatMessage, useChat } from "@/lib/chat-store";
  *
  * @param {string} options.sessionKey which conversation this is
  * @param {string|null} [options.page] the page slug the backend uses for context
- * @param {{id: string, name: string}|null} [options.client] narrows the question to one client
+ * @param {{id: string, name: string}|null} [options.client] limits the conversation to one client. The backend then
+ *   answers only about that client and pins every data request to it, whatever the question asks for.
  * @param {(sessionId: string) => void} [options.onSessionId] a new conversation learned its id
  * @param {() => void} [options.onSettled] a reply (or a failure) came back
  */
@@ -37,7 +38,9 @@ export function useAgentChat({ sessionKey, page = null, client = null, onSession
     }
     await sendChatMessage(
       sessionKey,
-      { text: text.trim(), page, clientGroupId: client?.id ?? null, clientName: client?.name ?? null },
+      // "client_detail" is the page the backend treats as one client only: its prompt refuses other clients and
+      // the server pins each tool call to this client's id. So a client always wins over the tab's own page name.
+      { text: text.trim(), page: client ? "client_detail" : page, clientGroupId: client?.id ?? null, clientName: client?.name ?? null },
       {
         onSessionId,
         on412: () => {

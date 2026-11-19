@@ -7,15 +7,23 @@ import { AskBar, AskPanel, Button, SECTIONS, SectionHeader } from "@/components/
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { ClientDashboard } from "@/components/agency/client-dashboard";
 import { ClientsList } from "@/components/clients/list/clients-list";
 
 const OPS = SECTIONS.find((s) => s.id === "ops");
 
 /**
- * Agency Ops' Dashboard tab: the Clients table, with the ask bar under it.
- * A question opens the conversation in a column beside the table.
+ * Agency Ops' Dashboard tab. For the agency it is the Clients table with the
+ * ask bar under it; inside a client (`?client=<id>`) it is that client's Leads,
+ * Ads and Calls tables.
  */
 export function DashboardTab() {
+  const clientId = useSearchParams().get("client");
+  return clientId ? <ClientDashboard clientId={clientId} /> : <AgencyDashboard />;
+}
+
+/** The Clients table under the Agency Ops header. A question opens the conversation in a column beside it. */
+function AgencyDashboard() {
   const router = useRouter();
   const tabs = useOpsTabs();
   const search = useSearchParams();

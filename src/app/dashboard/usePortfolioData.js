@@ -22,6 +22,7 @@ import {
 } from "@/lib/portfolio-series";
 import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 import { isChangeActivity } from "@/lib/activity";
+import { previousValues, previousWindow } from "@/lib/birds-eye";
 import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 
 // ─── Where the figures come from ───────────────────────────────────────────
@@ -107,7 +108,7 @@ export function usePortfolioData({
   const [previousGroups, setPreviousGroups] = useState(null);
   // One row per day: { date, leads, closes }. Counted in Mongo, so this is the
   // whole range rather than the newest 5,000 rows.
-  const [leadDays, setLeadDays] = useState([]);
+  const [leadDaysState, setLeadDays] = useState([]);
   const [rail, setRail] = useState({
     suggestions: [],
     activity: [],
@@ -177,7 +178,9 @@ export function usePortfolioData({
       try {
         const { start_date, end_date } = presetToDateRange(preset);
         const params = new URLSearchParams({ groups: groupIds });
-        if (start_date) params.set("start_date", start_date);
+        // Asked for from one window earlier, so the chart can draw the period before as a dashed line.
+        const before = previousWindow(start_date, end_date);
+        if (start_date) params.set("start_date", before?.start ?? start_date);
         if (end_date) params.set("end_date", end_date);
 
         const res = await apiRequest(`/api/facebook-leads/series?${params}`, {
@@ -332,12 +335,25 @@ export function usePortfolioData({
     // Leads and closes are counted server-side across the whole range, so
     // there is no sample to scale — the days roll straight up into whichever
     // granularity is selected.
+    // The per-day rows reach one window further back than the range (see the
+    // request above); `leadDays` here is the range itself, `allLeadDays` both.
+    const allLeadDays = leadDaysState;
+    const range = presetToDateRange(preset);
+    const before = previousWindow(range.start_date, range.end_date);
+    const leadDays = range.start_date ? allLeadDays.filter((d) => d.date >= range.start_date) : allLeadDays;
+    // The dashed line only makes sense point for point, so it is offered at daily granularity only.
+    const plotted = [...new Set(leadDays.map((d) => d.date))].sort();
+    const earlier = (rows, valueOf) =>
+      before && granularity === "Daily" ? previousValues(plotted, rows, before.days, valueOf) : null;
+
     const leadSeries = {
       ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.leads),
+      previousValues: earlier(allLeadDays, (d) => d.leads),
       estimated: false,
     };
     const closeSeries = {
       ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.closes),
+      previousValues: earlier(allLeadDays, (d) => d.closes),
       estimated: false,
     };
 
@@ -351,8 +367,10 @@ export function usePortfolioData({
     const spendDays = (current.dailySpend ?? []).filter(
       (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
     );
+    const spendDates = [...new Set(spendDays.map((d) => d.date))].sort();
     const spendSeries = {
       ...bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend),
+      previousValues: before && granularity === "Daily" ? previousValues(spendDates, current.dailySpend, before.days, (d) => d.spend) : null,
       estimated: false,
     };
 
@@ -425,7 +443,7 @@ export function usePortfolioData({
       },
     };
   }, [
-    leadDays,
+    leadDaysState,
     callRows,
     callsLoading,
     granularity,

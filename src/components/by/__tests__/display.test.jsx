@@ -224,6 +224,17 @@ describe("LineChart", () => {
     expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual(["1 Nov 2026: 3", "2 Nov 2026: 5"])
   })
 
+  it("draws the period before as a second, dashed line and reads both out", () => {
+    const { container } = render(<LineChart aria-label="Leads" values={[3, 5]} previous={[4, 9]} labels={["1 Nov", "2 Nov"]} />)
+    expect(container.querySelector("path[stroke-dasharray]")).not.toBeNull()
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("2 Nov: 5, 9 the period before")
+  })
+
+  it("leaves the dashed line out when the earlier period does not line up point for point", () => {
+    const { container } = render(<LineChart aria-label="Leads" values={[3, 5]} previous={[4]} labels={["1 Nov", "2 Nov"]} />)
+    expect(container.querySelector("path[stroke-dasharray]")).toBeNull()
+  })
+
   it("picks an axis top that divides into four round steps, whole ones for counts", () => {
     expect(niceMax(158)).toBe(200)
     expect(niceMax(410)).toBe(600)

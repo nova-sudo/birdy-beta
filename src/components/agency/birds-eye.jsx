@@ -213,7 +213,7 @@ export function BirdsEye() {
                 <div className="flex flex-wrap items-start gap-x-4 gap-y-2.5">
                   <div className="min-w-0">
                     <h3 className="text-by-body-lg font-semibold">{copy.title}</h3>
-                    <p className="text-by-body-sm text-by-muted">{rangeLabel}</p>
+                    <p className="text-by-body-sm text-by-muted">{series?.previousValues ? `${rangeLabel}, against the period before (dashed)` : rangeLabel}</p>
                   </div>
                   <div className="ml-auto">
                     <TabPill
@@ -241,6 +241,7 @@ export function BirdsEye() {
                       className="mt-1 motion-safe:animate-[by-fade_var(--by-dur-base)_var(--by-ease-out)]"
                       aria-label={`${copy.title}, ${rangeLabel.toLowerCase()}`}
                       values={series.values}
+                      previous={series.previousValues ?? undefined}
                       labels={series.labels}
                       pointLabels={series.tooltipLabels}
                       format={FORMAT[copy.kind]}

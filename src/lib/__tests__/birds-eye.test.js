@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildFinding, buildTiles, calledShare, change, chartKeys, comparisonLabel, greeting, rankCampaigns } from "../birds-eye"
+import { buildFinding, buildTiles, calledShare, change, chartKeys, comparisonLabel, greeting, previousValues, previousWindow, rankCampaigns, shiftDay } from "../birds-eye"
 
 const money = (n, d = 0) => `£${Number(n).toFixed(d)}`
 const NOW = { spend: 2888, leads: 962, closes: 29, cpl: 3, funnelCached: 1, funnelLeads: 962, funnelCalled: 280 }
@@ -110,5 +110,28 @@ describe("rankCampaigns", () => {
 describe("greeting", () => {
   it("follows the time of day", () => {
     expect([greeting(8), greeting(13), greeting(20)]).toEqual(["Good morning", "Good afternoon", "Good evening"])
+  })
+})
+
+describe("the period before", () => {
+  it("is the window of the same length just before the range", () => {
+    expect(previousWindow("2026-11-12", "2026-11-19")).toEqual({ start: "2026-11-04", end: "2026-11-11", days: 8 })
+    expect(shiftDay("2026-03-01", -1)).toBe("2026-02-28")
+  })
+
+  it("does not exist for an open range, a single day or a very long range", () => {
+    expect(previousWindow(null, null)).toBeNull()
+    expect(previousWindow("2026-11-19", "2026-11-19")).toBeNull()
+    expect(previousWindow("2026-01-01", "2026-11-19")).toBeNull()
+  })
+
+  it("lines each plotted day up with the same day one window earlier, counting a missing day as zero", () => {
+    const rows = [{ date: "2026-11-09", leads: 4 }, { date: "2026-11-11", leads: 6 }, { date: "2026-11-12", leads: 9 }]
+    expect(previousValues(["2026-11-12", "2026-11-13", "2026-11-14"], rows, 3, (r) => r.leads)).toEqual([4, 0, 6])
+  })
+
+  it("is absent when there is nothing recorded for the earlier window", () => {
+    expect(previousValues(["2026-11-12", "2026-11-13"], [{ date: "2026-11-12", leads: 9 }], 2, (r) => r.leads)).toBeNull()
+    expect(previousValues([], [], 2, (r) => r.leads)).toBeNull()
   })
 })
