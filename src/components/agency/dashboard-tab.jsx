@@ -6,7 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { AskBar, AskPanel, Button, SECTIONS, SectionHeader } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
-import { OPS_TABS, opsTabHref } from "@/components/agency/tabs";
+import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
 import { ClientsList } from "@/components/clients/list/clients-list";
 
 const OPS = SECTIONS.find((s) => s.id === "ops");
@@ -17,8 +17,10 @@ const OPS = SECTIONS.find((s) => s.id === "ops");
  */
 export function DashboardTab() {
   const router = useRouter();
+  const tabs = useOpsTabs();
   const search = useSearchParams();
-  const chat = useAgentChat({ sessionKey: "by_ops_ask_table", page: "clients" });
+  // "dashboard" is the page name the chat backend already knows for the agency-wide view.
+  const chat = useAgentChat({ sessionKey: "by_ops_ask_table", page: "dashboard" });
   const [asking, setAsking] = useState(false);
 
   return (
@@ -30,7 +32,7 @@ export function DashboardTab() {
           header={({ dateMenu }) => (
             <SectionHeader
               section={OPS}
-              tabs={OPS_TABS}
+              tabs={tabs}
               tab="dashboard"
               onTabChange={(value) => value !== "dashboard" && router.push(opsTabHref(value, search))}
               dateRange={dateMenu}

@@ -9,6 +9,7 @@ const replace = vi.fn()
 const route = { search: "" }
 const hook = { args: null, result: null }
 
+vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 5 }))
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
   usePathname: () => "/dashboard",
@@ -73,16 +74,18 @@ describe("Bird's Eye for the agency", () => {
     expect(screen.getByText("down from 62")).toBeInTheDocument()
   })
 
-  it("greys the tab that is not built, and opens Chat and Dashboard", async () => {
+  it("opens the other tabs, and shows how many suggestions are open", async () => {
     render(<BirdsEye />)
     const views = screen.getByRole("tablist", { name: "Agency Ops views" })
     expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeEnabled()
-    expect(within(views).getByRole("tab", { name: "Suggestions" })).toBeDisabled()
+    expect(within(views).getByRole("tab", { name: /^Suggestions/ })).toHaveTextContent("Suggestions5")
     await userEvent.click(within(views).getByRole("tab", { name: "Chat" }))
     expect(push).toHaveBeenCalledWith("/dashboard/chat")
     await userEvent.click(within(views).getByRole("tab", { name: "Dashboard" }))
     expect(push).toHaveBeenCalledWith("/dashboard/table")
+    await userEvent.click(within(views).getByRole("tab", { name: /^Suggestions/ }))
+    expect(push).toHaveBeenCalledWith("/dashboard/suggestions")
   })
 
   it("switches the chart between leads, spend, calls and closed", async () => {

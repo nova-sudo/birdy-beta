@@ -8,6 +8,7 @@ const push = vi.fn()
 const sendChatMessage = vi.fn()
 const list = { props: null }
 
+vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 5 }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/dashboard/table", useSearchParams: () => new URLSearchParams("") }))
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
@@ -39,7 +40,7 @@ describe("Agency Ops' Dashboard tab", () => {
     render(<DashboardTab />)
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
     await userEvent.type(screen.getByRole("textbox", { name: /Ask Agency Ops/ }), "Who is over their limit?{Enter}")
-    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_table", expect.objectContaining({ text: "Who is over their limit?", page: "clients" }), expect.any(Object))
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_table", expect.objectContaining({ text: "Who is over their limit?", page: "dashboard" }), expect.any(Object))
     expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
   })
 

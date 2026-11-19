@@ -186,6 +186,8 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       return
     }
 
+    // Say why in the console: the reply below is all the person sees, and it hides the status.
+    if (!res.ok) console.warn(`[chat] /api/chat answered ${res.status} for page "${page ?? "none"}"`, await res.clone().text().catch(() => ""))
     const data = res.ok
       ? await res.json()
       : { reply: "Sorry, something went wrong.", tools_used: [] }

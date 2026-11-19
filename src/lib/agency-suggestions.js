@@ -1,0 +1,50 @@
+// Shaping for Agency Ops' Suggestions tab, from the dashboard summary the app already serves.
+
+import { isChangeActivity } from "@/lib/activity";
+
+const IMPACT = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+const TONE = { CRITICAL: "danger", HIGH: "danger", MEDIUM: "warning", LOW: "accent" };
+
+/**
+ * What the tab lists, from `/api/dashboard/summary`.
+ * Suggestions come back most impact first; history keeps only changes that were made, newest first as served.
+ */
+export function shapeSummary(data) {
+  const suggestions = (data?.suggestions ?? [])
+    .map((s, order) => {
+      const severity = String(s.severity ?? "MEDIUM").toUpperCase();
+      return {
+        id: s.id,
+        title: s.title ?? "",
+        why: s.description ?? s.why ?? "",
+        client: s.client ?? "",
+        severity,
+        tone: TONE[severity] ?? "warning",
+        agentId: s.agent_id ?? null,
+        order,
+      };
+    })
+    .sort((a, b) => (IMPACT[a.severity] ?? 2) - (IMPACT[b.severity] ?? 2) || a.order - b.order);
+
+  const history = (data?.activity ?? []).filter(isChangeActivity).map((a) => ({
+    id: a.id,
+    what: a.title ?? a.action ?? "",
+    client: a.client ?? "",
+    // What Birdy did on standing approval, against what a person signed off.
+    mode: a.actor === "birdy" ? "Auto-run" : "Approved",
+    when: a.time ?? "",
+  }));
+
+  return { suggestions, history };
+}
+
+const same = (a, b) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+
+/** Only the rows about one client, matched on its name (the summary carries no client id). */
+export const forClient = (rows, clientName) => (clientName ? rows.filter((r) => same(r.client, clientName)) : rows);
+
+/** The page's heading for a number of suggestions. */
+export function suggestionsHeading(count, clientName) {
+  if (count === 0) return clientName ? `No suggestions for ${clientName}` : "All looking good";
+  return `${count} ${count === 1 ? "suggestion" : "suggestions"} ${clientName ? `for ${clientName}` : "across your agency"}`;
+}

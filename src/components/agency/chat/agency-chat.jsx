@@ -6,7 +6,7 @@ import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AskBar, Button, EmptyState, Notice, SECTIONS, SectionHeader, Skeleton } from "@/components/by";
 import { useStoredUser } from "@/components/shell/account-menu";
-import { OPS_TABS, opsTabHref } from "@/components/agency/tabs";
+import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
 import { groupConversations, scopeLine } from "@/lib/agent-chat";
 import { apiRequest } from "@/lib/api";
 import { greeting } from "@/lib/birds-eye";
@@ -29,6 +29,7 @@ const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", of
  */
 export function AgencyChat() {
   const router = useRouter();
+  const tabs = useOpsTabs();
   const pathname = usePathname();
   const search = useSearchParams();
   const clientId = search.get("client") || null;
@@ -124,7 +125,7 @@ export function AgencyChat() {
       <SectionHeader
         section={OPS}
         subtitle={subtitle}
-        tabs={OPS_TABS}
+        tabs={tabs}
         tab="chat"
         onTabChange={(value) => value !== "chat" && router.push(opsTabHref(value, search))}
       />

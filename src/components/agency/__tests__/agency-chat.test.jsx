@@ -12,6 +12,7 @@ const sendChatMessage = vi.fn()
 const resetChat = vi.fn(() => { chatStore.state = { messages: [], loading: false, sessionId: null, submittedUIs: [] } })
 const hydrateChat = vi.fn((key, { sessionId, messages }) => { chatStore.state = { messages, loading: false, sessionId, submittedUIs: [] } })
 
+vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 5 }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/dashboard/chat", useSearchParams: () => new URLSearchParams(route.search) }))
 vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("@/lib/chat-store", () => ({

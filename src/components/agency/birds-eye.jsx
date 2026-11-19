@@ -11,7 +11,7 @@ import {
 import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
-import { OPS_TABS, opsTabHref } from "@/components/agency/tabs";
+import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
 import { useStoredUser } from "@/components/shell/account-menu";
 import { clientDetailHref, clientHref } from "@/components/shell/nav";
 import { CHART_COPY, buildFinding, buildTiles, chartKeys, greeting, rankCampaigns } from "@/lib/birds-eye";
@@ -41,6 +41,7 @@ const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
  */
 export function BirdsEye() {
   const router = useRouter();
+  const tabs = useOpsTabs();
   const pathname = usePathname();
   const search = useSearchParams();
   const clientId = search.get("client") || null;
@@ -134,7 +135,7 @@ export function BirdsEye() {
       <SectionHeader
         section={OPS}
         subtitle={subtitle}
-        tabs={OPS_TABS}
+        tabs={tabs}
         tab="birdseye"
         onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
         dateRange={

@@ -69,6 +69,7 @@ describe("isRebuilt", () => {
     expect(isRebuilt("/dashboard")).toBe(true)
     expect(isRebuilt("/dashboard/chat")).toBe(true)
     expect(isRebuilt("/dashboard/table")).toBe(true)
+    expect(isRebuilt("/dashboard/suggestions")).toBe(true)
     expect(isRebuilt("/clients/abc")).toBe(false)
     expect(isRebuilt("/campaigns")).toBe(false)
   })
