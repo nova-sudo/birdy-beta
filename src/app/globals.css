@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "dashkit/styles.css";
+@import "../styles/tokens.css";
 
 @custom-variant shared (&:is(.shared *));
 

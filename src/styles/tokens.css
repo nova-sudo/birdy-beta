@@ -1,0 +1,198 @@
+/* ── Birdy redesign tokens ───────────────────────────────────────────────
+   Spec: docs/superpowers/specs/2026-11-19-redesign-design-system-design.md
+
+   Three layers, the same shape as the shadcn block in globals.css:
+     1. raw values   (--by-grey-*, --by-purple-*, ...)   only this file reads them
+     2. roles        (--by-canvas, --by-text, ...)        what a value is for
+     3. @theme       (--color-by-*, ...)                  turns roles into utilities
+
+   Components in src/components/by read the utilities only (bg-by-surface,
+   text-by-muted, rounded-by-md). A dark theme later redefines layer 2 in one
+   block and nothing else changes.
+
+   Everything is prefixed by- so it cannot collide with the shadcn, pd-* or
+   dashkit variables that still drive the pages not yet rebuilt. */
+
+:root {
+  /* 1. Raw values */
+  --by-grey-0: #ffffff;
+  --by-grey-50: #f7f6fb;
+  --by-grey-75: #f3f2f8;
+  --by-grey-100: #efeef5;
+  --by-grey-200: #e4e2ed;
+  --by-grey-300: #d0cedc;
+  --by-grey-400: #a7a4b6;
+  --by-grey-500: #7c798c;
+  --by-grey-600: #5f5c6e;
+  --by-grey-700: #433f50;
+  --by-grey-900: #000000;
+
+  --by-purple-50: #f4f1fe;
+  --by-purple-100: #e8e2fd;
+  --by-purple-200: #d3c8fb;
+  --by-purple-300: #b5a3f7;
+  --by-purple-400: #8f76f3;
+  --by-purple-500: #6544ee;
+  --by-purple-600: #5433d6;
+  --by-purple-700: #4326b0;
+  --by-purple-800: #331d85;
+  --by-purple-900: #23145a;
+
+  --by-red-text: #b4232c;
+  --by-red-bg: #fdecec;
+  --by-red-solid: #c9303a;
+  --by-amber-text: #8a5300;
+  --by-amber-bg: #fdf1d7;
+  --by-amber-solid: #e0a100;
+  --by-green-text: #12703f;
+  --by-green-bg: #e2f5ea;
+  --by-green-solid: #2bab63;
+  --by-blue-text: #2a63d4;
+  --by-blue-bg: #e8effc;
+  --by-teal-text: #0f7466;
+  --by-teal-bg: #def3ee;
+
+  /* 2. Roles */
+  --by-canvas: var(--by-grey-50);
+  --by-surface: var(--by-grey-0);
+  --by-sunken: var(--by-grey-100);
+  --by-rail: var(--by-grey-75);
+
+  --by-text: var(--by-grey-900);
+  --by-text-2: var(--by-grey-700);
+  --by-muted: var(--by-grey-600);
+  --by-on-accent: var(--by-grey-0);
+
+  --by-line: var(--by-grey-200);
+  --by-line-soft: var(--by-grey-100);
+  --by-line-strong: var(--by-grey-300);
+
+  --by-accent: var(--by-purple-500);
+  --by-accent-hover: var(--by-purple-600);
+  --by-accent-soft: var(--by-purple-50);
+  --by-accent-soft-hover: var(--by-purple-100);
+  --by-accent-line: var(--by-purple-200);
+
+  --by-danger: var(--by-red-text);
+  --by-danger-bg: var(--by-red-bg);
+  --by-danger-solid: var(--by-red-solid);
+  --by-warning: var(--by-amber-text);
+  --by-warning-bg: var(--by-amber-bg);
+  --by-warning-solid: var(--by-amber-solid);
+  --by-success: var(--by-green-text);
+  --by-success-bg: var(--by-green-bg);
+  --by-success-solid: var(--by-green-solid);
+
+  /* One colour pair per section of the app. */
+  --by-ops: var(--by-purple-500);
+  --by-ops-bg: var(--by-purple-50);
+  --by-buyer: var(--by-blue-text);
+  --by-buyer-bg: var(--by-blue-bg);
+  --by-coach: var(--by-green-text);
+  --by-coach-bg: var(--by-green-bg);
+  --by-clients: var(--by-teal-text);
+  --by-clients-bg: var(--by-teal-bg);
+
+  /* The Lifted primary button: a two-stop gradient, darker on hover. */
+  --by-primary-from: #7a5df4;
+  --by-primary-to: #5c3be6;
+  --by-primary-from-hover: #6d4ef0;
+  --by-primary-to-hover: #4f2fd8;
+
+  /* Motion timings. Colour changes are fast; anything that moves uses the
+     spring curve and takes longer. */
+  --by-dur-fast: 160ms;
+  --by-dur-base: 320ms;
+  --by-dur-press: 260ms;
+  --by-dur-tab: 460ms;
+  --by-dur-enter: 600ms;
+  --by-stagger: 70ms;
+}
+
+/* 3. Utilities. `inline` so each utility carries the role variable itself and
+   follows it wherever a subtree (or a future theme) redefines it. */
+@theme inline {
+  --color-by-canvas: var(--by-canvas);
+  --color-by-surface: var(--by-surface);
+  --color-by-sunken: var(--by-sunken);
+  --color-by-rail: var(--by-rail);
+
+  --color-by-text: var(--by-text);
+  --color-by-text-2: var(--by-text-2);
+  --color-by-muted: var(--by-muted);
+  --color-by-on-accent: var(--by-on-accent);
+
+  --color-by-line: var(--by-line);
+  --color-by-line-soft: var(--by-line-soft);
+  --color-by-line-strong: var(--by-line-strong);
+
+  --color-by-accent: var(--by-accent);
+  --color-by-accent-hover: var(--by-accent-hover);
+  --color-by-accent-soft: var(--by-accent-soft);
+  --color-by-accent-soft-hover: var(--by-accent-soft-hover);
+  --color-by-accent-line: var(--by-accent-line);
+
+  --color-by-danger: var(--by-danger);
+  --color-by-danger-bg: var(--by-danger-bg);
+  --color-by-danger-solid: var(--by-danger-solid);
+  --color-by-warning: var(--by-warning);
+  --color-by-warning-bg: var(--by-warning-bg);
+  --color-by-warning-solid: var(--by-warning-solid);
+  --color-by-success: var(--by-success);
+  --color-by-success-bg: var(--by-success-bg);
+  --color-by-success-solid: var(--by-success-solid);
+
+  --color-by-ops: var(--by-ops);
+  --color-by-ops-bg: var(--by-ops-bg);
+  --color-by-buyer: var(--by-buyer);
+  --color-by-buyer-bg: var(--by-buyer-bg);
+  --color-by-coach: var(--by-coach);
+  --color-by-coach-bg: var(--by-coach-bg);
+  --color-by-clients: var(--by-clients);
+  --color-by-clients-bg: var(--by-clients-bg);
+
+  --color-by-primary-from: var(--by-primary-from);
+  --color-by-primary-to: var(--by-primary-to);
+  --color-by-primary-from-hover: var(--by-primary-from-hover);
+  --color-by-primary-to-hover: var(--by-primary-to-hover);
+
+  /* Type. Poppins is only defined where src/lib/by-fonts.js is applied; Inter
+     is on <html> already. Sizes are rem, so they follow the app's base size. */
+  --font-by-display: var(--font-poppins), var(--font-inter), system-ui, sans-serif;
+  --font-by-body: var(--font-inter), system-ui, sans-serif;
+
+  --text-by-label: 0.6875rem;
+  --text-by-label--line-height: 1rem;
+  --text-by-caption: 0.75rem;
+  --text-by-caption--line-height: 1.125rem;
+  --text-by-body-sm: 0.8125rem;
+  --text-by-body-sm--line-height: 1.25rem;
+  --text-by-body: 0.875rem;
+  --text-by-body--line-height: 1.25rem;
+  --text-by-body-lg: 0.9375rem;
+  --text-by-body-lg--line-height: 1.375rem;
+  --text-by-heading: 1.125rem;
+  --text-by-heading--line-height: 1.5rem;
+  --text-by-title: 1.5rem;
+  --text-by-title--line-height: 1.75rem;
+  --text-by-display: 2rem;
+  --text-by-display--line-height: 2.25rem;
+
+  /* Corners */
+  --radius-by-sm: 6px;
+  --radius-by-md: 8px;
+  --radius-by-lg: 12px;
+  --radius-by-xl: 16px;
+
+  /* Shadows: three levels, plus the two that belong to the Lifted controls. */
+  --shadow-by-card: 0 1px 2px rgb(22 20 29 / 0.05);
+  --shadow-by-raised: 0 1px 2px rgb(22 20 29 / 0.1);
+  --shadow-by-floating: 0 0 0 1px rgb(22 20 29 / 0.08), 0 8px 24px -8px rgb(22 20 29 / 0.2);
+  --shadow-by-primary: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 2px 6px -1px rgb(101 68 238 / 0.5);
+  --shadow-by-primary-hover: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 8px 18px -6px rgb(101 68 238 / 0.7);
+  --shadow-by-field: inset 0 1px 2px rgb(22 20 29 / 0.07);
+
+  /* Motion curves */
+  --ease-by-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-by-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

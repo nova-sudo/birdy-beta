@@ -102,6 +102,8 @@ export default function RootLayout({ children }) {
     pathname.startsWith("/install") ||
     // The OAuth consent screen is a standalone card; an AI app sent the owner here.
     pathname.startsWith("/connect") ||
+    // The redesign's component preview brings its own shell.
+    pathname.startsWith("/kit") ||
     pathname.startsWith("/admin");
 
   const [chatOpen, setChatOpen] = useState(false);
