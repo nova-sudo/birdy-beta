@@ -180,3 +180,60 @@ export function lastSynced(groups, now = Date.now()) {
   const days = Math.round(hours / 24)
   return `${days} day${days === 1 ? "" : "s"} ago`
 }
+
+const OUTCOME_IDS = new Set(["ghl_revenue", "conversion_rate", "roas"])
+const OUTCOME_NAMES = /close rate|cpa\b|cost per (acquisition|close)|revenue|roas/i
+const AD_IDS = /^(meta_|active_campaigns|paused_campaigns|best_ad|engagement_rate)/
+
+/**
+ * Which heading a column sits under in the Columns panel, in the redesign's
+ * order: the default four first, then outcomes, ads, the call centre, the CRM,
+ * tags, custom metrics, and whatever is left.
+ *
+ * @param {object} column a catalogue column: `{ id, label, category }`
+ * @param {string} rangeLabel the date range in words, e.g. "Last 7 days"
+ */
+export function columnGroup(column, rangeLabel) {
+  const range = rangeLabel.toLowerCase()
+  if (DEFAULT_COLUMNS.includes(column.id)) return rangeLabel
+  if (OUTCOME_IDS.has(column.id) || (column.category === "formulas" && OUTCOME_NAMES.test(column.label || ""))) return `Outcomes · ${range}`
+  if (column.category === "formulas") return "Custom metrics"
+  if (column.category === "tags" || column.type === "tag") return "Tags"
+  if (AD_IDS.test(column.id)) return `Ads · ${range}`
+  if (column.id.startsWith("hp_")) return `Call centre · ${range}`
+  if (column.id.startsWith("ghl_") || column.id === "total_tags" || column.id === "top_tag_string") return "GoHighLevel"
+  return "Other"
+}
+
+const GROUP_ORDER = ["range", "Outcomes", "Ads", "Call centre", "GoHighLevel", "Tags", "Custom metrics", "Other"]
+
+/** The catalogue sorted into panel order, each column carrying its `group` heading. The default four keep their own order. */
+export function groupColumns(catalogue, rangeLabel) {
+  const rank = (group) => {
+    const i = GROUP_ORDER.findIndex((g) => (g === "range" ? group === rangeLabel : group.startsWith(g)))
+    return i === -1 ? GROUP_ORDER.length : i
+  }
+  return catalogue
+    .map((column, index) => ({ ...column, group: columnGroup(column, rangeLabel), index }))
+    .sort((a, b) => rank(a.group) - rank(b.group) || (a.group === rangeLabel ? DEFAULT_COLUMNS.indexOf(a.id) - DEFAULT_COLUMNS.indexOf(b.id) : a.index - b.index))
+    .map(({ index, ...column }) => column)
+}
+
+/**
+ * The saved views offered at the top of the panel: Default, Outcomes and Ads
+ * (built from the columns that exist for this account), then the user's own
+ * saved view when they have one that differs from all three.
+ */
+export function savedViews(grouped, saved) {
+  const has = new Set(grouped.map((c) => c.id))
+  const inGroup = (prefix) => grouped.filter((c) => c.group.startsWith(prefix)).map((c) => c.id)
+  const views = [{ name: "Default", ids: DEFAULT_COLUMNS.filter((id) => has.has(id)) }]
+  const outcomes = inGroup("Outcomes")
+  if (outcomes.length) views.push({ name: "Outcomes", ids: ["meta_spend", ...outcomes].filter((id) => has.has(id)) })
+  const ads = ["meta_ctr", "meta_clicks", "meta_cpm", "meta_cpc"].filter((id) => has.has(id))
+  if (ads.length) views.push({ name: "Ads", ids: [...views[0].ids, ...ads] })
+  const mine = (saved || []).filter((id) => has.has(id))
+  const same = (a, b) => a.length === b.length && a.every((id) => b.includes(id))
+  if (mine.length && !views.some((v) => same(v.ids, mine))) views.push({ name: "My view", ids: mine })
+  return views
+}

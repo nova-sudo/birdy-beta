@@ -102,7 +102,7 @@ export default function RootLayout({ children }) {
 
                 {/* Content */}
                 {isRebuilt(pathname) ? (
-                  <main className="relative min-h-0 w-full flex-1 overflow-hidden">{children}</main>
+                  <main className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">{children}</main>
                 ) : (
                   <main className="relative flex w-full flex-1 flex-col overflow-hidden bg-pd-canvas">
                     <div className="mx-auto w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">

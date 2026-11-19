@@ -145,11 +145,20 @@ describe("Clients list", () => {
     viewState.savedColumns = ["name", "health", "meta_spend", "meta_ctr"]
     render(<ClientsList />)
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Client", "Status", "Spend", "CTR", "Open"])
-    await userEvent.click(screen.getByRole("button", { name: "Columns" }))
-    expect(await screen.findByRole("button", { name: "Save as my view" })).toBeDisabled()
+    await userEvent.click(screen.getByRole("button", { name: /^Columns\s*·\s*My view$/ }))
+    expect(await screen.findByRole("button", { name: "My view" })).toHaveAttribute("aria-pressed", "true")
     await userEvent.click(screen.getByRole("checkbox", { name: "Leads" }))
-    await userEvent.click(screen.getByRole("button", { name: "Save as my view" }))
-    expect(viewState.saveView).toHaveBeenCalledWith(["name", "meta_spend", "meta_ctr", "meta_leads"])
+    await userEvent.click(screen.getByRole("button", { name: "Save current view" }))
+    expect(viewState.saveView).toHaveBeenCalledWith(["name", "meta_spend", "meta_leads", "meta_ctr"])
+  })
+
+  it("offers the Default and Ads views, and switches to one in a click", async () => {
+    render(<ClientsList />)
+    await userEvent.click(screen.getByRole("button", { name: "Columns" }))
+    expect(await screen.findByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getAllByRole("group").slice(0, 2).map((g) => g.getAttribute("aria-label"))).toEqual(["Saved views", "Last 7 days"])
+    await userEvent.click(screen.getByRole("button", { name: "Ads" }))
+    expect(screen.getAllByRole("columnheader", { hidden: true }).map((h) => h.textContent)).toEqual(["Client", "Status", "Spend", "Leads", "CPL", "Leads called", "CTR", "Clicks", "CPM", "CPC", "Open"])
   })
 })
 

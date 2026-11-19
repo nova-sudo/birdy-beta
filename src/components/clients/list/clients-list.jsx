@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Check, ChevronDown, Files, Plus, SearchX, Users } from "lucide-react";
+import { Calendar, ChevronDown, Files, Plus, SearchX, Users } from "lucide-react";
 import getSymbolFromCurrency from "currency-symbol-map";
 import {
   Button, Card, ColumnsMenu, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Notice, Pill,
@@ -14,17 +14,16 @@ import { apiRequest } from "@/lib/api";
 import { isAwaitingFirstData } from "@/lib/client-loading";
 import { flattenClientGroup } from "@/lib/client-rows";
 import {
-  COLUMN_LABELS, DEFAULT_COLUMNS, FIXED_COLUMNS, TABS, formatCell, inTab, lastSynced, nextSort, overTarget, readState, searchRows, sortRows,
-  statusOf, tabCounts, writeState,
+  COLUMN_LABELS, DEFAULT_COLUMNS, FIXED_COLUMNS, TABS, formatCell, groupColumns, inTab, lastSynced, nextSort, overTarget, readState, savedViews,
+  searchRows, sortRows, statusOf, tabCounts, writeState,
 } from "@/lib/clients-list";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET, STORAGE_KEYS } from "@/lib/constants";
-import { COLUMN_MENU_SOURCES, buildDynamicColumns, columnMenuSource } from "@/lib/enhanced-columns-config";
+import { buildDynamicColumns } from "@/lib/enhanced-columns-config";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { useColumnViews } from "@/lib/useColumnViews";
 
 const RANGES = DATE_PRESETS.map((p) => p.value);
 const URL_OPTIONS = { ranges: RANGES, defaultRange: DEFAULT_DATE_PRESET };
-const SOURCE_LABEL = Object.fromEntries(COLUMN_MENU_SOURCES.map((s) => [s.id, s.label]));
 const PILL = { danger: ["danger", "At risk"], warning: ["warning", "At risk"], ok: ["success", "On track"] };
 const EMPTY_TAB = { all: "No active clients", risk: "No clients at risk", ok: "No clients on track", off: "No inactive clients" };
 
@@ -79,6 +78,8 @@ export function ClientsList() {
   const [ready, setReady] = useState(false);
   // null until the user changes the columns here; then their working set.
   const [columnIds, setColumnIds] = useState(null);
+  // While the Columns panel is open the table makes room beside it, so a column just added is never under the panel.
+  const [columnsOpen, setColumnsOpen] = useState(false);
 
   // The list's state lives in the address, so coming back from a client
   // returns to the same tab, search, sort and date range.
@@ -105,15 +106,17 @@ export function ClientsList() {
     const seen = new Set();
     return [...built, ...custom]
       .filter((c) => !seen.has(c.id) && seen.add(c.id))
-      .map((c) => ({ ...c, label: COLUMN_LABELS[c.id] ?? c.label ?? c.id, group: SOURCE_LABEL[columnMenuSource(c)] ?? "Other" }));
+      .map((c) => ({ ...c, label: COLUMN_LABELS[c.id] ?? c.label ?? c.id }));
   }, [clientGroups, customMetrics]);
   const known = useMemo(() => new Map(catalogue.map((c) => [c.id, c])), [catalogue]);
+  const range = DATE_PRESETS.find((p) => p.value === datePreset) ?? DATE_PRESETS.find((p) => p.value === DEFAULT_DATE_PRESET);
+  const rangeLabel = range.label.charAt(0) + range.label.slice(1).toLowerCase();
+  const grouped = useMemo(() => groupColumns(catalogue, rangeLabel), [catalogue, rangeLabel]);
 
   // What is shown: the working set, else the saved view, else the defaults.
   const saved = Array.isArray(savedColumns) ? savedColumns.filter((id) => !FIXED_COLUMNS.has(id)) : null;
   const shownIds = (columnIds ?? (saved?.length ? saved : DEFAULT_COLUMNS)).filter((id) => known.has(id) || DEFAULT_COLUMNS.includes(id));
   const columns = shownIds.map((id) => known.get(id) ?? { id, label: COLUMN_LABELS[id] ?? id });
-  const unsaved = columnIds !== null && JSON.stringify(columnIds) !== JSON.stringify(saved?.length ? saved : DEFAULT_COLUMNS);
 
   const rows = useMemo(
     () =>
@@ -128,7 +131,6 @@ export function ClientsList() {
   const counts = useMemo(() => tabCounts(rows), [rows]);
   const visible = sortRows(searchRows(rows.filter((row) => inTab(row.listStatus, tab)), query), sort);
   const synced = lastSynced(clientGroups);
-  const range = DATE_PRESETS.find((p) => p.value === datePreset) ?? DATE_PRESETS.find((p) => p.value === DEFAULT_DATE_PRESET);
   const sortText = !sort ? "Most urgent first" : sort.id === "name" ? `Client, ${sort.dir === "asc" ? "A to Z" : "Z to A"}` : `${known.get(sort.id)?.label ?? COLUMN_LABELS[sort.id] ?? sort.id}, ${sort.dir === "desc" ? "highest first" : "lowest first"}`;
   const press = (id) => setSort(nextSort(sort, id));
 
@@ -138,7 +140,7 @@ export function ClientsList() {
   }));
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-by-canvas font-by-body text-by-body text-by-text">
+    <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text">
       <header className="flex shrink-0 items-center gap-2.5 border-b border-by-line bg-by-surface px-7 py-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="font-by-display text-by-title font-semibold tracking-[-0.01em]">Clients</h1>
@@ -186,18 +188,12 @@ export function ClientsList() {
             </Menu>
             <SearchField className="w-56" placeholder="Search clients" value={query} onChange={(e) => setQuery(e.target.value)} />
             <ColumnsMenu
-              columns={catalogue}
+              columns={grouped}
               value={shownIds}
               onChange={setColumnIds}
-              footer={
-                <>
-                  <Button size="sm" kind="ghost" onClick={() => setColumnIds(DEFAULT_COLUMNS)}>Reset</Button>
-                  <span className="flex-1" />
-                  <Button size="sm" kind="soft" disabled={!unsaved || !viewsLoaded} onClick={() => saveView(["name", ...shownIds]).then(() => setColumnIds(null))}>
-                    <Check aria-hidden="true" />Save as my view
-                  </Button>
-                </>
-              }
+              views={savedViews(grouped, saved)}
+              onSaveView={viewsLoaded ? () => saveView(["name", ...shownIds]).then(() => setColumnIds(null)) : undefined}
+              onOpenChange={setColumnsOpen}
             />
             </>
           }
@@ -223,7 +219,7 @@ export function ClientsList() {
                   )}
                 </Card>
               ) : (
-                <Card className="overflow-x-auto">
+                <Card className={`overflow-x-auto ${columnsOpen ? "min-[1100px]:mr-60" : ""}`}>
                   <Table>
                     <TableHead>
                       <tr>

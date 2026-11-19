@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
-  DEFAULT_COLUMNS, formatCell, inTab, lastSynced, nextSort, overTarget, readState, searchRows, sortRows, statusOf, tabCounts, writeState,
+  DEFAULT_COLUMNS, columnGroup, formatCell, groupColumns, inTab, lastSynced, nextSort, overTarget, readState, savedViews, searchRows, sortRows, statusOf, tabCounts, writeState,
 } from "../clients-list"
 
 const OPTS = { ranges: ["last_7d", "last_30d"], defaultRange: "last_7d" }
@@ -168,5 +168,53 @@ describe("lastSynced", () => {
 describe("defaults", () => {
   it("shows spend, leads, cost per lead and the share of leads called", () => {
     expect(DEFAULT_COLUMNS).toEqual(["meta_spend", "meta_leads", "cost_per_lead", "hp_connect_rate"])
+  })
+})
+
+describe("the Columns panel's groups and views", () => {
+  const catalogue = [
+    { id: "ghl_contacts", label: "GHL Leads", category: "gohighlevel" },
+    { id: "meta_ctr", label: "CTR", category: "metaads" },
+    { id: "hp_connect_rate", label: "Leads called", category: "hotprospector" },
+    { id: "meta_spend", label: "Spend", category: "metaads" },
+    { id: "roas", label: "ROAS", category: "calculated" },
+    { id: "m1", label: "Close Rate", category: "formulas" },
+    { id: "m2", label: "Bookings per call", category: "formulas" },
+    { id: "tag_vip", label: "vip", category: "tags", type: "tag" },
+    { id: "hp_total_calls", label: "Total Calls", category: "hotprospector" },
+    { id: "account_age_days", label: "Account Age (Days)", category: "calculated" },
+    { id: "meta_leads", label: "Leads", category: "metaads" },
+    { id: "cost_per_lead", label: "CPL", category: "calculated" },
+  ]
+
+  it("files each column under the redesign's headings", () => {
+    const of = (id) => columnGroup(catalogue.find((c) => c.id === id), "Last 7 days")
+    expect(of("meta_spend")).toBe("Last 7 days")
+    expect(of("hp_connect_rate")).toBe("Last 7 days")
+    expect(of("roas")).toBe("Outcomes · last 7 days")
+    expect(of("m1")).toBe("Outcomes · last 7 days")
+    expect(of("m2")).toBe("Custom metrics")
+    expect(of("meta_ctr")).toBe("Ads · last 7 days")
+    expect(of("hp_total_calls")).toBe("Call centre · last 7 days")
+    expect(of("ghl_contacts")).toBe("GoHighLevel")
+    expect(of("tag_vip")).toBe("Tags")
+    expect(of("account_age_days")).toBe("Other")
+  })
+
+  it("orders the panel: the default four in their own order, then outcomes, ads, call centre, CRM, tags, custom, other", () => {
+    expect(groupColumns(catalogue, "Last 7 days").map((c) => c.id)).toEqual([
+      "meta_spend", "meta_leads", "cost_per_lead", "hp_connect_rate", "roas", "m1", "meta_ctr", "hp_total_calls", "ghl_contacts", "tag_vip", "m2", "account_age_days",
+    ])
+  })
+
+  it("offers Default, Outcomes and Ads from the columns that exist, plus the user's own view when it differs", () => {
+    const grouped = groupColumns(catalogue, "Last 7 days")
+    expect(savedViews(grouped, null)).toEqual([
+      { name: "Default", ids: ["meta_spend", "meta_leads", "cost_per_lead", "hp_connect_rate"] },
+      { name: "Outcomes", ids: ["meta_spend", "roas", "m1"] },
+      { name: "Ads", ids: ["meta_spend", "meta_leads", "cost_per_lead", "hp_connect_rate", "meta_ctr"] },
+    ])
+    expect(savedViews(grouped, ["meta_spend", "ghl_contacts", "gone_column"]).at(-1)).toEqual({ name: "My view", ids: ["meta_spend", "ghl_contacts"] })
+    expect(savedViews(grouped, ["hp_connect_rate", "cost_per_lead", "meta_leads", "meta_spend"])).toHaveLength(3)
   })
 })

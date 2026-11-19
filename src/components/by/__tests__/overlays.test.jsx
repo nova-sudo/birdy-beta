@@ -119,27 +119,55 @@ describe("sortable header", () => {
 })
 
 describe("ColumnsMenu", () => {
-  const COLUMNS = [{ id: "spend", label: "Spend", group: "Meta" }, { id: "ctr", label: "CTR", group: "Meta" }, { id: "won", label: "Won Opps", group: "GHL" }]
+  const COLUMNS = [{ id: "spend", label: "Spend", group: "Last 7 days" }, { id: "leads", label: "Leads", group: "Last 7 days" }, { id: "ctr", label: "CTR", group: "Ads" }, { id: "won", label: "Won Opps", group: "GoHighLevel" }]
+  const VIEWS = [{ name: "Default", ids: ["spend", "leads"] }, { name: "Ads", ids: ["spend", "leads", "ctr"] }]
+  const openMenu = async (props) => {
+    render(<ColumnsMenu columns={COLUMNS} value={["spend", "leads"]} onChange={() => {}} {...props} />)
+    await userEvent.click(screen.getByRole("button", { name: /Columns/ }))
+    return screen.findByRole("dialog", { name: "Show columns" })
+  }
 
-  it("ticks what is shown, adds to the end and removes without reordering", async () => {
-    const onChange = vi.fn()
-    render(<ColumnsMenu columns={COLUMNS} value={["spend", "won"]} onChange={onChange} />)
-    await userEvent.click(screen.getByRole("button", { name: "Columns" }))
-    expect(await screen.findByRole("checkbox", { name: "Spend" })).toBeChecked()
+  it("groups the columns under their headings and ticks what is shown", async () => {
+    await openMenu()
+    expect(screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"))).toEqual(["Last 7 days", "Ads", "GoHighLevel"])
+    expect(screen.getByRole("checkbox", { name: "Spend" })).toBeChecked()
     expect(screen.getByRole("checkbox", { name: "CTR" })).not.toBeChecked()
+  })
+
+  it("keeps the table's order when a column is added, and removes without reordering", async () => {
+    const onChange = vi.fn()
+    await openMenu({ value: ["spend", "won"], onChange })
     await userEvent.click(screen.getByRole("checkbox", { name: "CTR" }))
-    expect(onChange).toHaveBeenLastCalledWith(["spend", "won", "ctr"])
+    expect(onChange).toHaveBeenLastCalledWith(["spend", "ctr", "won"])
     await userEvent.click(screen.getByRole("checkbox", { name: "Spend" }))
     expect(onChange).toHaveBeenLastCalledWith(["won"])
   })
 
-  it("filters by search and says when nothing matches", async () => {
-    render(<ColumnsMenu columns={COLUMNS} value={[]} onChange={() => {}} footer={<Button>Save as my view</Button>} />)
-    await userEvent.click(screen.getByRole("button", { name: "Columns" }))
-    await userEvent.type(await screen.findByRole("searchbox", { name: "Search columns" }), "opp")
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1)
-    expect(screen.getByRole("button", { name: "Save as my view" })).toBeInTheDocument()
-    await userEvent.type(screen.getByRole("searchbox", { name: "Search columns" }), "zzz")
-    expect(screen.getByText("No column matches “oppzzz”.")).toBeInTheDocument()
+  it("lists saved views first, marks the one on screen and applies another in one click", async () => {
+    const onChange = vi.fn()
+    await openMenu({ views: VIEWS, onChange })
+    expect(screen.getAllByRole("group")[0]).toHaveAccessibleName("Saved views")
+    expect(screen.getByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Ads" })).toHaveAttribute("aria-pressed", "false")
+    await userEvent.click(screen.getByRole("button", { name: "Ads" }))
+    expect(onChange).toHaveBeenLastCalledWith(["spend", "leads", "ctr"])
+  })
+
+  it("names the view on the button unless it is the default, and says Custom for anything else", () => {
+    const { rerender } = render(<ColumnsMenu columns={COLUMNS} value={["spend", "leads"]} onChange={() => {}} views={VIEWS} />)
+    expect(screen.getByRole("button", { name: "Columns" })).toBeInTheDocument()
+    rerender(<ColumnsMenu columns={COLUMNS} value={["spend", "leads", "ctr"]} onChange={() => {}} views={VIEWS} />)
+    expect(screen.getByRole("button", { name: /^Columns\s*·\s*Ads$/ })).toBeInTheDocument()
+    rerender(<ColumnsMenu columns={COLUMNS} value={["won"]} onChange={() => {}} views={VIEWS} />)
+    expect(screen.getByRole("button", { name: /^Columns\s*·\s*Custom$/ })).toBeInTheDocument()
+  })
+
+  it("offers to save the current view only when saving is possible, and reports opening", async () => {
+    const onSaveView = vi.fn()
+    const onOpenChange = vi.fn()
+    await openMenu({ views: VIEWS, onSaveView, onOpenChange })
+    expect(onOpenChange).toHaveBeenLastCalledWith(true)
+    await userEvent.click(screen.getByRole("button", { name: "Save current view" }))
+    expect(onSaveView).toHaveBeenCalledOnce()
   })
 })
