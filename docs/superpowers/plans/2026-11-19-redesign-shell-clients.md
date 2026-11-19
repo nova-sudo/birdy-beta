@@ -175,7 +175,7 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 
 ### Phase 5: Tests (done)
 
-**Result:** 155 new tests in nine files; the full `src` suite passes. One bug found and fixed by the tests: the Add client wizard let you continue past a list that had failed to load.
+**Result:** 138 new tests in nine files; the full `src` suite passes. One bug found and fixed by the tests: the Add client wizard let you continue past a list that had failed to load.
 
 Started straight after phase 4, by the user's choice on the previous plan.
 
