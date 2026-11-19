@@ -68,26 +68,29 @@ function useCountUp(target, enabled) {
  * @param {(n: number) => string} [props.format] turns the number into text, e.g. money; whole numbers by default
  * @param {React.ReactNode} [props.delta] usually a Delta
  * @param {React.ReactNode} [props.note] one line under the figure, e.g. "vs previous 7 days"
+ * @param {"md"|"lg"} [props.size] "lg" is the page-leading tile: 24px padding and the display figure, 140px tall with a note
  * @param {boolean} [props.countUp] count up from zero once on first appearance; on by default
  */
-export function KpiTile({ label, value, format = (n) => Math.round(n).toLocaleString("en-GB"), delta, note, countUp = true, className, ...props }) {
+export function KpiTile({ label, value, format = (n) => Math.round(n).toLocaleString("en-GB"), delta, note, size = "md", countUp = true, className, ...props }) {
+  const lg = size === "lg";
+  const figure = lg ? "font-by-display text-by-display leading-[1.1] font-semibold tracking-[-0.01em]" : "font-by-display text-by-title font-semibold";
   const known = Number.isFinite(value);
   const shown = useCountUp(known ? value : 0, countUp && known);
   return (
-    <Card className={cn("px-4 py-3.5", className)} {...props}>
-      <div className="text-by-body-sm text-by-text-2">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
+    <Card className={cn(lg ? "p-6" : "px-4 py-3.5", className)} {...props}>
+      <div className={cn("text-by-body-sm text-by-text-2", lg && "font-medium")}>{label}</div>
+      <div className={cn("flex items-baseline gap-2", lg ? "mt-2" : "mt-1")}>
         {/* Screen readers get the final figure, not the counting. */}
         {known ? (
-          <span className="font-by-display text-by-title font-semibold tabular-nums text-by-text" aria-label={format(value)}>
+          <span className={cn(figure, "tabular-nums text-by-text")} aria-label={format(value)}>
             <span aria-hidden="true">{format(shown)}</span>
           </span>
         ) : (
-          <span className="font-by-display text-by-title font-semibold text-by-muted" aria-label="No data">—</span>
+          <span className={cn(figure, "text-by-muted")} aria-label="No data">—</span>
         )}
         {known && delta}
       </div>
-      {note && <div className="mt-1 text-by-body-sm text-by-text-2">{note}</div>}
+      {note && <div className={cn("text-by-body-sm text-by-text-2", lg ? "mt-2 font-medium" : "mt-1")}>{note}</div>}
     </Card>
   );
 }

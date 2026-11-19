@@ -171,7 +171,7 @@ export function BirdsEye() {
               )}
             </div>
             {!scoped && (
-              <h2 className="mt-2.5 font-by-display text-by-display font-semibold tracking-[-0.02em] text-balance">
+              <h2 className="mt-1.5 font-by-display text-[length:2.25rem] leading-[1.2] font-bold tracking-[-0.01em] text-balance">
                 {hour == null ? "Hello" : greeting(hour)}{user.name ? `, ${user.name.split(" ")[0]}` : ""}.
               </h2>
             )}
@@ -190,15 +190,16 @@ export function BirdsEye() {
           ) : (
             <>
               {finding && (
-                <p className="text-by-body-lg text-by-text-2 text-pretty">
-                  <b className="font-semibold text-by-text">{finding.lead}</b>{finding.rest}
+                <p className="-mt-0.5 mb-2 text-[length:1.0625rem] leading-[1.6] text-by-text-2 text-pretty">
+                  <b className="font-semibold text-by-text underline decoration-by-line-strong underline-offset-[3px]">{finding.lead}</b>{finding.rest}
                 </p>
               )}
 
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
                 {tiles.map((t) => (
                   <KpiTile
                     key={t.key}
+                    size="lg"
                     label={t.label}
                     value={t.value}
                     format={FORMAT[t.kind]}
@@ -232,7 +233,7 @@ export function BirdsEye() {
                 ) : (
                   <>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="font-by-display text-by-title font-semibold tabular-nums">{series.total}</span>
+                      <span className="font-by-display text-[length:1.75rem] leading-[1.15] font-semibold tracking-[-0.01em] tabular-nums">{series.total}</span>
                       {tile?.delta != null && <Delta value={tile.delta} goodWhen={tile.goodWhen} />}
                     </div>
                     <LineChart
@@ -292,7 +293,7 @@ export function BirdsEye() {
                           tone={diagnosis.state === "problem" ? "danger" : "success"}
                           icon={diagnosis.state === "problem" ? <AlertTriangle aria-hidden="true" className="mt-0.5" /> : <CheckCircle2 aria-hidden="true" className="mt-0.5" />}
                         >
-                          <b className="block font-semibold">{diagnosis.title}</b>
+                          <b className="block font-by-display font-semibold">{diagnosis.title}</b>
                           {diagnosis.body && <span className="text-by-text-2">{diagnosis.body}</span>}
                         </Notice>
                       )}
