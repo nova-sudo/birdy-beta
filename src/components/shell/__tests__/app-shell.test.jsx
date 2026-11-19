@@ -1,0 +1,166 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import "@/components/by/__tests__/jsdom"
+
+const push = vi.fn()
+const route = { pathname: "/campaigns" }
+const role = { isAdmin: false }
+const work = { count: 8 }
+const credits = { status: { ok: true }, allowance: 1000, balance: 440, remainingAllowance: 440 }
+const groups = { clientGroups: [], loading: false, error: null }
+const confirm = vi.fn(() => Promise.resolve(false))
+const clearSession = vi.fn()
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => route.pathname }))
+// The dialogs are loaded lazily and are covered by their own tests.
+vi.mock("next/dynamic", () => ({ default: () => () => null }))
+vi.mock("@/hooks/useCredits", () => ({ useCredits: () => credits }))
+vi.mock("@/hooks/useRole", () => ({ useRole: () => role }))
+vi.mock("@/lib/agents-api", () => ({ useAgentWorkCount: () => work.count }))
+vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ ...groups, refresh: vi.fn(), invalidate: vi.fn() }) }))
+vi.mock("@/components/ds", () => ({ confirm: (...args) => confirm(...args) }))
+vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(() => Promise.resolve({ ok: true })) }))
+vi.mock("@/lib/session", () => ({ clearSession: () => clearSession() }))
+vi.mock("@/components/birdy/BirdyAvatar", () => ({ default: ({ size }) => <span data-testid="birdy" style={{ width: size }} /> }))
+
+import { apiRequest } from "@/lib/api"
+import { AppShell } from "../app-shell"
+
+const CLIENTS = [
+  { id: "a", name: "Aura", client_status: "Active", health: "Critical" },
+  { id: "b", name: "Healthy Glow", client_status: "Active", health: "Healthy" },
+  { id: "c", name: "Old Clinic", client_status: "Inactive", health: "Critical" },
+]
+const shell = () => render(<AppShell><p>Page content</p></AppShell>)
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  route.pathname = "/campaigns"
+  role.isAdmin = false
+  work.count = 8
+  Object.assign(groups, { clientGroups: CLIENTS, loading: false, error: null })
+  localStorage.setItem("user", JSON.stringify({ name: "Hadley", email: "hadley@agency.test", role: "user" }))
+})
+
+describe("AppShell: the rail", () => {
+  it("renders the page beside the rail", () => {
+    shell()
+    expect(screen.getByText("Page content")).toBeInTheDocument()
+    expect(screen.getByRole("navigation", { name: "Sections" })).toBeInTheDocument()
+  })
+
+  it.each([
+    ["Agency Ops", "/dashboard"],
+    ["Sales Coach", "/Sales-Hub"],
+    ["Clients", "/clients"],
+    ["Settings", "/settings"],
+  ])("opens %s at %s", async (name, href) => {
+    shell()
+    await userEvent.click(screen.getByRole("button", { name }))
+    expect(push).toHaveBeenCalledWith(href)
+  })
+
+  it("marks the section the current page belongs to", () => {
+    route.pathname = "/hub/agents/media-buying"
+    shell()
+    expect(screen.getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("aria-current", "page")
+    expect(screen.getByRole("button", { name: "Clients" })).not.toHaveAttribute("aria-current")
+  })
+
+  it("flags Media Buyer with the agent’s open work, and no section when there is none", () => {
+    const { unmount } = shell()
+    expect(screen.getByRole("button", { name: "Media Buyer, 8 waiting" })).toBeInTheDocument()
+    unmount()
+    work.count = null
+    shell()
+    expect(screen.getByRole("button", { name: "Media Buyer" })).toBeInTheDocument()
+  })
+
+  it("shows the credit balance, or no ring when credits are unavailable", () => {
+    const { unmount } = shell()
+    expect(screen.getByRole("img", { name: "440 credits left, 44%" })).toBeInTheDocument()
+    unmount()
+    const saved = credits.status
+    credits.status = null
+    shell()
+    expect(screen.queryByRole("img", { name: /credits left/ })).not.toBeInTheDocument()
+    credits.status = saved
+  })
+})
+
+describe("AppShell: other pages", () => {
+  it("lists the pages with no tile and opens one", async () => {
+    shell()
+    await userEvent.click(screen.getByRole("button", { name: "Other pages" }))
+    expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["BirdyHub", "Ask Birdy", "Leads", "Metrics", "Alerts"])
+    await userEvent.click(screen.getByRole("menuitem", { name: "Metrics" }))
+    expect(push).toHaveBeenCalledWith("/metrics")
+  })
+})
+
+describe("AppShell: the client switcher", () => {
+  it("lists real clients and opens the one picked", async () => {
+    shell()
+    await userEvent.click(screen.getByRole("button", { name: "Switch client, showing all clients" }))
+    expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual(["Add new client", "Agency view3 clients", "Aura", "Healthy Glow", "Old Clinic"])
+    await userEvent.click(screen.getByRole("option", { name: "Healthy Glow" }))
+    expect(push).toHaveBeenCalledWith("/clients/b")
+  })
+
+  it("shows the client whose page is open, and returns to the list for the agency view", async () => {
+    route.pathname = "/clients/a"
+    shell()
+    await userEvent.click(screen.getByRole("button", { name: "Switch client, showing Aura" }))
+    await userEvent.click(await screen.findByRole("option", { name: /Agency view/ }))
+    expect(push).toHaveBeenCalledWith("/clients")
+  })
+
+  it("shows the loading and failed states of the client list", async () => {
+    Object.assign(groups, { clientGroups: [], loading: true })
+    const { unmount } = shell()
+    await userEvent.click(screen.getByRole("button", { name: /Switch client/ }))
+    expect(await screen.findByRole("status", { name: "Loading clients" })).toBeInTheDocument()
+    unmount()
+    Object.assign(groups, { loading: false, error: "HTTP 500" })
+    shell()
+    await userEvent.click(screen.getByRole("button", { name: /Switch client/ }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load your clients.")
+  })
+})
+
+describe("AppShell: the account menu", () => {
+  it("shows who is signed in, with Settings and Log out but no admin entry for a normal user", async () => {
+    shell()
+    await userEvent.click(await screen.findByRole("button", { name: "Account menu, Hadley" }))
+    expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["Settings", "Log out"])
+    expect(screen.getByText("hadley@agency.test")).toBeInTheDocument()
+  })
+
+  it("adds the admin console for an admin", async () => {
+    role.isAdmin = true
+    shell()
+    await userEvent.click(await screen.findByRole("button", { name: "Account menu, Hadley" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Admin console" }))
+    expect(push).toHaveBeenCalledWith("/admin")
+  })
+
+  it("asks before logging out, and does nothing when cancelled", async () => {
+    shell()
+    await userEvent.click(await screen.findByRole("button", { name: "Account menu, Hadley" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Log out" }))
+    await waitFor(() => expect(confirm).toHaveBeenCalledOnce())
+    expect(apiRequest).not.toHaveBeenCalled()
+    expect(localStorage.getItem("user")).not.toBeNull()
+  })
+
+  it("logs out when confirmed: tells the server, clears the session and local data", async () => {
+    confirm.mockResolvedValueOnce(true)
+    shell()
+    await userEvent.click(await screen.findByRole("button", { name: "Account menu, Hadley" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Log out" }))
+    await waitFor(() => expect(clearSession).toHaveBeenCalledOnce())
+    expect(apiRequest).toHaveBeenCalledWith("/api/logout", { method: "POST" })
+    expect(localStorage.getItem("user")).toBeNull()
+  })
+})

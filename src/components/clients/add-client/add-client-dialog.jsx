@@ -130,8 +130,9 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
 
   const canContinue =
     step === 0 ? form.name.trim().length > 0
-    : step === 1 ? !locations.loading && (Boolean(form.location) || locations.items.length === 0)
-    : step === 2 ? !accounts.loading && (Boolean(form.account) || accounts.items.length === 0) && !campaignsMissing
+    // A list that failed to load is not an empty list: nothing may be skipped on a guess.
+    : step === 1 ? !locations.loading && !locations.error && (Boolean(form.location) || locations.items.length === 0)
+    : step === 2 ? !accounts.loading && !accounts.error && (Boolean(form.account) || accounts.items.length === 0) && !campaignsMissing
     : step === 3 ? Boolean(form.provider)
     : true;
 

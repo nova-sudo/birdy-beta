@@ -1,6 +1,6 @@
 # Birdy Redesign: Shell Go-Live, Add Client, Import and Clients List Implementation Plan
 
-**Status:** in progress. Phases 1 to 3 built 2026-11-19; phase 4 (final verification) next.
+**Status:** all five phases done 2026-11-19 and pushed to draft pull request #175, which stays unmerged.
 
 **Goal:** Put the new shell in front of every signed-in page, rebuild Add client and Import as kit dialogs, and rebuild the Clients list, on the redesign branch.
 
@@ -152,7 +152,9 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 
 **Verification:** `npx vitest run --dir src` and `npm run build` pass. On the dev server, signed in: the four tabs and their counts agree with the old page's health and status counts for the same account (compare against the "before" screenshot); every column sorts three ways; search, the Columns menu with a custom metric, and a saved view surviving a reload all work; the address carries tab, search, sort and date range and restores them; each state in the spec is reached (loading on a slow reload, a syncing client if the account has one, no match, an empty tab). Screenshot against board 09 at 1440 and 2560 wide.
 
-### Phase 4: Final verification
+### Phase 4: Final verification (done)
+
+**Result:** all twelve pages load in the new shell with the right rail item marked; both dialogs were walked on the live account without submitting (no client created, nothing imported); focus returns to the opening button. Not done: a real create and a real import, which write to the live account and wait for the user's say-so. Known duplication left in place: `formatCell` in `src/lib/clients-list.js` repeats the old table's cell-formatting rules, which still live inside `ui/table-container.jsx`.
 
 **Outcome:** the three parts match their boards, old pages still work, and the branch is pushed.
 
@@ -171,7 +173,9 @@ Out of scope (from the spec): any other page's rebuild, the client detail page, 
 - Run `nova-review` on the work since the previous plan and fix what it finds.
 - Push to draft pull request #175 and update its description. Delete the saved session.
 
-### Phase 5: Tests
+### Phase 5: Tests (done)
+
+**Result:** 155 new tests in nine files; the full `src` suite passes. One bug found and fixed by the tests: the Add client wizard let you continue past a list that had failed to load.
 
 Started straight after phase 4, by the user's choice on the previous plan.
 
