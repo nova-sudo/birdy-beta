@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Link2, Megaphone, Phone, Play, SearchX, Users } from "lucide-react";
+import { Check, ChevronRight, Link2, ListFilter, Megaphone, Phone, Play, SearchX, Users } from "lucide-react";
 import {
-  Button, Card, ColumnsMenu, EmptyState, Notice, Pill, RowArrow, SearchField, Skeleton, TabPill, Table, TableBody, TableHead, TableScroll, Td, Th, Tr,
+  Button, Card, ColumnsMenu, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Notice, Pill, RowArrow, SearchField, Skeleton, TabPill, Table, TableBody, TableHead, TableScroll, Td, Th, Tr,
 } from "@/components/by";
-import { LEAD_STAGES, leadCounts, lengthLabel, searchBy, sortBy, toggleSort, whenLabel } from "@/lib/client-tables";
+import {
+  AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, searchBy, sortBy, toggleSort, whenLabel,
+} from "@/lib/client-tables";
 
 const STAGE = {
   crm: { label: "In CRM", tone: "accent", icon: <Link2 /> },
@@ -52,6 +54,57 @@ function useColumns(all) {
 
 const money = (symbol) => (n, decimals = 0) => `${symbol}${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
+/**
+ * The Leads table's filters in one menu: Source, Type, Opportunity and Tag.
+ * Several values can be ticked in each; the menu stays open while choosing.
+ */
+function LeadFilters({ options, chosen, onChange }) {
+  const total = Object.values(chosen).reduce((n, list) => n + list.length, 0);
+  const groups = LEAD_FILTERS.filter((f) => options[f.id]?.length);
+  const toggle = (id, value) => {
+    const list = chosen[id] ?? [];
+    onChange({ ...chosen, [id]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] });
+  };
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <Button aria-label={total ? `Filters, ${total} on` : "Filters"}><ListFilter aria-hidden="true" />Filters{total > 0 && <CountBadge>{total}</CountBadge>}</Button>
+      </MenuTrigger>
+      <MenuContent align="end" className="max-h-96 w-64 overflow-y-auto">
+        {groups.length === 0 && <p className="px-2.5 py-2 text-by-body-sm text-by-muted">Nothing to filter by in this range.</p>}
+        {groups.map((f, i) => (
+          <div key={f.id} role="group" aria-label={f.label}>
+            {i > 0 && <MenuSeparator />}
+            <MenuLabel>{f.label}</MenuLabel>
+            {options[f.id].map((value) => {
+              const on = chosen[f.id]?.includes(value);
+              return (
+                <MenuItem
+                  key={value}
+                  role="menuitemcheckbox"
+                  aria-checked={on}
+                  selected={on}
+                  // Keep the menu open: filters are usually set several at a time.
+                  onSelect={(e) => { e.preventDefault(); toggle(f.id, value); }}
+                >
+                  <span className="min-w-0 flex-1 truncate capitalize" title={value}>{value}</span>
+                  {on && <Check aria-hidden="true" />}
+                </MenuItem>
+              );
+            })}
+          </div>
+        ))}
+        {total > 0 && (
+          <>
+            <MenuSeparator />
+            <MenuItem onSelect={() => onChange({})}>Clear all filters</MenuItem>
+          </>
+        )}
+      </MenuContent>
+    </Menu>
+  );
+}
+
 // ── Leads ───────────────────────────────────────────────────────────────────
 
 const LEAD_COLUMNS = [
@@ -67,13 +120,17 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ id: "added", dir: "desc" });
+  const [filters, setFilters] = useState({});
   const columns = useColumns(LEAD_COLUMNS);
   const fmt = money(currencySymbol);
 
-  const counts = useMemo(() => leadCounts(data.rows), [data.rows]);
+  const options = useMemo(() => leadFilterOptions(data.rows), [data.rows]);
+  // The tab counts follow the filters, so a tab never promises rows the filters then hide.
+  const filtered = useMemo(() => filterLeads(data.rows, filters), [data.rows, filters]);
+  const counts = useMemo(() => leadCounts(filtered), [filtered]);
   const rows = useMemo(
-    () => sortBy(searchBy(data.rows.filter((r) => tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source"]), sort),
-    [data.rows, tab, query, sort],
+    () => sortBy(searchBy(filtered.filter((r) => tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source"]), sort),
+    [filtered, tab, query, sort],
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
   const open = (row) => row.id && router.push(`/contacts/${encodeURIComponent(row.id)}`);
@@ -90,7 +147,8 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
             items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
           />
           <div className="ml-auto flex items-center gap-2.5">
-            <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className="w-56" />
+            <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className="w-52" />
+            <LeadFilters options={options} chosen={filters} onChange={setFilters} />
             {columns.menu}
           </div>
         </>
@@ -153,26 +211,46 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
 const AD_COLUMNS = [{ id: "spend", label: "Spend" }, { id: "leads", label: "Leads" }, { id: "cpl", label: "CPL" }, { id: "inCrm", label: "In CRM" }, { id: "closed", label: "Closed" }];
 
 /**
- * A client's ads, with what each spent and brought in.
- * @param {number|null} [props.cplTarget] an ad over this cost per lead is marked
+ * A client's campaigns, ad sets or ads, with what each spent and brought in.
+ * @param {{levels?: Record<string, object[]>, rows: object[]}} props.data `levels` holds the rows for each level; without it only ads are shown
+ * @param {number|null} [props.cplTarget] a row over this cost per lead is marked
  */
 export function AdsTable({ data, cplTarget = null, currencySymbol = "£" }) {
+  const [level, setLevel] = useState("ads");
+  const spec = AD_LEVELS.find((l) => l.key === level);
+  const levelRows = data.levels?.[level] ?? data.rows;
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ id: "spend", dir: "desc" });
   const columns = useColumns(AD_COLUMNS);
   const fmt = money(currencySymbol);
-  const rows = useMemo(() => sortBy(searchBy(data.rows, query, ["name", "campaign"]), sort), [data.rows, query, sort]);
+  const rows = useMemo(() => sortBy(searchBy(levelRows, query, ["name", "campaign"]), sort), [levelRows, query, sort]);
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
+  const plural = spec.label.toLowerCase();
 
   return (
     <TableCard
-      toolbar={<><SearchField placeholder="Search ads" value={query} onChange={(e) => setQuery(e.target.value)} className="w-60" />{columns.menu}</>}
-      state={tableState({ data, shown: rows.length, noun: "ads", icon: <Megaphone />, empty: { title: "No ads ran in this range", body: "Ads appear here once they spend or bring in a lead." } })}
+      toolbar={
+        <>
+          {data.levels && (
+            <TabPill
+              aria-label="Ad level"
+              value={level}
+              onValueChange={setLevel}
+              items={AD_LEVELS.map((l) => ({ value: l.key, label: l.label, count: data.levels[l.key]?.length }))}
+            />
+          )}
+          <div className={data.levels ? "ml-auto flex items-center gap-2.5" : "flex items-center gap-2.5"}>
+            <SearchField placeholder={`Search ${plural}`} value={query} onChange={(e) => setQuery(e.target.value)} className="w-56" />
+            {columns.menu}
+          </div>
+        </>
+      }
+      state={tableState({ data: { ...data, rows: levelRows }, shown: rows.length, noun: plural, icon: <Megaphone />, empty: { title: `No ${plural} ran in this range`, body: `${spec.label} appear here once they spend or bring in a lead.` } })}
     >
       <Table>
         <TableHead>
           <tr>
-            <Th {...header("name", "asc")} className="min-w-56">Ad</Th>
+            <Th {...header("name", "asc")} className="min-w-56">{spec.noun}</Th>
             {columns.shows("spend") && <Th numeric {...header("spend")}>Spend</Th>}
             {columns.shows("leads") && <Th numeric {...header("leads")}>Leads</Th>}
             {columns.shows("cpl") && <Th numeric {...header("cpl")}>CPL</Th>}

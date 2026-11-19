@@ -9,8 +9,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
 
 const data = (rows, over = {}) => ({ rows, total: rows.length, loading: false, error: false, retry: vi.fn(), ...over })
 const LEADS = [
-  { id: "c1", name: "Leanne Turner", stage: "closed", stageNote: "Lead booked", campaign: "SOUP - CBO", ad: "Timelapse", source: "Facebook", added: "2026-11-04T18:31:00", calls: 3, value: 349 },
-  { id: "c2", name: "Hannah Lewis", stage: "crm", stageNote: "", campaign: "", ad: "", source: "Website", added: "2026-11-03T13:05:00", calls: 0, value: 0 },
+  { id: "c1", name: "Leanne Turner", stage: "closed", stageNote: "Lead booked", campaign: "SOUP - CBO", ad: "Timelapse", source: "Facebook", tags: ["hifu"], type: "lead", statuses: ["won"], added: "2026-11-04T18:31:00", calls: 3, value: 349 },
+  { id: "c2", name: "Hannah Lewis", stage: "crm", stageNote: "", campaign: "", ad: "", source: "Website", tags: ["hifu", "cold lead"], type: "contact", statuses: [], added: "2026-11-03T13:05:00", calls: 0, value: 0 },
   { id: "c3", name: "Leah Fenwick", stage: "called", stageNote: "", campaign: "Body Sculpting", ad: "", source: "", added: "2026-11-05T09:00:00", calls: 1, value: 0 },
 ]
 const names = () => screen.getAllByRole("row").slice(1).map((r) => within(r).getAllByRole("cell")[0].textContent)
@@ -52,6 +52,23 @@ describe("Leads table", () => {
     expect(push).toHaveBeenCalledWith("/contacts/c2")
   })
 
+  it("narrows by source, type, opportunity and tag from one menu, and the tab counts follow", async () => {
+    render(<LeadsTable data={data(LEADS)} />)
+    await userEvent.click(screen.getByRole("button", { name: "Filters" }))
+    expect(screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"))).toEqual(["Source", "Type", "Opportunity", "Tag"])
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "hifu" }))
+    // The menu stays open, so a second filter can be set straight away.
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Website" }))
+    expect(screen.getByRole("menuitemcheckbox", { name: "Website" })).toHaveAttribute("aria-checked", "true")
+    await userEvent.keyboard("{Escape}")
+    expect(names()).toEqual(["Hannah Lewis"])
+    expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument()
+    expect(within(screen.getByRole("tablist", { name: "Leads by stage" })).getAllByRole("tab")[0]).toHaveTextContent("All1")
+    await userEvent.click(screen.getByRole("button", { name: "Filters, 2 on" }))
+    await userEvent.click(screen.getByRole("menuitem", { name: "Clear all filters" }))
+    expect(names()).toHaveLength(3)
+  })
+
   it("says how many are not shown when the list is capped", () => {
     render(<LeadsTable data={data(LEADS, { total: 1200 })} />)
     expect(screen.getByText("Showing the newest 3 of 1,200 leads.")).toBeInTheDocument()
@@ -86,6 +103,24 @@ describe("Ads table", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Leads/ }))
     expect(names()[0]).toBe("TimelapseSOUP - CBO")
   })
+  it("switches between campaigns, ad sets and ads when all three are given", async () => {
+    const levels = {
+      campaigns: [{ id: "c1", name: "SOUP - CBO", campaign: "", spend: 50, leads: 4, cpl: 12.5, inCrm: 3, closed: 1 }],
+      adsets: [{ id: "s1", name: "Lookalike 1%", campaign: "SOUP - CBO", spend: 50, leads: 4, cpl: 12.5, inCrm: 3, closed: 1 }],
+      ads: ADS,
+    }
+    render(<AdsTable data={{ ...data(ADS), levels }} />)
+    const pill = screen.getByRole("tablist", { name: "Ad level" })
+    expect(within(pill).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Campaigns1", "Ad sets1", "Ads3"])
+    expect(screen.getByRole("columnheader", { name: /^Ad/ })).toBeInTheDocument()
+    await userEvent.click(within(pill).getByRole("tab", { name: /^Campaigns/ }))
+    expect(screen.getByRole("columnheader", { name: /^Campaign/ })).toBeInTheDocument()
+    expect(names()).toEqual(["SOUP - CBO"])
+    expect(screen.getByRole("searchbox", { name: "Search campaigns" })).toBeInTheDocument()
+    await userEvent.click(within(pill).getByRole("tab", { name: /^Ad sets/ }))
+    expect(names()).toEqual(["Lookalike 1%SOUP - CBO"])
+  })
+
   it("says so when no ad ran", () => {
     render(<AdsTable data={data([])} />)
     expect(screen.getByRole("heading", { name: "No ads ran in this range" })).toBeInTheDocument()

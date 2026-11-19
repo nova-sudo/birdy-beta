@@ -31,6 +31,10 @@ export function leadRow(contact) {
     campaign: meta.campaign_name || "",
     ad: meta.ad_name || "",
     source: contact.source || "",
+    tags: Array.isArray(contact.tags) ? contact.tags.filter(Boolean).map(String) : [],
+    type: contact.contactType || contact.type || "",
+    // Every status among its deals: a lead with one open and one lost deal matches either filter.
+    statuses: [...new Set(statuses.filter(Boolean))],
     added: contact.dateAdded || "",
     calls,
     value: opps.reduce((sum, o) => sum + num(o.monetaryValue ?? o.monetary_value), 0),
@@ -44,23 +48,63 @@ export function leadCounts(rows) {
   return counts;
 }
 
-// ── Ads ─────────────────────────────────────────────────────────────────────
+/** The four ways the Leads table can be narrowed, in menu order. Each lists the values present in the loaded leads. */
+export const LEAD_FILTERS = [
+  { id: "source", label: "Source", values: (row) => (row.source ? [row.source] : []) },
+  { id: "type", label: "Type", values: (row) => (row.type ? [row.type] : []) },
+  { id: "status", label: "Opportunity", values: (row) => row.statuses ?? [] },
+  { id: "tag", label: "Tag", values: (row) => row.tags ?? [] },
+];
+
+/** For each filter, the values it can offer, A to Z. */
+export function leadFilterOptions(rows) {
+  const out = {};
+  for (const f of LEAD_FILTERS) out[f.id] = [...new Set(rows.flatMap(f.values))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  return out;
+}
 
 /**
- * One row per ad that spent or brought a lead, from the client's own Meta data
- * and the per-ad CRM roll-up (`/api/campaigns/opp-rollup`).
+ * Leads matching every filter that has a choice; within one filter any chosen value will do.
+ * @param {Record<string, string[]>} chosen filter id -> chosen values
  */
-export function adRows(group, rollupByAd = {}) {
-  const campaigns = new Map((group?.facebook?.campaigns ?? []).map((c) => [String(c.id), c.name]));
-  return (group?.facebook?.ads ?? [])
-    .map((ad) => {
-      const spend = num(ad.spend);
-      const leads = num(ad.results ?? ad.leads);
-      const crm = rollupByAd[ad.id] ?? {};
+export function filterLeads(rows, chosen) {
+  const active = LEAD_FILTERS.filter((f) => chosen?.[f.id]?.length);
+  if (active.length === 0) return rows;
+  return rows.filter((row) => active.every((f) => f.values(row).some((v) => chosen[f.id].includes(v))));
+}
+
+// ── Ads ─────────────────────────────────────────────────────────────────────
+
+/** The three levels the Ads table can show. */
+export const AD_LEVELS = [
+  { key: "campaigns", label: "Campaigns", noun: "Campaign", list: "campaigns", rollup: "by_campaign" },
+  { key: "adsets", label: "Ad sets", noun: "Ad set", list: "adsets", rollup: "by_adset" },
+  { key: "ads", label: "Ads", noun: "Ad", list: "ads", rollup: "by_ad" },
+];
+
+/**
+ * One row per campaign, ad set or ad that spent or brought a lead, from the
+ * client's own Meta data and the CRM roll-up for that level (`/api/campaigns/opp-rollup`).
+ * `parent` is what the row sits under: an ad set's or ad's campaign.
+ *
+ * @param {"campaigns"|"adsets"|"ads"} level
+ */
+export function adLevelRows(group, rollup = {}, level = "ads") {
+  const spec = AD_LEVELS.find((l) => l.key === level) ?? AD_LEVELS[2];
+  const fb = group?.facebook ?? {};
+  const campaigns = new Map((fb.campaigns ?? []).map((c) => [String(c.id), c.name]));
+  const crmBy = rollup?.[spec.rollup] ?? {};
+  return (fb[spec.list] ?? [])
+    .map((item) => {
+      const spend = num(item.spend);
+      const leads = num(item.results ?? item.leads);
+      const crm = crmBy[item.id] ?? {};
       return {
-        id: String(ad.id),
-        name: ad.name || "Unnamed ad",
-        campaign: campaigns.get(String(ad.campaign_id)) ?? "",
+        id: String(item.id),
+        name: item.name || `Unnamed ${spec.noun.toLowerCase()}`,
+        parent: level === "campaigns" ? "" : campaigns.get(String(item.campaign_id)) ?? "",
+        // Kept under its old name too: the search and older callers read `campaign`.
+        campaign: level === "campaigns" ? "" : campaigns.get(String(item.campaign_id)) ?? "",
         spend,
         leads,
         cpl: leads > 0 ? spend / leads : null,
@@ -68,8 +112,11 @@ export function adRows(group, rollupByAd = {}) {
         closed: num(crm.won),
       };
     })
-    .filter((ad) => ad.spend > 0 || ad.leads > 0);
+    .filter((row) => row.spend > 0 || row.leads > 0);
 }
+
+/** The ads level alone. `rollupByAd` is the roll-up's `by_ad`. */
+export const adRows = (group, rollupByAd = {}) => adLevelRows(group, { by_ad: rollupByAd }, "ads");
 
 // ── Calls ───────────────────────────────────────────────────────────────────
 

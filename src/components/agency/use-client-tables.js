@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { apiRequest } from "@/lib/api";
-import { adRows, callRows, leadRow } from "@/lib/client-tables";
+import { adLevelRows, callRows, leadRow } from "@/lib/client-tables";
 import { presetToDateRange } from "@/lib/date-utils";
 
 const LEADS_LIMIT = 500;
@@ -43,7 +43,13 @@ export function useClientTables(client, preset) {
       retry: () => leads.mutate(),
     },
     ads: {
-      rows: adRows(client, rollup.data?.by_ad),
+      // `rows` is the ads level, which the Ads tab counts; `levels` has all three.
+      rows: adLevelRows(client, rollup.data, "ads"),
+      levels: {
+        campaigns: adLevelRows(client, rollup.data, "campaigns"),
+        adsets: adLevelRows(client, rollup.data, "adsets"),
+        ads: adLevelRows(client, rollup.data, "ads"),
+      },
       // The ads themselves come with the client; only the CRM figures wait on a request.
       loading: false,
       error: false,

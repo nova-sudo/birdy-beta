@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adRows, callRows, leadCounts, leadRow, lengthLabel, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
+import { adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
 
 const contact = (over = {}) => ({ contactId: "c1", contactName: "Leanne Turner", dateAdded: "2026-11-04T18:31:00Z", source: "Facebook", opportunities: [], ...over })
 
@@ -94,5 +94,41 @@ describe("labels, search and sort", () => {
   it("reverses a column on its second press and starts another as asked", () => {
     expect(toggleSort({ id: "spend", dir: "desc" }, "spend")).toEqual({ id: "spend", dir: "asc" })
     expect(toggleSort({ id: "spend", dir: "desc" }, "name", "asc")).toEqual({ id: "name", dir: "asc" })
+  })
+})
+
+describe("lead filters", () => {
+  const rows = [
+    leadRow({ contactId: "1", source: "Facebook", contactType: "lead", tags: ["hifu", "cold lead"], opportunities: [{ status: "open" }, { status: "lost" }] }),
+    leadRow({ contactId: "2", source: "Website", contactType: "contact", tags: ["hifu"], opportunities: [{ status: "won" }] }),
+    leadRow({ contactId: "3", source: "Facebook", contactType: "lead" }),
+  ]
+  it("offers the values present in the loaded leads, A to Z", () => {
+    expect(leadFilterOptions(rows)).toEqual({ source: ["Facebook", "Website"], type: ["contact", "lead"], status: ["lost", "open", "won"], tag: ["cold lead", "hifu"] })
+  })
+  it("matches any chosen value within a filter and every filter that has a choice", () => {
+    expect(filterLeads(rows, { tag: ["hifu"] }).map((r) => r.id)).toEqual(["1", "2"])
+    expect(filterLeads(rows, { tag: ["hifu"], source: ["Facebook"] }).map((r) => r.id)).toEqual(["1"])
+    expect(filterLeads(rows, { status: ["lost", "won"] }).map((r) => r.id)).toEqual(["1", "2"])
+    expect(filterLeads(rows, { source: [] })).toBe(rows)
+    expect(filterLeads(rows, {})).toBe(rows)
+  })
+})
+
+describe("adLevelRows", () => {
+  const group = { facebook: {
+    campaigns: [{ id: "c1", name: "SOUP - CBO", spend: 50, results: 4 }, { id: "c2", name: "Paused", spend: 0, results: 0 }],
+    adsets: [{ id: "s1", name: "Lookalike 1%", campaign_id: "c1", spend: 50, results: 4 }],
+    ads: [{ id: "a1", name: "Timelapse", campaign_id: "c1", spend: 24, results: 2 }],
+  } }
+  const rollup = { by_campaign: { c1: { contacts: 3, won: 1 } }, by_adset: { s1: { contacts: 3, won: 1 } }, by_ad: { a1: { contacts: 1, won: 1 } } }
+  it("gives each level its own rows and CRM figures, with the campaign as the parent below campaign level", () => {
+    expect(adLevelRows(group, rollup, "campaigns")).toEqual([expect.objectContaining({ name: "SOUP - CBO", parent: "", spend: 50, leads: 4, cpl: 12.5, inCrm: 3, closed: 1 })])
+    expect(adLevelRows(group, rollup, "adsets")[0]).toMatchObject({ name: "Lookalike 1%", parent: "SOUP - CBO", inCrm: 3 })
+    expect(adLevelRows(group, rollup, "ads")[0]).toMatchObject({ name: "Timelapse", parent: "SOUP - CBO", inCrm: 1 })
+  })
+  it("copes with no roll-up yet and with a client that has no ad sets", () => {
+    expect(adLevelRows(group, undefined, "campaigns")[0]).toMatchObject({ inCrm: 0, closed: 0 })
+    expect(adLevelRows({ facebook: {} }, rollup, "adsets")).toEqual([])
   })
 })
