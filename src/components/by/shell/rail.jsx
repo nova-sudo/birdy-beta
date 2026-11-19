@@ -23,13 +23,14 @@ function SectionButton({ section, active, count, onSelect }) {
         className={cn(
           TILE,
           section.mascot
-            ? // The mascot keeps its round frame, a little larger than the icon tiles so the
-              // bird reads at rail size; when open, an accent ring marks it.
-              cn("size-12 rounded-full", active && "outline-2 outline-offset-2 outline-by-accent")
+            ? // The mascot keeps its round frame at the tiles' size. The bird inside is
+              // scaled up from its feet so it reads at rail size, cropped by the circle.
+              // When the section is open, an accent ring marks it.
+              cn("rounded-full", active && "outline-2 outline-offset-2 outline-by-accent")
             : active ? cn(section.solid, "shadow-by-raised") : section.tile,
         )}
       >
-        {section.mascot ? <BirdyAvatar size={48} /> : <Icon aria-hidden="true" />}
+        {section.mascot ? <BirdyAvatar size={40} className="[&>svg]:origin-bottom [&>svg]:scale-[1.18]" /> : <Icon aria-hidden="true" />}
         {count > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 size-2.5 rounded-full bg-by-accent ring-2 ring-by-rail" />}
       </button>
     </Tooltip>
