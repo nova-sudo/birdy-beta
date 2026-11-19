@@ -26,6 +26,8 @@ describe("Agency Ops' Dashboard tab", () => {
   it("is the Clients table under the Agency Ops header, with the date range and the ask bar", () => {
     render(<DashboardTab />)
     expect(list.props.viewKey).toBe("clients")
+    // The same centred column as Bird's Eye.
+    expect(list.props.column).toBe(true)
     expect(screen.getByRole("heading", { level: 1, name: "Agency Ops" })).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true")
     expect(screen.getByText("the clients table")).toBeInTheDocument()
