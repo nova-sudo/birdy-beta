@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowRight, Calendar, Check, CheckCircle2, Link2, Phone, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, Calendar, Check, CheckCircle2, Link2, MessageSquare, Phone, Users } from "lucide-react";
 import {
-  Card, Delta, DropdownTrigger, EmptyState, Funnel, KpiTile, LineChart, Menu, MenuContent, MenuItem, MenuTrigger, Notice,
+  AskBar, AskPanel, Button, Card, Delta, DropdownTrigger, EmptyState, Funnel, KpiTile, LineChart, Menu, MenuContent, MenuItem, MenuTrigger, Notice,
   RankList, SECTIONS, SectionHeader, Skeleton, TabPill,
 } from "@/components/by";
 import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
+import { ChatThread } from "@/components/agency/chat/thread";
+import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
+import { OPS_TABS, opsTabHref } from "@/components/agency/tabs";
 import { useStoredUser } from "@/components/shell/account-menu";
 import { clientDetailHref, clientHref } from "@/components/shell/nav";
 import { CHART_COPY, buildFinding, buildTiles, chartKeys, greeting, rankCampaigns } from "@/lib/birds-eye";
@@ -19,13 +22,6 @@ import { buildFunnel, buildLeaderboards } from "@/lib/portfolio-aggregate";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 
 const OPS = SECTIONS.find((s) => s.id === "ops");
-const TABS = [
-  { value: "chat", label: "Chat" },
-  { value: "birdseye", label: "Bird's Eye" },
-  // Not rebuilt yet: shown so the section reads as it will, and greyed until each exists.
-  { value: "dashboard", label: "Dashboard", disabled: true },
-  { value: "suggestions", label: "Suggestions", disabled: true },
-];
 const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
 const FUNNEL_PARTS = {
   leads: { label: "Meta leads", icon: <Users /> },
@@ -62,6 +58,18 @@ export function BirdsEye() {
   const user = useStoredUser();
   const [hour, setHour] = useState(null);
   useEffect(() => setHour(new Date().getHours()), []);
+
+  // The ask bar: the first question opens the conversation beside the page. Each client has its own thread.
+  const chat = useAgentChat({
+    sessionKey: `by_ops_ask_${clientId ?? "agency"}`,
+    page: scoped ? "client_detail" : "dashboard",
+    client: client && isActive(client) ? { id: client.id, name: client.name } : null,
+  });
+  const [asking, setAsking] = useState(false);
+  const ask = (text) => {
+    setAsking(true);
+    chat.send(text);
+  };
 
   // The address carries the range and the client, so a link to this page opens the same view.
   const withQuery = (changes) => {
@@ -126,10 +134,9 @@ export function BirdsEye() {
       <SectionHeader
         section={OPS}
         subtitle={subtitle}
-        tabs={TABS}
+        tabs={OPS_TABS}
         tab="birdseye"
-        // Chat is today's Ask Birdy until it is rebuilt.
-        onTabChange={(value) => value === "chat" && router.push("/ask-birdy")}
+        onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
         dateRange={
           <Menu>
             <MenuTrigger asChild>
@@ -148,7 +155,10 @@ export function BirdsEye() {
         }
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-10">
+      {/* The page and, once a question is asked, the conversation beside it. */}
+      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
         <div className="mx-auto flex max-w-[1040px] flex-col gap-3.5">
           <div>
             <div className="flex items-center gap-3 text-by-body-sm font-medium text-by-text-2">
@@ -294,6 +304,30 @@ export function BirdsEye() {
             </>
           )}
         </div>
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 px-7 pb-5">
+        <AskBar
+          className="pointer-events-auto mx-auto max-w-[820px]"
+          placeholder={scoped && client ? `Ask ${OPS.name} about ${client.name}` : `Ask ${OPS.name} about these numbers`}
+          busy={chat.loading}
+          onSubmit={ask}
+        />
+      </div>
+      </div>
+      {asking && (
+        <AskPanel
+          title={OPS.name}
+          onClose={() => setAsking(false)}
+          follow={`${chat.messages.length}-${chat.loading}`}
+          actions={chat.sessionId && (
+            <Button kind="ghost" size="sm" onClick={() => router.push(`${opsTabHref("chat", search)}${search.get("client") || search.get("range") ? "&" : "?"}c=${encodeURIComponent(chat.sessionId)}`)}>
+              <MessageSquare aria-hidden="true" />Open in Chat
+            </Button>
+          )}
+        >
+          <ChatThread chat={chat} name={OPS.name} compact />
+        </AskPanel>
+      )}
       </div>
     </div>
   );

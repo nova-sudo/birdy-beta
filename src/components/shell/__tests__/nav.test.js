@@ -67,6 +67,7 @@ describe("isRebuilt", () => {
   it("is true for the rebuilt pages only: the Clients list and Agency Ops, not a client's own page", () => {
     expect(isRebuilt("/clients")).toBe(true)
     expect(isRebuilt("/dashboard")).toBe(true)
+    expect(isRebuilt("/dashboard/chat")).toBe(true)
     expect(isRebuilt("/clients/abc")).toBe(false)
     expect(isRebuilt("/campaigns")).toBe(false)
   })

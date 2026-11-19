@@ -133,6 +133,17 @@
   from { opacity: 0; }
 }
 
+/* The conversation column sliding in from the right edge. */
+@keyframes by-panel {
+  from { opacity: 0; transform: translateX(24px); }
+}
+
+/* The three dots while a reply is being written. */
+@keyframes by-typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
 /* A block arriving on the page: fades in and settles upward. */
 @keyframes by-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.96); }

@@ -1,0 +1,68 @@
+"use client";
+
+import { useCallback } from "react";
+import { toast } from "sonner";
+import { useAiCredentials } from "@/hooks/useAiCredentials";
+import { useCredits } from "@/hooks/useCredits";
+import { markUISubmitted, sendChatMessage, useChat } from "@/lib/chat-store";
+
+/**
+ * One conversation with Birdy, on the app's existing chat backend.
+ *
+ * The transcript lives in the shared chat store under `sessionKey`, so it
+ * survives the page that started it being closed and reopened.
+ *
+ * @param {string} options.sessionKey which conversation this is
+ * @param {string|null} [options.page] the page slug the backend uses for context
+ * @param {{id: string, name: string}|null} [options.client] narrows the question to one client
+ * @param {(sessionId: string) => void} [options.onSessionId] a new conversation learned its id
+ * @param {() => void} [options.onSettled] a reply (or a failure) came back
+ */
+export function useAgentChat({ sessionKey, page = null, client = null, onSessionId, onSettled }) {
+  const chat = useChat(sessionKey);
+  const { configured: hasKey, loading: checkingKey, refresh: refreshCreds, markUnconfigured } = useAiCredentials();
+  // Until the check comes back, assume a key is there: the server still refuses a message sent without one.
+  const configured = hasKey || checkingKey;
+  const { blocked: outOfCredits, refresh: refreshCredits } = useCredits();
+
+  const send = useCallback(async (text) => {
+    if (!text?.trim() || chat.loading) return false;
+    if (!configured) {
+      toast.error("AI not configured", { description: "Add your AI key in Settings to chat." });
+      return false;
+    }
+    if (outOfCredits) {
+      toast.error("You're out of Birdy Credits", { description: "Top up to keep using Birdy AI." });
+      return false;
+    }
+    await sendChatMessage(
+      sessionKey,
+      { text: text.trim(), page, clientGroupId: client?.id ?? null, clientName: client?.name ?? null },
+      {
+        onSessionId,
+        on412: () => {
+          markUnconfigured();
+          refreshCreds();
+          toast.error("AI not configured", { description: "Add your AI key in Settings to chat." });
+        },
+        on402: () => {
+          refreshCredits?.();
+          toast.error("You're out of Birdy Credits", { description: "Top up to keep using Birdy AI." });
+        },
+        onSettled: () => {
+          refreshCredits?.();
+          onSettled?.();
+        },
+      },
+    );
+    return true;
+  }, [chat.loading, configured, outOfCredits, sessionKey, page, client?.id, client?.name, onSessionId, onSettled, markUnconfigured, refreshCreds, refreshCredits]);
+
+  // A form inside a reply answers as a hidden message, the way the existing chat does.
+  const submitUI = useCallback((uiKey, values) => {
+    markUISubmitted(sessionKey, uiKey);
+    send(`[UI_RESPONSE] ${JSON.stringify(values)}`);
+  }, [sessionKey, send]);
+
+  return { messages: chat.messages, loading: chat.loading, sessionId: chat.sessionId, submittedUIs: chat.submittedUIs, send, submitUI, configured, outOfCredits };
+}

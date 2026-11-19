@@ -15,6 +15,11 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(route.search),
 }))
 vi.mock("@/app/dashboard/usePortfolioData", () => ({ usePortfolioData: (args) => { hook.args = args; return hook.result } }))
+const chatStore = { state: { messages: [], loading: false, sessionId: null, submittedUIs: [] } }
+const sendChatMessage = vi.fn()
+vi.mock("@/lib/chat-store", () => ({ useChat: () => chatStore.state, sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
+vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
+vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
 vi.mock("@/components/shell/account-menu", () => ({ useStoredUser: () => ({ name: "Hadley Stone", email: "" }) }))
 
 const series = (values) => ({ values, labels: values.map((_, i) => `${i + 1} Nov`), tooltipLabels: values.map((_, i) => `${i + 1} Nov 2026`) })
@@ -46,6 +51,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   route.search = ""
   hook.result = result()
+  chatStore.state = { messages: [], loading: false, sessionId: null, submittedUIs: [] }
 })
 
 describe("Bird's Eye for the agency", () => {
@@ -67,14 +73,14 @@ describe("Bird's Eye for the agency", () => {
     expect(screen.getByText("down from 62")).toBeInTheDocument()
   })
 
-  it("greys the tabs that are not built, and opens today's Ask Birdy for Chat", async () => {
+  it("greys the tabs that are not built, and opens Chat", async () => {
     render(<BirdsEye />)
     const views = screen.getByRole("tablist", { name: "Agency Ops views" })
     expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeDisabled()
     expect(within(views).getByRole("tab", { name: "Suggestions" })).toBeDisabled()
     await userEvent.click(within(views).getByRole("tab", { name: "Chat" }))
-    expect(push).toHaveBeenCalledWith("/ask-birdy")
+    expect(push).toHaveBeenCalledWith("/dashboard/chat")
   })
 
   it("switches the chart between leads, spend, calls and closed", async () => {
@@ -138,6 +144,38 @@ describe("Bird's Eye for the agency", () => {
     hook.result = result({ hasClients: false })
     render(<BirdsEye />)
     expect(screen.getByRole("heading", { name: "No active clients yet" })).toBeInTheDocument()
+  })
+})
+
+describe("Bird's Eye: asking a question", () => {
+  it("opens the conversation beside the page only once a question is sent, and sends it about this page", async () => {
+    render(<BirdsEye />)
+    expect(screen.queryByRole("complementary", { name: "Agency Ops conversation" })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about these numbers" }), "Why did closes drop?{Enter}")
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_agency", expect.objectContaining({ text: "Why did closes drop?", page: "dashboard", clientGroupId: null }), expect.any(Object))
+    expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
+  })
+
+  it("shows the exchange in the column, offers the full Chat, and closes without losing the page", async () => {
+    chatStore.state = { messages: [{ role: "user", content: "Why did closes drop?" }, { role: "assistant", content: "Fewer leads got a call." }], loading: false, sessionId: "s9", submittedUIs: [] }
+    render(<BirdsEye />)
+    await userEvent.type(screen.getByRole("textbox", { name: /Ask Agency Ops/ }), "And leads?{Enter}")
+    const column = screen.getByRole("complementary", { name: "Agency Ops conversation" })
+    expect(within(column).getByText("Why did closes drop?")).toBeInTheDocument()
+    expect(within(column).getByText("Fewer leads got a call.")).toBeInTheDocument()
+    await userEvent.click(within(column).getByRole("button", { name: "Open in Chat" }))
+    expect(push).toHaveBeenCalledWith("/dashboard/chat?c=s9")
+    await userEvent.click(within(column).getByRole("button", { name: "Close conversation" }))
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Performance funnel" })).toBeInTheDocument()
+  })
+
+  it("asks about the client when the page is narrowed to one", async () => {
+    route.search = "client=a"
+    hook.result = result({ client: AURA, current: totals({ spend: 50, leads: 4, cpl: 12.5, closes: 1 }), previous: null })
+    render(<BirdsEye />)
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about Aura" }), "How are they doing?{Enter}")
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
   })
 })
 

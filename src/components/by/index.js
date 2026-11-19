@@ -6,6 +6,8 @@ export { cn } from "./cn"
 export { Button, buttonVariants } from "./button"
 export { TextField, SearchField, DropdownTrigger } from "./field"
 export { AskBar } from "./ask-bar"
+export { AskPanel } from "./ask-panel"
+export { ChatSender, ChatTyping, UserMessage } from "./chat"
 export { Switch, Checkbox, RadioGroup, Radio } from "./choice"
 
 // Navigation

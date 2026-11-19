@@ -10,15 +10,16 @@ import { buttonVariants } from "./button";
  *
  * @param {string} props.placeholder also the field's accessible name, e.g. "Ask Media Buyer about your clients"
  * @param {(text: string) => void} [props.onSubmit] called with the trimmed text; the bar then clears
+ * @param {boolean} [props.busy] a reply is on its way: typing is still possible, sending waits
  */
-export function AskBar({ placeholder, onSubmit, className, ...props }) {
+export function AskBar({ placeholder, onSubmit, busy = false, className, ...props }) {
   const [value, setValue] = useState("");
   const text = value.trim();
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!text) return;
+        if (!text || busy) return;
         onSubmit?.(text);
         setValue("");
       }}
@@ -39,7 +40,7 @@ export function AskBar({ placeholder, onSubmit, className, ...props }) {
       <button
         type="submit"
         aria-label="Send"
-        disabled={!text}
+        disabled={!text || busy}
         className={cn(buttonVariants({ kind: "primary", iconOnly: true }), "rounded-full")}
       >
         <ArrowUp aria-hidden="true" strokeWidth={2.4} />

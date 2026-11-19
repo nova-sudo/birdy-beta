@@ -15,8 +15,9 @@ It replaces the old Portfolio Dashboard page at the same address.
 | Decision | Pick |
 |---|---|
 | Layout | A, the reference: centred column, greeting and a one-line finding, four tiles, the chart, then a ranked list beside the funnel. The page scrolls. |
-| Header tabs | All four shown (Chat, Bird's Eye, Dashboard, Suggestions). Dashboard and Suggestions are greyed until built. Chat opens today's Ask Birdy. |
-| Ask bar | Left out until Chat is rebuilt. |
+| Header tabs | All four shown (Chat, Bird's Eye, Dashboard, Suggestions). Dashboard and Suggestions are greyed until built. |
+| Ask bar | First left out; added the same day at the owner's request. Sending a question opens the conversation in a column beside the page, as the reference does. |
+| Chat | Rebuilt at `/dashboard/chat` to the reference layout: saved conversations on the left, the open one on the right. |
 | Client view | Built in this step. A client row and the client switcher both land here. |
 
 ## Approaches considered
@@ -45,3 +46,13 @@ cost-per-lead series. What to draw is worked out in `src/lib/birds-eye.js`.
 - The client card ranks campaigns, not individual ads: campaigns are what the client payload carries.
 - `/clients/<id>` (the old client page) still exists and is linked from the client view as "Open client page"; it holds settings, notes and tracking.
 - The old `components/portfolio` kit and `dashboard-controls` are now unused by this page and are removed with the other old layers at the end of the redesign.
+
+## Chat and the ask bar (added 2026-11-19)
+
+Both use the app's existing chat backend (`/api/chat`, `/api/chat/conversations`)
+through `src/lib/chat-store.js`, so answers are real and the history is shared
+with the older Ask Birdy page.
+
+- Bird's Eye has a floating ask bar. The first question opens `AskPanel`, a column on the right; the page narrows beside it. Each client has its own thread. "Open in Chat" carries the conversation to the Chat tab.
+- Chat: New chat, conversations grouped Today / Yesterday / This week / Earlier, delete on hover, starter prompts on an empty chat.
+- Not in this step: the reference's scheduled "Morning roundup" messages and its inline client, ad and report tags, which need the agent work planned for other sessions. Forms, metric cards and charts inside a reply are drawn by the older chat blocks and keep their older look. File attachments and the client picker in the composer are not carried over.
