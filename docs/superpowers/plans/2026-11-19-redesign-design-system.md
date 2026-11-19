@@ -1,6 +1,6 @@
 # Birdy Redesign Design System Implementation Plan
 
-**Status:** in progress. Phases 1 to 5 done 2026-11-19, except opening the pull request, which waits for the user to say push. Phase 6 (tests) follows the pull request's review.
+**Status:** in progress. Phases 1 to 5 done and the pull request opened 2026-11-19. Phase 6 (tests) follows the pull request's review.
 
 **Goal:** Build the `by-` tokens, the `by` component kit and the new app shell in `birdy-beta`, shown on a development-only `/kit` page, with no change to any existing page.
 
@@ -154,7 +154,7 @@ Everything in the shell takes its data as props. Nothing here calls the API.
 
 **Verification:** `npx vitest run --dir src` and `npm run build` pass; screenshots of `/kit/shell` at 1440 and 1280 wide show the one-row and two-row headers; compare with option B on `08-shell.html`; open the switcher with ⌘K and complete a pick using only the keyboard; check each of the four client-list states.
 
-### Phase 5: Final verification and pull request (done, pull request not yet opened)
+### Phase 5: Final verification and pull request (done)
 
 **Outcome:** the kit matches the boards, existing pages are unchanged, and the pull request is open.
 
@@ -172,6 +172,7 @@ Everything in the shell takes its data as props. Nothing here calls the API.
 - `npx vitest run --dir src` and `npm run build` pass; the production build returns "not found" for `/kit` and `/kit/shell`.
 - Run `nova-review` on the branch and fix what it finds. Done: the ask bar reuses the primary button recipe, the switcher reuses `SearchField`, the Birdy avatar wraps the app's existing framed mascot, and the preview pages use the existing `money()` helper.
 - Open the pull request against `main` when the user says to push, using the `nova-sudo` login.
+- After the shell review (user, 2026-11-19): the Agency Ops section header shows a sparkle icon tile instead of the mascot; on the rail the mascot keeps its 40px frame with the bird scaled up 18% inside it.
 
 ### Phase 6: Tests
 
