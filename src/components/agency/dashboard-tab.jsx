@@ -30,7 +30,7 @@ function AgencyDashboard() {
   const tabs = useOpsTabs();
   const search = useSearchParams();
   // "dashboard" is the page name the chat backend already knows for the agency-wide view.
-  const chat = useAgentChat({ sessionKey: "by_ops_ask_table", page: "dashboard" });
+  const chat = useAgentChat({ sessionKey: "by_ops_ask_table", page: "dashboard", agent: "birdy" });
   const [asking, setAsking] = useState(false);
 
   return (

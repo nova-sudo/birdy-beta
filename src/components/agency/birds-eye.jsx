@@ -66,6 +66,8 @@ export function BirdsEye() {
   const chat = useAgentChat({
     sessionKey: `by_ops_ask_${clientId ?? "agency"}`,
     page: scoped ? "client_detail" : "dashboard",
+    // Agency Ops talks to Birdy, the orchestrator.
+    agent: "birdy",
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });
   const [asking, setAsking] = useState(false);

@@ -11,13 +11,14 @@ const chatStore = { state: null }
 const sendChatMessage = vi.fn()
 const resetChat = vi.fn(() => { chatStore.state = { messages: [], loading: false, sessionId: null, submittedUIs: [] } })
 const hydrateChat = vi.fn((key, { sessionId, messages }) => { chatStore.state = { messages, loading: false, sessionId, submittedUIs: [] } })
+const syncProposals = vi.fn()
 
 vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 5 }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/dashboard/chat", useSearchParams: () => new URLSearchParams(route.search) }))
 vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("@/lib/chat-store", () => ({
   useChat: () => chatStore.state, sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn(),
-  resetChat: (...a) => resetChat(...a), hydrateChat: (...a) => hydrateChat(...a),
+  resetChat: (...a) => resetChat(...a), hydrateChat: (...a) => hydrateChat(...a), syncProposals: (...a) => syncProposals(...a),
 }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
@@ -59,6 +60,34 @@ describe("Agency Ops chat", () => {
     render(<AgencyChat />)
     await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "Why did closes drop?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ text: "Why did closes drop?", page: null, clientGroupId: null }), expect.any(Object))
+  })
+
+  it("talks to Birdy", async () => {
+    render(<AgencyChat />)
+    await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "Who needs me?{Enter}")
+    expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ agent: "birdy" }), expect.any(Object))
+  })
+
+  it("lists Birdy's conversations and older ones that name no agent, never another agent's", async () => {
+    apiRequest.mockImplementation(() => ok({ conversations: [
+      { ...LIST[1], session_id: "old" },
+      { session_id: "b1", title: "Birdy's own", scope: "global", agent: "birdy", updated_at: new Date().toISOString() },
+      { session_id: "m1", title: "Media Buyer's chat", scope: "global", agent: "media_buyer", updated_at: new Date().toISOString() },
+    ] }))
+    render(<AgencyChat />)
+    const list = screen.getByRole("navigation", { name: "Conversations" })
+    expect(await within(list).findByText("Birdy's own")).toBeInTheDocument()
+    expect(within(list).getByText("Best creatives this month")).toBeInTheDocument()
+    expect(within(list).queryByText("Media Buyer's chat")).not.toBeInTheDocument()
+  })
+
+  it("brings a chat kept in this browser up to date with the decisions on its saved conversation", async () => {
+    chatStore.state = { messages: [{ role: "user", content: "Hi" }], loading: false, sessionId: "s9", submittedUIs: [] }
+    const saved = [{ role: "assistant", content: "x", proposals: [{ id: "p1", status: "approved" }] }]
+    apiRequest.mockImplementation((url) => (url === "/api/chat/conversations/s9" ? ok({ messages: saved }) : ok({ conversations: LIST })))
+    render(<AgencyChat />)
+    await waitFor(() => expect(syncProposals).toHaveBeenCalledWith("by_ops_chat_agency", saved))
+    expect(hydrateChat).not.toHaveBeenCalled()
   })
 
   it("opens a saved conversation and marks it", async () => {

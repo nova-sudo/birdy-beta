@@ -269,7 +269,7 @@ function LoadingCards() {
 /**
  * A section's Context page (under "More"): what it knows, which Birdy uses in every answer and
  * suggestion. The four cards with inline edit, Documents & notes; inside a client that client's own
- * card and notes come first. Media Buyer and Sales Coach list their sub-agents; Media Buyer its lessons.
+ * card and notes come first. Media Buyer and Sales Coach list their sub-agents and keep their lessons.
  *
  * @param {import("./sections").SectionConfig|string} props.section
  */
@@ -343,7 +343,7 @@ export function ContextTab({ section: which }) {
             )}
 
             {section.subAgents && <SubAgentsCard section={section} clientId={clientId} onWaiting={setWaiting} />}
-            {section.lessons && !clientId && <LessonsSection />}
+            {section.lessons && <LessonsSection section={section} client={client ? { id: client.id, name: client.name } : null} />}
           </div>
         </div>
       </AskDock>

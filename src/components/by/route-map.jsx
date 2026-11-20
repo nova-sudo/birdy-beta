@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Bot, Check, CircleAlert, Info, Megaphone, Minus, Phone, X } from "lucide-react";
 import {
   agentChatHref, askedByName, findStep, liveIndex, liveWire, limitMessage, normalizeRoute, routeMeta, routeStatusLabel,
-  routeStatusLine, stepMeta, stepStatusLabel,
+  routeStatusLine, stepMeta, stepReason, stepStatusLabel,
 } from "@/lib/agent-route";
 import { BirdyAvatar } from "./avatar";
 import { buttonVariants } from "./button";
@@ -257,8 +257,9 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
   const meta = stepMeta(step);
   const title = `${info.name}’s part`;
   const answerLabel = step.status === "failed" ? `${info.name} couldn’t finish` : `${info.name} answered`;
-  const answer = step.answer
-    ?? (step.status === "working" ? "Still working on it." : step.status === "skipped" ? "This agent was not asked in the end." : step.status === "failed" ? "No answer came back." : step.summary || null);
+  // A skipped or failed step says why instead of a bare "no answer".
+  const reason = stepReason(route, step);
+  const answer = step.answer ?? (step.status === "working" ? "Still working on it." : reason ? null : step.summary || null);
 
   return (
     <section
@@ -305,10 +306,18 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
         )}
       </div>
 
+      {reason && <Quote label={step.status === "skipped" ? "Why it was skipped" : "Why it stopped"} tone={step.status === "failed" ? "danger" : undefined}>{reason}</Quote>}
       {answer && <Quote label={answerLabel} tone={step.status === "failed" ? "danger" : undefined}>{answer}</Quote>}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Link href={chatHref ?? agentChatHref(info)} className={cn(buttonVariants({ kind: "soft", size: "sm" }))}>
+        {/* A sub-agent is kept on its main agent's Context page; its work shows in that agent's chat. */}
+        {info.kind === "sub" && info.context && (
+          <Link href={info.context} className={cn(buttonVariants({ kind: "soft", size: "sm" }))}>
+            See {info.name} in Context
+            <ArrowUpRight aria-hidden="true" />
+          </Link>
+        )}
+        <Link href={chatHref ?? agentChatHref(info)} className={cn(buttonVariants({ kind: info.kind === "sub" && info.context ? "ghost" : "soft", size: "sm" }))}>
           Open {info.kind === "sub" && info.parentName ? `${info.parentName}’s` : `${info.name}’s`} chat
           <ArrowUpRight aria-hidden="true" />
         </Link>

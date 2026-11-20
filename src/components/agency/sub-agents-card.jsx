@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowUpRight, Bot, CalendarClock, Check, MessageSquare, Pause, Pencil, Play, Trash2, Users, Wrench } from "lucide-react";
-import { AgentAvatar, Button, Card, Dialog, DialogBody, DialogContent, DialogFooter, Notice, Pill, Skeleton, buttonVariants, cn } from "@/components/by";
+import { ArrowUpRight, Bot, CalendarClock, Check, History, MessageSquare, MoreHorizontal, Pause, Pencil, Play, Trash2, Users, Wrench, Zap } from "lucide-react";
+import {
+  AgentAvatar, Button, Card, Dialog, DialogBody, DialogContent, DialogFooter, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Notice, Pill, Skeleton,
+  buttonVariants, cn,
+} from "@/components/by";
 import { ContextCardHead } from "@/components/agency/context-parts";
 import { SubAgentEditDialog } from "@/components/agency/sub-agent-fields";
+import { RunNowDialog, RunStatus, RunsDialog, runWhen } from "@/components/agency/sub-agent-runs";
 import { sectionTabHref } from "@/components/agency/tabs";
-import { agentInfo } from "@/lib/agent-route";
+import { agentInfo, formatCredits, subAgentAnchor } from "@/lib/agent-route";
 import { customAgentPath } from "@/lib/agents-api";
-import { parseServerDate } from "@/lib/stock-agent-api";
 import {
   ALL_CLIENTS, PARENT_NAMES, approveSubAgent, clientsLine, deleteSubAgent, pauseSubAgent, rejectSubAgent, resumeSubAgent, scheduleLine,
   subAgentErrorMessage, toolsLine, useSubAgents,
@@ -22,11 +25,6 @@ const STATUS = {
   paused: { tone: "neutral", label: "Paused" },
 };
 
-const when = (iso) => {
-  const d = parseServerDate(iso);
-  return d && !Number.isNaN(d.getTime()) ? d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
-};
-
 function Meta({ icon: Icon, label, children }) {
   return (
     <span className="flex min-w-0 items-start gap-1.5">
@@ -36,16 +34,39 @@ function Meta({ icon: Icon, label, children }) {
   );
 }
 
-/** One sub-agent: who it is, what it does, its tools, clients and schedule, and what can be done to it. */
-function SubAgentRow({ sub, busy, onAct, onEdit, onDelete }) {
+/** Its last run: how it went, when, what it found and what it cost; or that it has not run. */
+function LastRun({ sub }) {
+  const run = sub.last_run;
+  const at = runWhen(run?.at ?? sub.last_run_at);
+  if (!run) return <span className="text-by-caption text-by-muted">{at ? `Last ran ${at}` : "Not run yet"}</span>;
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-by-caption text-by-muted">
+      <span className="sr-only">Last run: </span>
+      <RunStatus status={run.status} />
+      {at && <span className="tabular-nums">{at}</span>}
+      {run.summary && <span className="min-w-0 truncate text-by-text-2" title={run.summary}>{run.summary}</span>}
+      {run.credits > 0 && <span className="tabular-nums">· {formatCredits(run.credits)}</span>}
+    </span>
+  );
+}
+
+/** One sub-agent: who it is, what it does, its tools, clients and schedule, its last run, and what can be done to it. */
+function SubAgentRow({ sub, busy, onAct, onEdit, onDelete, onRun, onRuns, highlighted }) {
   const info = agentInfo(`sub:${sub.id}`, { name: sub.name, parent: sub.parent });
   const status = STATUS[sub.status];
   const custom = sub.kind === "custom";
-  const lastRun = when(sub.last_run_at);
   const doing = busy?.id === sub.id ? busy.what : null;
   const locked = busy != null;
   return (
-    <li className={cn("flex flex-wrap items-start gap-x-3 gap-y-2.5 border-t border-by-line-soft py-3.5 first:border-t-0 first:pt-1", sub.status === "paused" && "[&_[data-face]]:opacity-60 [&_[data-face]]:grayscale")}>
+    <li
+      id={subAgentAnchor(sub.id)}
+      className={cn(
+        "flex scroll-mt-24 flex-wrap items-start gap-x-3 gap-y-2.5 rounded-by-md border-t border-by-line-soft py-3.5 first:border-t-0 first:pt-1",
+        "transition-[background-color,box-shadow] duration-(--by-dur-base) ease-by-out",
+        highlighted && "bg-by-accent-soft shadow-[0_0_0_6px_var(--by-accent-soft)]",
+        sub.status === "paused" && "[&_[data-face]]:opacity-60 [&_[data-face]]:grayscale",
+      )}
+    >
       <span data-face className="pt-0.5"><AgentAvatar info={info} size={32} /></span>
       <div className="min-w-0 flex-1 basis-72">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -57,8 +78,9 @@ function SubAgentRow({ sub, busy, onAct, onEdit, onDelete }) {
         <div className="mt-1.5 flex flex-col gap-0.5 text-by-caption text-by-muted">
           {!custom && <Meta icon={Wrench} label="Tools">{toolsLine(sub.tools)}</Meta>}
           <Meta icon={Users} label="Clients">{clientsLine(sub.clients)}</Meta>
-          {!custom && <Meta icon={CalendarClock} label="Runs">{scheduleLine(sub.schedule)}{sub.status !== "proposed" && ` · ${lastRun ? `last ran ${lastRun}` : "not run yet"}`}</Meta>}
+          {!custom && <Meta icon={CalendarClock} label="Runs">{scheduleLine(sub.schedule)}</Meta>}
         </div>
+        {!custom && sub.status !== "proposed" && <div className="mt-2"><LastRun sub={sub} /></div>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
         {custom ? (
@@ -77,12 +99,53 @@ function SubAgentRow({ sub, busy, onAct, onEdit, onDelete }) {
             ) : (
               <Button kind="ghost" size="sm" loading={doing === "resume"} disabled={locked} onClick={() => onAct(sub, "resume")} aria-label={`Resume ${sub.name}`}><Play aria-hidden="true" />Resume</Button>
             )}
-            <Button kind="ghost" size="sm" className="text-by-danger hover:bg-by-danger-bg hover:text-by-danger" disabled={locked} onClick={() => onDelete(sub)} aria-label={`Delete ${sub.name}`}><Trash2 aria-hidden="true" />Delete</Button>
+            <Menu>
+              <MenuTrigger asChild>
+                <Button kind="ghost" size="sm" iconOnly disabled={locked} aria-label={`More for ${sub.name}`}><MoreHorizontal aria-hidden="true" /></Button>
+              </MenuTrigger>
+              <MenuContent align="end">
+                {sub.status === "active" && <MenuItem onSelect={() => onRun(sub)}><Zap aria-hidden="true" />Run now</MenuItem>}
+                <MenuItem onSelect={() => onRuns(sub)}><History aria-hidden="true" />See its runs</MenuItem>
+                <MenuSeparator />
+                <MenuItem className="text-by-danger data-[highlighted]:bg-by-danger-bg" onSelect={() => onDelete(sub)}><Trash2 aria-hidden="true" />Delete</MenuItem>
+              </MenuContent>
+            </Menu>
           </>
         )}
       </div>
     </li>
   );
+}
+
+/**
+ * Arriving on `#sub-agent-<id>` (from a route map): once the list is drawn, bring that row into
+ * view and mark it for a moment. Returns the anchor being marked, or null.
+ */
+function useAnchoredRow(ready) {
+  const [marked, setMarked] = useState(null);
+  const done = useRef(false);
+  useEffect(() => {
+    if (!ready || done.current || typeof window === "undefined") return;
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (!hash.startsWith("sub-agent-")) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    done.current = true;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    // Scroll only the page's own scrolling column, so the header and rail stay where they are.
+    let scroller = el.parentElement;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    if (scroller) {
+      const box = scroller.getBoundingClientRect();
+      const row = el.getBoundingClientRect();
+      const top = scroller.scrollTop + row.top - box.top - (scroller.clientHeight - row.height) / 2;
+      scroller.scrollTo?.({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
+    }
+    setMarked(hash);
+    const t = setTimeout(() => setMarked(null), 2400);
+    return () => clearTimeout(t);
+  }, [ready]);
+  return marked;
 }
 
 const ACTIONS = { approve: approveSubAgent, reject: rejectSubAgent, pause: pauseSubAgent, resume: resumeSubAgent, delete: deleteSubAgent };
@@ -104,6 +167,9 @@ export function SubAgentsCard({ section, clientId = null, onWaiting }) {
   const [failure, setFailure] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [running, setRunning] = useState(null);
+  const [viewingRuns, setViewingRuns] = useState(null);
+  const highlighted = useAnchoredRow(!isLoading && subAgents.length > 0);
 
   const shown = clientId ? subAgents.filter((s) => s.clients === ALL_CLIENTS || s.clients.some((c) => c.id === clientId)) : subAgents;
   const waiting = shown.filter((s) => s.status === "proposed").length;
@@ -153,16 +219,21 @@ export function SubAgentsCard({ section, clientId = null, onWaiting }) {
       ) : (
         <ul aria-label={`${parentName}’s sub-agents`} className="flex flex-col">
           {shown.map((sub) => (
-            <SubAgentRow key={sub.id} sub={sub} busy={busy} onAct={act} onEdit={setEditing} onDelete={setDeleting} />
+            <SubAgentRow
+              key={sub.id} sub={sub} busy={busy} onAct={act} onEdit={setEditing} onDelete={setDeleting}
+              onRun={setRunning} onRuns={setViewingRuns} highlighted={highlighted === subAgentAnchor(sub.id)}
+            />
           ))}
         </ul>
       )}
       {count > 0 && !unavailable && !error && <p className="mt-auto flex items-center gap-[7px] pt-3 text-by-caption text-by-muted">
         <Bot aria-hidden="true" className="size-[13px] shrink-0 text-by-accent-line" />
-        {parentName} asks these during a chat, and each runs on its own schedule. They work only in {parentName}’s area.
+        {parentName} asks these during a chat, and each runs on its own schedule or when you run it. They work only in {parentName}’s area.
       </p>}
 
       <SubAgentEditDialog record={editing} open={editing != null} onOpenChange={(open) => !open && setEditing(null)} onSaved={() => mutate()} />
+      <RunNowDialog sub={running} onClose={() => setRunning(null)} onDone={() => mutate()} />
+      <RunsDialog sub={viewingRuns} onClose={() => setViewingRuns(null)} />
 
       <Dialog open={deleting != null} onOpenChange={(open) => !open && busy == null && setDeleting(null)}>
         {deleting && (

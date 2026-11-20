@@ -93,6 +93,8 @@ function useDock(rootRef, active) {
         fits: scroller.clientWidth >= DOCK_MIN_AREA,
         pad,
         shift,
+        // The scrollbar's width: the thread is centred in the area beside it, not under it.
+        gutter: Math.max(0, Math.round(scroller.offsetWidth - scroller.clientWidth)),
         style: { top: area.top, left, width: DOCK_WIDTH, height: scroller.clientHeight },
       });
     };
@@ -116,11 +118,13 @@ function useDock(rootRef, active) {
  * @param {boolean} [props.compact] the narrow column beside a page: replies are not indented under the sender
  * @param {"auto"|"side"|"inline"} [props.partPlacement] where an agent's part opens when its box on a route map is
  *   pressed. auto: beside the thread when there is room for it, otherwise under the map. Compact threads always open it inline.
+ * @param {(room: {shift: number, pad: number, gutter: number}|null) => void} [props.onDock] told how the thread column moved to make room
+ *   for a docked part (null once it closes), so whatever sits under the thread (the composer) can line up with it
  *
  * A reply that other agents helped with carries a route map above it; while
  * agents are still at work, the live map stands in for the typing dots.
  */
-export function ChatThread({ chat, name, compact = false, partPlacement = "auto" }) {
+export function ChatThread({ chat, name, compact = false, partPlacement = "auto", onDock }) {
   const { messages, loading, send, submitUI, submittedUIs, configured, outOfCredits } = chat;
   const shown = messages.filter((m) => !(m.role === "user" && m.content?.startsWith("[UI_RESPONSE]")));
   const indent = compact ? "" : "pl-10";
@@ -136,6 +140,17 @@ export function ChatThread({ chat, name, compact = false, partPlacement = "auto"
   const wantsSide = !compact && partPlacement !== "inline" && Boolean(openStep);
   const dock = useDock(rootRef, wantsSide);
   const side = wantsSide && (partPlacement === "side" || dock?.fits === true);
+  const room = side && dock?.pad ? { shift: dock.shift ?? 0, pad: dock.pad, gutter: dock.gutter ?? 0 } : null;
+
+  // Tell the page how the column moved, once per change, so the composer follows it.
+  const told = useRef(null);
+  useEffect(() => {
+    const key = room ? `${room.shift}:${room.pad}:${room.gutter}` : null;
+    if (told.current === key) return;
+    told.current = key;
+    onDock?.(room);
+  });
+  useEffect(() => () => onDock?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = useCallback(() => {
     const was = part;
@@ -158,7 +173,7 @@ export function ChatThread({ chat, name, compact = false, partPlacement = "auto"
   );
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-5" style={side && dock?.pad ? { marginLeft: -dock.shift, paddingRight: dock.pad } : undefined}>
+    <div ref={rootRef} className="flex flex-col gap-5" style={room ? { marginLeft: -room.shift, paddingRight: room.pad } : undefined}>
       {shown.map((message, i) => message.role === "user" ? (
         <UserMessage key={i}>{message.content}</UserMessage>
       ) : (

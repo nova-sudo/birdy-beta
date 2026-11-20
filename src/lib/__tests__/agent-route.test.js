@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   agentChatHref, agentInfo, askedByName, findStep, formatCredits, formatSeconds, limitMessage, liveIndex, liveWire, normalizeRoute,
-  routeMeta, routeStatusLabel, routeStatusLine, stepMeta, stepStatusLabel,
+  routeMeta, routeStatusLabel, routeStatusLine, stepMeta, stepReason, stepStatusLabel, subAgentAnchor, subAgentContextHref,
 } from "@/lib/agent-route"
 
 const step = (over) => ({ id: "s1", agent: "sales_coach", name: "Sales Coach", kind: "main", status: "done", summary: "212 calls checked", question: null, asked_by: null, tools: [], answer: null, credits: 0, seconds: 0, ...over })
@@ -124,5 +124,47 @@ describe("asked by", () => {
     expect(askedByName(r, { asked_by: "media_buyer" })).toBe("Media Buyer")
     expect(askedByName(r, findStep(r, "s1"))).toBeNull()
     expect(findStep(r, "nope")).toBeNull()
+  })
+})
+
+describe("where a sub-agent is kept", () => {
+  it("is its row on its main agent's Context page", () => {
+    expect(subAgentContextHref("media_buyer", "abc")).toBe("/media-buyer/context#sub-agent-abc")
+    expect(subAgentContextHref("sales_coach", "x 1")).toBe("/sales-coach/context#sub-agent-x-1")
+    expect(subAgentContextHref("birdy", "abc")).toBeNull()
+    expect(subAgentContextHref("nobody", "abc")).toBeNull()
+    expect(subAgentAnchor("a/b")).toBe("sub-agent-a-b")
+  })
+  it("comes with a sub-agent's info when its main agent is known", () => {
+    expect(agentInfo("sub:s9", { name: "Pacer", parent: "sales_coach" }).context).toBe("/sales-coach/context#sub-agent-s9")
+    expect(agentInfo("sub:s9", { name: "Pacer" }).context).toBeNull()
+  })
+})
+
+describe("stepReason", () => {
+  const route = (over, step) => normalizeRoute({ status: "done", steps: [{ id: "a", agent: "birdy", status: "done" }, { id: "b", agent: "sub:s4", name: "Frequency watcher", kind: "sub", asked_by: "a", ...step }], ...over })
+  const reason = (over, step) => { const r = route(over, step); return stepReason(r, r.steps[1]) }
+
+  it("is null for a step that worked", () => {
+    expect(reason({}, { status: "done" })).toBeNull()
+  })
+  it("names the asks limit, from the route or the step's own note", () => {
+    expect(reason({ limit_hit: "asks" }, { status: "skipped" })).toMatch(/already used its 3 agent asks/)
+    expect(reason({}, { status: "skipped", summary: "Not asked: limit of 3 asks" })).toMatch(/already used its 3 agent asks/)
+  })
+  it("names the depth limit and the repeat rule", () => {
+    expect(reason({}, { status: "skipped", summary: "Not asked: chain too long" })).toMatch(/chain of agents was already as long as it can go/)
+    expect(reason({ limit_hit: "repeat" }, { status: "skipped" })).toMatch(/asked only once per reply/)
+  })
+  it("quotes a skipped step's own note when no limit explains it", () => {
+    expect(reason({}, { status: "skipped", summary: "Covered by another answer" })).toBe("Frequency watcher wasn’t asked in the end. The note it left: “Covered by another answer”.")
+  })
+  it("explains a step that ran out of time, with how long it took", () => {
+    expect(reason({}, { status: "failed", summary: "Ran out of time", seconds: 100 })).toMatch(/^Frequency watcher ran out of time after 1m 40s/)
+    expect(reason({}, { status: "failed", summary: "Not asked: no time left in this reply" })).toMatch(/no time left for it/)
+  })
+  it("falls back to plain words for any other failure", () => {
+    expect(reason({}, { status: "failed", summary: "Could not finish" })).toMatch(/hit a problem and couldn’t finish its part/)
+    expect(reason({}, { status: "failed", summary: "Meta said no" })).toMatch(/The note it left: “Meta said no”/)
   })
 })

@@ -14,6 +14,9 @@ vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestions: () => su
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
+const pending = { agents: [] }
+vi.mock("@/components/agency/pending-proposals", () => ({ PendingProposals: ({ agent, clientId }) => { pending.agents.push([agent, clientId]); return <section aria-label="Waiting for your approval" /> } }))
+vi.mock("@/lib/proposals-api", async (orig) => ({ ...(await orig()), usePendingProposals: () => ({ proposals: [], unavailable: false, error: null, isLoading: false, mutate: vi.fn() }) }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ clientGroups: [{ id: "a", name: "Aura", client_status: "Active", health: "Critical" }] }) }))
 
 const S = (id, title, client, tone = "warning") => ({ id, title, client, tone, why: `${title} because`, agentId: null })
@@ -116,6 +119,17 @@ describe("Media Buyer's and Sales Coach's Suggestions tab", () => {
     expect(screen.queryByText("Pause Body Sculpting")).not.toBeInTheDocument()
     expect(screen.getByText(/Sales Coach has no suggestions yet/)).toBeInTheDocument()
     expect(screen.queryByRole("complementary", { name: "History" })).not.toBeInTheDocument()
+  })
+
+  it("puts what waits for approval first in Media Buyer's and Sales Coach's, not in Agency Ops'", () => {
+    pending.agents = []
+    const { unmount } = render(<SuggestionsTab />)
+    expect(screen.queryByRole("region", { name: "Waiting for your approval" })).toBeNull()
+    unmount()
+    route.search = "client=a"
+    render(<SuggestionsTab section="coach" />)
+    expect(screen.getByRole("region", { name: "Waiting for your approval" })).toBeInTheDocument()
+    expect(pending.agents.at(-1)).toEqual(["sales_coach", "a"])
   })
 
   it("moves between Sales Coach's own tabs", async () => {

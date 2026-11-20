@@ -120,6 +120,36 @@ export function updateProposal(sessionKey, proposalId, patch) {
   if (found) emit(sessionKey)
 }
 
+/**
+ * Bring the proposals of a chat in this browser up to date with the server's saved conversation
+ * (`messages[].proposals[]`): a decision made after the chat was opened (on another page, in
+ * another tab, or before a reload) shows here too. Only proposals the server knows are touched,
+ * and only the fields it records about the decision.
+ */
+export function syncProposals(sessionKey, savedMessages) {
+  const saved = new Map()
+  for (const m of savedMessages ?? []) for (const p of m?.proposals ?? []) if (p?.id) saved.set(p.id, p)
+  if (!saved.size) return
+  const chat = entry(sessionKey)
+  let changed = false
+  chat.messages = chat.messages.map((m) => {
+    if (!m.proposals?.some((p) => saved.has(p.id))) return m
+    return {
+      ...m,
+      proposals: m.proposals.map((p) => {
+        const s = saved.get(p.id)
+        if (!s) return p
+        const patch = {}
+        for (const key of ["status", "session_id", "can_undo"]) if (s[key] !== undefined && s[key] !== p[key]) patch[key] = s[key]
+        if (!Object.keys(patch).length) return p
+        changed = true
+        return { ...p, ...patch }
+      }),
+    }
+  })
+  if (changed) emit(sessionKey)
+}
+
 export function markUISubmitted(sessionKey, uiKey) {
   const chat = entry(sessionKey)
   chat.submittedUIs = [...chat.submittedUIs, uiKey]

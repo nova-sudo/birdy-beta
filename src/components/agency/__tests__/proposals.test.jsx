@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
 import { ReplyProposals } from "../chat/proposal-card"
 
-const calls = { apply: vi.fn(), dismiss: vi.fn(), patch: vi.fn(), approve: vi.fn(), reject: vi.fn() }
+const calls = { apply: vi.fn(), dismiss: vi.fn(), undo: vi.fn(), patch: vi.fn(), approve: vi.fn(), reject: vi.fn() }
 const remember = vi.fn()
-vi.mock("@/lib/proposals-api", async (orig) => ({ ...(await orig()), applyProposal: (...a) => calls.apply(...a), dismissProposal: (...a) => calls.dismiss(...a) }))
+vi.mock("@/lib/proposals-api", async (orig) => ({ ...(await orig()), applyProposal: (...a) => calls.apply(...a), dismissProposal: (...a) => calls.dismiss(...a), undoProposal: (...a) => calls.undo(...a) }))
 // The sub-agent routes, by address: PATCH /api/agents/sub/{id}, POST …/approve and …/reject.
 vi.mock("@/lib/context-api", async (orig) => ({
   ...(await orig()),
@@ -64,6 +64,51 @@ describe("an approval card under a reply (A1)", () => {
     expect(calls.dismiss).toHaveBeenCalledWith("p1")
     expect(await screen.findByText("This was already decided somewhere else.")).toBeInTheDocument()
     expect(onUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe("undoing an approved change", () => {
+  it("offers Undo only when the server says the change can be undone", () => {
+    render(<ReplyProposals proposals={[P({ status: "approved", can_undo: true }), P({ id: "p2", title: "Raise the budget", status: "approved", can_undo: false })]} />)
+    expect(screen.getAllByRole("button", { name: /^Undo/ })).toHaveLength(1)
+    expect(screen.getByRole("button", { name: "Undo: Put the old lead form back" })).toBeInTheDocument()
+  })
+
+  it("undoes it and keeps the owning agent's answer", async () => {
+    calls.undo.mockResolvedValue({ reply: "Done. The new form is live again on both ad sets.", session_id: "mb-10" })
+    const onUpdate = vi.fn()
+    render(<ReplyProposals proposals={[P({ status: "approved", can_undo: true, session_id: "mb-9" })]} onUpdate={onUpdate} />)
+    await userEvent.click(screen.getByRole("button", { name: /^Undo/ }))
+    expect(calls.undo).toHaveBeenCalledWith("p1")
+    expect(onUpdate).toHaveBeenCalledWith("p1", { undone: true, can_undo: false, undo_receipt: "Done. The new form is live again on both ad sets.", session_id: "mb-10" })
+  })
+
+  it("shows the server's reason when it can't be undone", async () => {
+    calls.undo.mockRejectedValue(Object.assign(new Error("x"), { status: 409, code: "cannot_undo", detail: "The old form was deleted in Meta." }))
+    render(<ReplyProposals proposals={[P({ status: "approved", can_undo: true })]} onUpdate={vi.fn()} />)
+    await userEvent.click(screen.getByRole("button", { name: /^Undo/ }))
+    expect(await screen.findByText("The old form was deleted in Meta.")).toBeInTheDocument()
+  })
+
+  it("shows an undone change as undone, with no Undo", () => {
+    render(<ReplyProposals proposals={[P({ status: "approved", can_undo: false, undone: true, undo_receipt: "Back as it was." })]} />)
+    expect(screen.getByText("Undone")).toBeInTheDocument()
+    expect(screen.getByText(/Undone at your request/)).toHaveTextContent("Media Buyer: “Back as it was.”")
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull()
+  })
+
+  it("reads the server's undone and lapsed states after a reload", () => {
+    render(<ReplyProposals proposals={[P({ status: "undone", can_undo: false }), P({ id: "p4", title: "Raise the budget", status: "expired" })]} />)
+    expect(screen.getByText("Undone")).toBeInTheDocument()
+    expect(screen.getByText("Lapsed")).toBeInTheDocument()
+    expect(screen.getByText("It lapsed before you decided, so nothing was changed.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull()
+  })
+
+  it("names a sub-agent as the proposer when its name came with the proposal", () => {
+    render(<ReplyProposals proposals={[P({ proposed_by: "sub:s1", proposed_by_name: "Form checker" }), P({ id: "p3", proposed_by: "sub:s2" })]} />)
+    expect(screen.getByText("Form checker proposes")).toBeInTheDocument()
+    expect(screen.getByText("Media Buyer proposes")).toBeInTheDocument()
   })
 })
 

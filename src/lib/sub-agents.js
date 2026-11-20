@@ -5,6 +5,13 @@
 //   POST   /api/agents/sub/{id}/approve | reject | pause | resume
 //   PATCH  /api/agents/sub/{id}   name, purpose, instructions, tools, clients, schedule
 //   DELETE /api/agents/sub/{id}
+//   GET    /api/agents/sub/tools?parent=      -> {tools: [{name, label}]}  what the main agent can hand out
+//   POST   /api/agents/sub/{id}/run           -> the run (below); it uses credits
+//   GET    /api/agents/sub/{id}/runs?limit=20 -> {runs: [run]}
+// A run is {id, status, trigger, started_at, finished_at, summary, answer, credits, proposals}; the server
+// says done | error | skipped | running (ok and timeout are read too).
+// `trigger` is "schedule" or "manual" (the owner pressed Run now).
+// Each record carries `last_run`: null, or {status, at, summary, credits}.
 // Refusals are {detail, code}. A record with kind "custom" (today's rules agents)
 // is managed on its own page; every write here answers 409 managed_elsewhere.
 
@@ -45,8 +52,52 @@ export function normalizeSubAgent(raw) {
     schedule,
     status: ["proposed", "active", "paused"].includes(raw.status) ? raw.status : "active",
     created_at: raw.created_at ?? null,
-    last_run_at: raw.last_run_at ?? null,
+    last_run_at: raw.last_run?.at ?? raw.last_run_at ?? null,
+    last_run: normalizeLastRun(raw.last_run),
   }
+}
+
+export const RUN_STATUSES = ["done", "error", "skipped", "timeout", "running"]
+// "ok" is read as done; anything unknown is shown as failed rather than as fine.
+const runStatus = (v) => (v === "ok" ? "done" : RUN_STATUSES.includes(v) ? v : "error")
+const credits = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : 0)
+
+function normalizeLastRun(raw) {
+  if (!raw || typeof raw !== "object" || !raw.status) return null
+  return { status: runStatus(raw.status), at: raw.at ?? null, summary: str(raw.summary), credits: credits(raw.credits) }
+}
+
+/** One run from the server made safe to draw. */
+export function normalizeRun(raw) {
+  if (!raw || typeof raw !== "object") return null
+  return {
+    id: str(raw.id) || null,
+    status: runStatus(raw.status),
+    trigger: raw.trigger === "manual" || raw.trigger === "schedule" ? raw.trigger : null,
+    started_at: raw.started_at ?? null,
+    finished_at: raw.finished_at ?? null,
+    summary: str(raw.summary),
+    answer: str(raw.answer),
+    credits: credits(raw.credits),
+    proposals: (Array.isArray(raw.proposals) ? raw.proposals : []).filter((p) => p && p.id),
+  }
+}
+
+/** How each run outcome is said and marked. */
+export const RUN_WORDS = {
+  done: { label: "Finished", tone: "success" },
+  running: { label: "Running", tone: "accent" },
+  error: { label: "Failed", tone: "danger" },
+  skipped: { label: "Skipped", tone: "neutral" },
+  timeout: { label: "Ran out of time", tone: "warning" },
+}
+
+/** Seconds between a run's start and finish, or null when either is missing. */
+export function runSeconds(run, parse = (v) => new Date(v)) {
+  if (!run?.started_at || !run?.finished_at) return null
+  const a = parse(run.started_at)?.getTime?.()
+  const b = parse(run.finished_at)?.getTime?.()
+  return Number.isFinite(a) && Number.isFinite(b) && b >= a ? Math.round((b - a) / 1000) : null
 }
 
 /** Waiting for approval first, then working, then paused; newest first inside each. */
@@ -81,6 +132,21 @@ export function clientsLine(clients) {
 }
 
 export const toolsLine = (tools) => (tools?.length ? tools.map((t) => t.label).join(", ") : "No tools")
+
+/**
+ * The tools the Edit dialog offers: the ones the record has, then the rest its main agent can
+ * hand out (from the server), each once, in that order.
+ */
+export function toolOptions(record, available) {
+  const seen = new Set()
+  const out = []
+  for (const t of [...(record?.tools ?? []), ...(available ?? [])]) {
+    if (!t?.name || seen.has(t.name)) continue
+    seen.add(t.name)
+    out.push({ name: str(t.name), label: str(t.label) || str(t.name) })
+  }
+  return out
+}
 
 /** The fields the owner edits, from a record. */
 export function draftOf(record) {
@@ -123,6 +189,16 @@ export function draftErrors(draft) {
   return errors
 }
 
+/** A refusal of "Run now" in plain words. */
+export function runErrorMessage(err) {
+  if (err?.status === 404) return "Running a sub-agent by hand is not available yet."
+  if (err?.status === 402) return "You’re out of Birdy Credits. Top up to run it."
+  if (err?.status === 412) return "Add your AI key in Settings to run it."
+  if (err?.code === "wrong_status") return "Only an active sub-agent can run. Resume it first."
+  if (err?.code === "already_running") return "It is running now. Its result shows on its row when it’s done."
+  return err?.detail || "It couldn’t run. Check your connection and try again."
+}
+
 /** A refusal in plain words. */
 export function subAgentErrorMessage(err) {
   if (err?.code === "duplicate_name") return "Another sub-agent already has that name. Pick another one."
@@ -163,6 +239,42 @@ export function useSubAgents(parent) {
   }
 }
 
+export const subAgentToolsKey = (parent) => (parent ? `/api/agents/sub/tools?parent=${encodeURIComponent(parent)}` : null)
+
+/**
+ * The tools a main agent can give its sub-agents. `unavailable` is true while the route is missing (404).
+ * @param {"media_buyer"|"sales_coach"|null} parent null asks for nothing
+ */
+export function useSubAgentTools(parent) {
+  const { data, error, isLoading } = useSWR(subAgentToolsKey(parent), fetcher, { shouldRetryOnError: (e) => e?.status !== 404 })
+  const list = Array.isArray(data?.tools) ? data.tools : []
+  return {
+    tools: list.filter((t) => t && t.name).map((t) => ({ name: str(t.name), label: str(t.label) || str(t.name) })),
+    unavailable: error?.status === 404,
+    error: error?.status === 404 ? null : error ?? null,
+    isLoading: Boolean(parent) && isLoading,
+  }
+}
+
+export const RUNS_LIMIT = 20
+export const subAgentRunsKey = (id) => (id ? `/api/agents/sub/${encodeURIComponent(id)}/runs?limit=${RUNS_LIMIT}` : null)
+
+/**
+ * A sub-agent's last runs, newest first. `unavailable` is true while the route is missing (404).
+ * @param {string|null} id null asks for nothing
+ */
+export function useSubAgentRuns(id) {
+  const { data, error, isLoading, mutate } = useSWR(subAgentRunsKey(id), fetcher, { shouldRetryOnError: (e) => e?.status !== 404 })
+  const list = Array.isArray(data?.runs) ? data.runs : []
+  return {
+    runs: list.map(normalizeRun).filter(Boolean),
+    unavailable: error?.status === 404,
+    error: error?.status === 404 ? null : error ?? null,
+    isLoading: Boolean(id) && isLoading,
+    mutate,
+  }
+}
+
 const path = (id, action = "") => `/api/agents/sub/${encodeURIComponent(id)}${action ? `/${action}` : ""}`
 
 export const approveSubAgent = (id) => request(path(id, "approve"), "POST")
@@ -171,6 +283,8 @@ export const pauseSubAgent = (id) => request(path(id, "pause"), "POST")
 export const resumeSubAgent = (id) => request(path(id, "resume"), "POST")
 export const changeSubAgent = (id, body) => request(path(id), "PATCH", body)
 export const deleteSubAgent = (id) => request(path(id), "DELETE")
+/** Run it now, by hand. It uses credits; the page confirms first. Answers with the run. */
+export const runSubAgent = (id) => request(path(id, "run"), "POST")
 
 /**
  * Save the owner's edits (if any), then approve: what "Create" does on a proposal.

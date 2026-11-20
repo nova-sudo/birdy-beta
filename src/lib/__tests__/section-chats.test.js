@@ -19,6 +19,11 @@ describe("a section's conversations", () => {
     expect(conversationsFor(list, "media_buyer", new Set(["a", "b"])).map((c) => c.session_id)).toEqual(["a", "c"])
   })
 
+  it("lists Birdy's rows and rows without an agent in Agency Ops, never another agent's", () => {
+    const list = [{ session_id: "a" }, { session_id: "b", agent: "sales_coach" }, { session_id: "c", agent: "birdy" }, { session_id: "d" }]
+    expect(conversationsFor(list, "birdy", new Set()).map((c) => c.session_id)).toEqual(["a", "c", "d"])
+  })
+
   it("survives storage that cannot be read", () => {
     localStorage.setItem("by_section_chats", "not json")
     expect(sectionChatIds("buyer").size).toBe(0)

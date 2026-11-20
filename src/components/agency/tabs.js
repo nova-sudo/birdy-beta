@@ -6,6 +6,7 @@
 import { useMemo } from "react";
 import { useSuggestionCount } from "@/components/agency/use-suggestions";
 import { OPS_SECTION } from "@/components/agency/sections";
+import { usePendingProposals } from "@/lib/proposals-api";
 
 /** The section's tab pill. */
 export const OPS_TABS = [
@@ -22,12 +23,17 @@ export const OPS_TABS = [
 export const MORE_PAGES = [{ value: "context", label: "Context" }];
 
 /**
- * A section's tabs, with the number of its open suggestions on the Suggestions tab.
+ * A section's tabs, with the number of its open suggestions on the Suggestions tab. Media Buyer
+ * and Sales Coach also count the proposals waiting for the owner's approval in their area.
  * @param {import("./sections").SectionConfig} [section] Agency Ops when left out
  */
 export function useSectionTabs(section = OPS_SECTION) {
+  const ops = section === OPS_SECTION;
   // Agency Ops counts every suggestion, as it always has; the others count their own.
-  const count = useSuggestionCount(section === OPS_SECTION ? undefined : section.ownsSuggestion);
+  const suggestions = useSuggestionCount(ops ? undefined : section.ownsSuggestion);
+  const { proposals } = usePendingProposals(ops ? null : section.chat.agent);
+  const waiting = proposals.length;
+  const count = (Number(suggestions) || 0) + waiting;
   return useMemo(() => OPS_TABS.map((t) => (t.value === "suggestions" ? { ...t, count } : t)), [count]);
 }
 
