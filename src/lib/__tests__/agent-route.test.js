@@ -168,3 +168,27 @@ describe("stepReason", () => {
     expect(reason({}, { status: "failed", summary: "Meta said no" })).toMatch(/The note it left: “Meta said no”/)
   })
 })
+
+describe("an agent working alone", () => {
+  const alone = (step, status = "working") => ({ status, seconds: 3, credits: 1, limit_hit: null, steps: [{ id: "s1", agent: "sales_coach", name: "Sales Coach", kind: "main", status, summary: "", question: null, asked_by: null, tools: [], doing: null, answer: null, credits: 1, seconds: 3, ...step }] });
+
+  it("says which tool it has in hand, then that it is thinking", async () => {
+    const { normalizeRoute, routeStatusLine, workingLine } = await import("../agent-route");
+    const started = normalizeRoute(alone({}));
+    expect(workingLine(started.steps[0])).toBe("Starting…");
+    const busy = normalizeRoute(alone({ doing: "Call stats" }));
+    expect(workingLine(busy.steps[0])).toBe("Looking at call stats…");
+    expect(routeStatusLine(busy)).toBe("Sales Coach is looking at call stats");
+    const between = normalizeRoute(alone({ tools: [{ name: "get_call_center_stats", label: "Call stats", detail: null }] }));
+    expect(workingLine(between.steps[0])).toBe("Thinking it through…");
+  });
+
+  it("keeps the route on a finished reply only when there is something to show", async () => {
+    const { normalizeRoute, routeStatusLine, routeWorthShowing } = await import("../agent-route");
+    expect(routeWorthShowing(alone({}, "done"))).toBe(false);
+    const used = alone({ tools: [{ name: "get_call_trend", label: "Calls against the period before", detail: null }] }, "done");
+    expect(routeWorthShowing(used)).toBe(true);
+    expect(routeStatusLine(normalizeRoute(used))).toBe("Sales Coach answered on its own");
+    expect(routeWorthShowing(null)).toBe(false);
+  });
+});

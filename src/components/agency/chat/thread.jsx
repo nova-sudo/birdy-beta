@@ -16,7 +16,7 @@ import StatusBadge from "@/components/chat/blocks/StatusBadge";
 import { mdComponents } from "@/lib/chat-markdown";
 import { delatex } from "@/lib/chat-math";
 import { parseChatUI } from "@/lib/chat-ui-parser";
-import { findStep, normalizeRoute } from "@/lib/agent-route";
+import { findStep, normalizeRoute, routeWorthShowing } from "@/lib/agent-route";
 import { ReplyProposals } from "./proposal-card";
 
 const PROSE =
@@ -181,7 +181,7 @@ export function ChatThread({ chat, name, compact = false, partPlacement = "auto"
           {/* The face shows once per run of replies. */}
           {shown[i - 1]?.role !== "assistant" && <ChatSender name={name} />}
           <div className={indent}>
-            {message.route?.steps?.length ? mapFor(message.route, i) : null}
+            {routeWorthShowing(message.route) ? mapFor(message.route, i) : null}
             <ReplyBody message={message} index={i} onUISubmit={submitUI} onSend={send} submittedUIs={submittedUIs} />
             {/* Changes other agents proposed, under the answer that explains them. */}
             <ReplyProposals proposals={message.proposals} onUpdate={chat.updateProposal} compact={compact} />

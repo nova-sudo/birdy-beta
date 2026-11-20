@@ -5,8 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Bot, Check, CircleAlert, Info, Megaphone, Minus, Phone, X } from "lucide-react";
 import {
   agentChatHref, askedByName, findStep, liveIndex, liveWire, limitMessage, normalizeRoute, routeMeta, routeStatusLabel,
-  routeStatusLine, stepMeta, stepReason, stepStatusLabel,
-} from "@/lib/agent-route";
+  routeStatusLine, stepMeta, stepReason, stepStatusLabel, workingLine } from "@/lib/agent-route";
 import { BirdyAvatar } from "./avatar";
 import { buttonVariants } from "./button";
 import { cn } from "./cn";
@@ -55,7 +54,7 @@ export function AgentAvatar({ info, size = 22, solid = false, className }) {
 
 /** What a box says under the agent's name. */
 function stepLine(step) {
-  if (step.status === "working") return step.summary || "Working…";
+  if (step.status === "working") return workingLine(step);
   if (step.status === "failed") return step.summary ? `Couldn’t finish · ${step.summary}` : "Couldn’t finish";
   if (step.status === "skipped") return step.summary ? `Skipped · ${step.summary}` : "Skipped";
   return step.summary;

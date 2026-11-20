@@ -99,6 +99,7 @@ export function normalizeRoute(raw) {
       tools: (Array.isArray(s.tools) ? s.tools : [])
         .filter((t) => t && (t.label || t.name))
         .map((t) => ({ name: str(t.name), label: str(t.label) || str(t.name), detail: strOrNull(t.detail) })),
+      doing: strOrNull(s.doing),
       answer: strOrNull(s.answer),
       credits: num(s.credits),
       seconds: num(s.seconds),
@@ -174,13 +175,31 @@ export function routeStatusLine(route) {
   if (route.status === "working") {
     const live = steps[liveIndex(route)];
     if (!live) return "Agents are on it";
-    return live.summary ? `${live.info.name}: ${lowerFirst(live.summary)}` : `${live.info.name} is working`;
+    if (live.doing) return `${live.info.name} is looking at ${lowerFirst(live.doing)}`;
+    return live.summary ? `${live.info.name}: ${lowerFirst(live.summary)}` : `${live.info.name} is thinking`;
   }
   if (route.status === "failed") {
     const failed = steps.find((s) => s.status === "failed");
     return failed ? `${failed.info.name} couldn’t finish its part` : "The agents couldn’t finish";
   }
+  if (steps.length === 1) return `${steps[0].info.name} answered on its own`;
   return `Answer came back to ${steps[0].info.name}`;
+}
+
+/**
+ * What an agent's box says while it works: the tool in hand, else that it is thinking.
+ * @param {{doing: string|null, summary: string, tools: object[]}} step a normalised step
+ */
+export function workingLine(step) {
+  if (step.doing) return `Looking at ${lowerFirst(step.doing)}…`;
+  if (step.summary) return step.summary;
+  return step.tools.length ? "Thinking it through…" : "Starting…";
+}
+
+/** Whether a finished reply's route is worth showing: more than one agent, or one that used tools. */
+export function routeWorthShowing(raw) {
+  const steps = Array.isArray(raw?.steps) ? raw.steps : [];
+  return steps.length > 1 || (steps.length === 1 && Array.isArray(steps[0]?.tools) && steps[0].tools.length > 0);
 }
 
 const lowerFirst = (s) => (s && /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
