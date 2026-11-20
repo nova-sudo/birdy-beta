@@ -22,6 +22,9 @@ export function shapeSummary(data) {
         severity,
         tone: TONE[severity] ?? "warning",
         agentId: s.agent_id ?? null,
+        // Where it acts ("Meta Ads") and which rule raised it: how a section tells its own suggestions apart.
+        platform: s.platform ?? "",
+        ruleKind: s.rule_kind ?? "",
         order,
       };
     })
@@ -45,8 +48,11 @@ const same = (a, b) => String(a ?? "").trim().toLowerCase() === String(b ?? "").
 /** Only the rows about one client, matched on its name (the summary carries no client id). */
 export const forClient = (rows, clientName) => (clientName ? rows.filter((r) => same(r.client, clientName)) : rows);
 
-/** The page's heading for a number of suggestions. */
-export function suggestionsHeading(count, clientName) {
+/**
+ * The page's heading for a number of suggestions.
+ * @param {string|null} [from] the section's name when it is not Agency Ops: "8 suggestions from Media Buyer"
+ */
+export function suggestionsHeading(count, clientName, from = null) {
   if (count === 0) return clientName ? `No suggestions for ${clientName}` : "All looking good";
-  return `${count} ${count === 1 ? "suggestion" : "suggestions"} ${clientName ? `for ${clientName}` : "across your agency"}`;
+  return `${count} ${count === 1 ? "suggestion" : "suggestions"} ${clientName ? `for ${clientName}` : from ? `from ${from}` : "across your agency"}`;
 }

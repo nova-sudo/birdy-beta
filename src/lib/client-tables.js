@@ -129,6 +129,9 @@ export function callRows(leads) {
         const seconds = num(log.duration);
         return {
           id: `${lead.id}-${log.call_time_iso ?? i}-${i}`,
+          leadId: String(lead.id ?? name),
+          // The client the lead belongs to; the dialler says "No Client Group" when it has none.
+          client: lead.client_name && lead.client_name !== "No Client Group" ? lead.client_name : "",
           name,
           caller: log.caller_name || "",
           // The dialler records how long a call lasted, not how it ended: a call with talk time was answered.
@@ -141,6 +144,27 @@ export function callRows(leads) {
       });
     })
     .sort((a, b) => String(b.when).localeCompare(String(a.when)));
+}
+
+/**
+ * One row per caller, from the call rows above: how many calls they made, how many were answered,
+ * how many leads they reached, their time on the phone and when they last called. Busiest first.
+ */
+export function repRows(calls) {
+  const by = new Map();
+  for (const c of calls ?? []) {
+    const key = c.caller || "";
+    const rep = by.get(key) ?? { id: key || "unnamed", name: key || "No caller name", named: Boolean(key), calls: 0, answered: 0, talk: 0, leadIds: new Set(), last: "" };
+    rep.calls += 1;
+    if (c.seconds > 0) rep.answered += 1;
+    rep.talk += c.seconds || 0;
+    rep.leadIds.add(c.leadId ?? c.name);
+    if (String(c.when) > rep.last) rep.last = c.when;
+    by.set(key, rep);
+  }
+  return [...by.values()]
+    .map(({ leadIds, ...rep }) => ({ ...rep, leads: leadIds.size, answerRate: rep.calls ? (rep.answered / rep.calls) * 100 : 0, average: rep.answered ? rep.talk / rep.answered : 0 }))
+    .sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name));
 }
 
 // ── Shared ──────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ export { TextField, SearchField, DropdownTrigger } from "./field"
 export { AskBar } from "./ask-bar"
 export { AskPanel } from "./ask-panel"
 export { ChatSender, ChatTyping, UserMessage } from "./chat"
+export { RouteMap, AgentPart, AgentAvatar } from "./route-map"
 export { Switch, Checkbox, RadioGroup, Radio } from "./choice"
 
 // Navigation

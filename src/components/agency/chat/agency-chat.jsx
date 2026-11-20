@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { AskBar, Button, EmptyState, Notice, SECTIONS, SectionHeader, Skeleton } from "@/components/by";
+import { AskBar, Button, EmptyState, Notice, SectionHeader, Skeleton } from "@/components/by";
 import { useStoredUser } from "@/components/shell/account-menu";
-import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { OPS_SECTION, resolveSection, sessionKey } from "@/components/agency/sections";
+import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { groupConversations, scopeLine } from "@/lib/agent-chat";
 import { apiRequest } from "@/lib/api";
 import { greeting } from "@/lib/birds-eye";
@@ -15,26 +16,33 @@ import { startersFor } from "@/lib/chat-starters";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { conversationsFor, rememberSectionChat, sectionChatIds } from "@/lib/section-chats";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { ChatThread } from "./thread";
 import { useAgentChat } from "./use-agent-chat";
 
-const OPS = SECTIONS.find((s) => s.id === "ops");
 const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
 
 /**
- * Agency Ops' Chat: saved conversations on the left, the open one on the right.
+ * A section's Chat: saved conversations on the left, the open one on the right.
  * It talks to the same backend as the older Ask Birdy page, so the history is shared.
+ * Agency Ops (Birdy) lists every conversation; Media Buyer and Sales Coach list their own,
+ * and ask their own agent with that section's tools.
+ *
+ * @param {import("../sections").SectionConfig} [props.section] Agency Ops when left out
  */
-export function AgencyChat() {
+export function AgencyChat({ section: which }) {
+  const section = resolveSection(which);
+  const OPS = section.kit;
+  const ops = section === OPS_SECTION;
   const router = useRouter();
-  const tabs = useOpsTabs();
+  const tabs = useSectionTabs(section);
   const pathname = usePathname();
   const search = useSearchParams();
   const clientId = search.get("client") || null;
   const wanted = search.get("c") || null;
   // Each client has its own thread, so one client's conversation never shows under another.
-  const SESSION_KEY = `by_ops_chat_${clientId ?? "agency"}`;
+  const SESSION_KEY = sessionKey(section, `chat_${clientId ?? "agency"}`);
 
   const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
   const client = useMemo(() => (clientId ? clientGroups.find((g) => g.id === clientId) ?? null : null), [clientGroups, clientId]);
@@ -62,10 +70,17 @@ export function AgencyChat() {
   useEffect(() => { loadList(); }, [loadList]);
 
   // Titles and ordering are worked out on the server, so the list is re-read after each reply.
+  // A section's own conversations are remembered as they start, so its list can show them.
+  const onSessionId = useCallback((id) => {
+    if (!ops) rememberSectionChat(section.key, id);
+    setActiveId(id);
+  }, [ops, section.key]);
   const chat = useAgentChat({
     sessionKey: SESSION_KEY,
+    // Agency Ops has always sent no page: Birdy with every tool. The other sections send theirs, and their agent.
+    ...(ops ? {} : { page: section.chat.page, agent: section.chat.agent }),
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
-    onSessionId: setActiveId,
+    onSessionId,
     onSettled: loadList,
   });
 
@@ -116,13 +131,14 @@ export function AgencyChat() {
     }
   };
 
-  // Inside a client only that client's saved conversations are listed.
-  const groups = useMemo(
-    () => groupConversations(clientId ? conversations.filter((c) => c.scope === "client" && c.client_group_id === clientId) : conversations),
-    [conversations, clientId],
-  );
+  // Inside a client only that client's saved conversations are listed; in a section only that section's.
+  const groups = useMemo(() => {
+    const mine = ops ? conversations : conversationsFor(conversations, section.chat.agent, sectionChatIds(section.key));
+    return groupConversations(clientId ? mine.filter((c) => c.scope === "client" && c.client_group_id === clientId) : mine);
+    // activeId: a conversation that just started is remembered then, and listed on the next read.
+  }, [conversations, clientId, ops, section, activeId]); // eslint-disable-line react-hooks/exhaustive-deps
   const empty = chat.messages.length === 0 && !chat.loading;
-  const starters = startersFor(client ? "client_detail" : "dashboard").slice(0, 3);
+  const starters = startersFor(ops ? (client ? "client_detail" : "dashboard") : section.chat.starters).slice(0, 3);
   const subtitle = client ? <>Scoped to <b className="font-semibold text-by-text">{client.name}</b> · {STATUS_WORDS[statusOf(client)]}</> : undefined;
 
   return (
@@ -132,7 +148,7 @@ export function AgencyChat() {
         subtitle={subtitle}
         tabs={tabs}
         tab="chat"
-        onTabChange={(value) => value !== "chat" && router.push(opsTabHref(value, search))}
+        onTabChange={(value) => value !== "chat" && router.push(sectionTabHref(section, value, search))}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -148,7 +164,7 @@ export function AgencyChat() {
             ) : listState === "error" ? (
               <Notice tone="danger" action={<Button size="sm" onClick={loadList}>Retry</Button>}>Couldn’t load your conversations.</Notice>
             ) : groups.length === 0 ? (
-              <p className="px-2.5 pt-2 text-by-body-sm text-by-muted">{client ? `Conversations about ${client.name} are saved here.` : "Your conversations are saved here."}</p>
+              <p className="px-2.5 pt-2 text-by-body-sm text-by-muted">{client ? `Conversations ${ops ? "" : `with ${OPS.name} `}about ${client.name} are saved here.` : ops ? "Your conversations are saved here." : `Your conversations with ${OPS.name} are saved here.`}</p>
             ) : groups.map((group) => (
               <section key={group.label} aria-label={group.label}>
                 <h3 className="px-2.5 pt-3 pb-1.5 text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted">{group.label}</h3>
@@ -191,7 +207,7 @@ export function AgencyChat() {
                 <div aria-busy="true" aria-label="Opening conversation" className="flex flex-col gap-3"><Skeleton className="w-40" /><Skeleton className="w-full" /><Skeleton className="w-3/4" /></div>
               ) : empty ? (
                 <EmptyState icon={<MessageSquare />} title={`${hour == null ? "Hello" : greeting(hour)}${user.name ? `, ${user.name.split(" ")[0]}` : ""}.`} className="pt-16">
-                  {client ? `Ask anything about ${client.name}.` : "Ask about your clients, campaigns, leads or calls."}
+                  {client ? (ops ? `Ask anything about ${client.name}.` : `Ask about ${client.name}’s ${section.askAbout.replace(/^your /, "")}.`) : section.hello}
                 </EmptyState>
               ) : null}
               {!opening && <ChatThread chat={chat} name={OPS.name} />}

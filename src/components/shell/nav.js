@@ -7,8 +7,8 @@ import { Bell, Calculator, LayoutGrid, List, Sparkles } from "lucide-react";
 /** Rail item id -> the page it opens. */
 export const DESTINATIONS = {
   ops: "/dashboard",
-  buyer: "/campaigns",
-  coach: "/Sales-Hub",
+  buyer: "/media-buyer",
+  coach: "/sales-coach",
   clients: "/clients",
   settings: "/settings",
 };
@@ -31,8 +31,8 @@ const under = (pathname, base) => pathname === base || pathname.startsWith(`${ba
 export function activeRailId(pathname) {
   if (under(pathname, "/dashboard")) return "ops";
   // The Media Buying Agent lives under BirdyHub today but belongs to Media Buyer.
-  if (under(pathname, "/campaigns") || under(pathname, "/hub/agents/media-buying")) return "buyer";
-  if (under(pathname, "/Sales-Hub")) return "coach";
+  if (under(pathname, "/media-buyer") || under(pathname, "/campaigns") || under(pathname, "/hub/agents/media-buying")) return "buyer";
+  if (under(pathname, "/sales-coach") || under(pathname, "/Sales-Hub")) return "coach";
   if (under(pathname, "/clients")) return "clients";
   if (under(pathname, "/settings") || under(pathname, "/billing") || under(pathname, "/credits")) return "settings";
   if (OTHER_PAGES.some((page) => under(pathname, page.href))) return "other";
@@ -44,7 +44,14 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/dashboard" || pathname === "/dashboard/chat" || pathname === "/dashboard/table" || pathname === "/dashboard/suggestions";
+export const isRebuilt = (pathname) => pathname === "/clients" || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`));
+
+/** The three agent sections' addresses. Each has the same four tabs under it. */
+const SECTION_BASES = ["/dashboard", "/media-buyer", "/sales-coach"];
+const SECTION_TABS = ["", "/chat", "/table", "/suggestions"];
+
+/** The agent section a path is in ("/dashboard", "/media-buyer" or "/sales-coach"), or null. */
+export const sectionBase = (pathname) => SECTION_BASES.find((base) => under(pathname, base)) ?? null;
 
 /** The client a `/clients/<id>` page is showing, or null on any other page. */
 export function clientIdFromPath(pathname) {
@@ -58,18 +65,29 @@ export function clientIdFromPath(pathname) {
 }
 
 /**
- * The client a page is showing: `/clients/<id>`, or Agency Ops narrowed to one
- * client with `?client=<id>`. Null on any other page.
+ * The client a page is showing: `/clients/<id>`, or an agent section narrowed
+ * to one client with `?client=<id>`. Null on any other page.
  */
 export function clientIdFromLocation(pathname, search = "") {
   const fromPath = clientIdFromPath(pathname);
   if (fromPath) return fromPath;
-  if (!under(pathname, "/dashboard")) return null;
+  if (!sectionBase(pathname)) return null;
   return new URLSearchParams(search).get("client") || null;
 }
 
 /** The page for one client: Agency Ops' Bird's Eye, narrowed to that client. */
 export const clientHref = (id) => `${DESTINATIONS.ops}?client=${encodeURIComponent(id)}`;
+
+/**
+ * Where picking a client in the switcher goes from the current page. Inside
+ * Media Buyer or Sales Coach it stays in that section, on the same tab;
+ * anywhere else it opens Agency Ops for that client.
+ */
+export function clientHrefFrom(pathname, id) {
+  const base = sectionBase(pathname);
+  if (!base || base === DESTINATIONS.ops || !isRebuilt(pathname)) return clientHref(id);
+  return `${pathname}?client=${encodeURIComponent(id)}`;
+}
 
 /** The older, full client page. Still the only place for a client's settings, notes and tracking. */
 export const clientDetailHref = (id) => `/clients/${encodeURIComponent(id)}`;

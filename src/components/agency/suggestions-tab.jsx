@@ -3,18 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, MessageSquare, X, Zap } from "lucide-react";
-import { AskBar, AskPanel, Button, Card, Notice, Pill, SECTIONS, SectionHeader, Skeleton } from "@/components/by";
+import { AskBar, AskPanel, Button, Card, Notice, Pill, SectionHeader, Skeleton } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
-import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { OPS_SECTION, resolveSection, sessionKey } from "@/components/agency/sections";
+import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { useSuggestions } from "@/components/agency/use-suggestions";
 import { forClient, suggestionsHeading } from "@/lib/agency-suggestions";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { rememberSectionChat } from "@/lib/section-chats";
 import { useClientGroups } from "@/lib/useClientGroups";
 
-const OPS = SECTIONS.find((s) => s.id === "ops");
 const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
 // How each kind of history entry is marked.
 const MODE = {
@@ -25,25 +26,31 @@ const MODE = {
 const ICON_TONE = { danger: "bg-by-danger-bg text-by-danger", warning: "bg-by-warning-bg text-by-warning", accent: "bg-by-accent-soft text-by-accent" };
 
 /**
- * Agency Ops' Suggestions tab: what Birdy suggests doing, most impact first,
+ * A section's Suggestions tab: what it suggests doing, most impact first,
  * each with "Do it for me" and Dismiss, and the history of what was done or dismissed.
+ * Agency Ops lists every suggestion; Media Buyer and Sales Coach list their own.
  * With `?client=<id>` only that client's suggestions and history show.
+ *
+ * @param {import("./sections").SectionConfig} [props.section] Agency Ops when left out
  */
-export function SuggestionsTab() {
+export function SuggestionsTab({ section: which }) {
+  const section = resolveSection(which);
+  const OPS = section.kit;
+  const ops = section === OPS_SECTION;
   const router = useRouter();
-  const tabs = useOpsTabs();
+  const tabs = useSectionTabs(section);
   const search = useSearchParams();
   const clientId = search.get("client") || null;
   const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
   const client = clientId ? clientGroups.find((g) => g.id === clientId) ?? null : null;
 
   const data = useSuggestions();
-  const suggestions = forClient(data.suggestions, client?.name);
-  const history = forClient(data.history, client?.name);
+  const suggestions = forClient(ops ? data.suggestions : data.suggestions.filter(section.ownsSuggestion), client?.name);
+  const history = section.ownsHistory ? forClient(data.history, client?.name) : [];
 
   const chat = useAgentChat({
-    sessionKey: `by_ops_ask_sugg_${clientId ?? "agency"}`,
-    page: client ? "client_detail" : "dashboard",
+    sessionKey: sessionKey(section, `ask_sugg_${clientId ?? "agency"}`),
+    ...(ops ? { page: client ? "client_detail" : "dashboard" } : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });
   const [asking, setAsking] = useState(false);
@@ -55,16 +62,16 @@ export function SuggestionsTab() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text selection:bg-by-accent-line selection:text-by-text">
-      <SectionHeader section={OPS} subtitle={subtitle} tabs={tabs} tab="suggestions" onTabChange={(value) => value !== "suggestions" && router.push(opsTabHref(value, search))} />
+      <SectionHeader section={OPS} subtitle={subtitle} tabs={tabs} tab="suggestions" onTabChange={(value) => value !== "suggestions" && router.push(sectionTabHref(section, value, search))} />
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
-            <div className="mx-auto grid max-w-[1040px] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className={`mx-auto grid max-w-[1040px] items-start gap-5 ${section.ownsHistory ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
               <section aria-labelledby="sugg-heading" className="min-w-0">
                 <div className="flex items-baseline gap-3">
                   <h2 id="sugg-heading" className="font-by-display text-by-heading font-semibold text-balance">
-                    {data.loading ? "Suggestions" : suggestionsHeading(suggestions.length, client?.name)}
+                    {data.loading ? "Suggestions" : !ops && !section.ownsHistory && suggestions.length === 0 ? "No suggestions yet" : suggestionsHeading(suggestions.length, client?.name, ops ? null : OPS.name)}
                   </h2>
                   {suggestions.length > 1 && <span className="ml-auto shrink-0 text-by-body-sm text-by-muted">Sorted by impact</span>}
                 </div>
@@ -77,7 +84,9 @@ export function SuggestionsTab() {
                   </div>
                 ) : suggestions.length === 0 ? (
                   <p className="mt-2 text-by-body-lg text-by-text-2">
-                    {client ? `${OPS.name} has nothing to suggest for ${client.name} right now.` : `${OPS.name} is watching every client and will suggest the next thing here.`}
+                    {!ops && !section.ownsHistory
+                      ? `${OPS.name} has no suggestions yet. Birdy’s suggestions today come from its ad rules, and those are Media Buyer’s. Suggestions about calls will appear here.`
+                      : client ? `${OPS.name} has nothing to suggest for ${client.name} right now.` : `${OPS.name} is watching every client and will suggest the next thing here.`}
                   </p>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-3">
@@ -103,7 +112,7 @@ export function SuggestionsTab() {
                 )}
               </section>
 
-              <Card aria-labelledby="hist-heading" role="complementary" className="px-4 py-4">
+              {section.ownsHistory && <Card aria-labelledby="hist-heading" role="complementary" className="px-4 py-4">
                 <div className="flex items-baseline">
                   <h3 id="hist-heading" className="font-by-display text-by-body-lg font-semibold">History</h3>
                   {history.length > 1 && <span className="ml-auto text-by-caption text-by-muted">Newest first</span>}
@@ -131,7 +140,7 @@ export function SuggestionsTab() {
                     })}
                   </ol>
                 )}
-              </Card>
+              </Card>}
             </div>
           </div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 px-7 pb-5">
@@ -152,7 +161,7 @@ export function SuggestionsTab() {
             onClose={() => setAsking(false)}
             follow={`${chat.messages.length}-${chat.loading}`}
             actions={chat.sessionId && (
-              <Button kind="ghost" size="sm" onClick={() => router.push(`/dashboard/chat?c=${encodeURIComponent(chat.sessionId)}`)}><MessageSquare aria-hidden="true" />Open in Chat</Button>
+              <Button kind="ghost" size="sm" onClick={() => router.push(ops ? `/dashboard/chat?c=${encodeURIComponent(chat.sessionId)}` : sectionTabHref(section, "chat", search, { c: chat.sessionId }))}><MessageSquare aria-hidden="true" />Open in Chat</Button>
             )}
           >
             <ChatThread chat={chat} name={OPS.name} compact />

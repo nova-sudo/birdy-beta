@@ -470,6 +470,10 @@ export function usePortfolioData({
     previous,
     // The client the figures are narrowed to, when they are.
     client: clientId ? (allGroups ?? []).find((g) => g.id === clientId) ?? null : null,
+    // The client groups behind the figures (narrowed like them), and the comparison
+    // period's, for screens that rank or chart clients one by one.
+    groups: clientGroups ?? [],
+    previousGroups,
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),

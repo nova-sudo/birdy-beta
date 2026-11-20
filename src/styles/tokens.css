@@ -149,6 +149,18 @@
   from { opacity: 0; transform: translateY(18px) scale(0.96); }
 }
 
+/* The line in use on the route map: its dashes travel toward the next agent.
+   Used with `motion-safe:` only, so under "reduce motion" the dashes stand still. */
+@keyframes by-flow {
+  /* One period of the dash pattern on both axes: a sideways line moves right, a stacked one moves down. */
+  to { background-position: 12px 12px; }
+}
+
+/* A small dot that breathes while an agent is working. */
+@keyframes by-pulse {
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
 /* 3. Utilities. `inline` so each utility carries the role variable itself and
    follows it wherever a subtree (or a future theme) redefines it. */
 @theme inline {

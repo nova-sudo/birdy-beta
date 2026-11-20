@@ -10,7 +10,7 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHref, clientIdFromLocation, clientIdFromPath } from "./nav";
+import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, sectionBase } from "./nav";
 
 // Hand-set health -> the switcher's dot. An inactive client gets no colour.
 const HEALTH_DOT = { Critical: "danger", Warning: "warning", Healthy: "success" };
@@ -59,8 +59,9 @@ export function AppShell({ children }) {
           <Suspense fallback={<WiredSwitcher clients={clients} value={clientIdFromPath(pathname)} onChange={() => {}} status="loading" />}>
             <LocatedSwitcher
               clients={clients}
-              // Leaving a client from Agency Ops returns to the whole agency there; anywhere else it opens the Clients list.
-              onChange={(id) => router.push(id ? clientHref(id) : activeId === "ops" ? DESTINATIONS.ops : DESTINATIONS.clients)}
+              // Picking a client inside Media Buyer or Sales Coach stays there; elsewhere it opens Agency Ops for it.
+              // Leaving a client from an agent section returns to the whole agency there; anywhere else it opens the Clients list.
+              onChange={(id) => router.push(id ? clientHrefFrom(pathname, id) : activeId === "ops" ? DESTINATIONS.ops : isRebuilt(pathname) && sectionBase(pathname) ? pathname : DESTINATIONS.clients)}
               status={error ? "error" : loading ? "loading" : "ready"}
               onRetry={refresh}
             />

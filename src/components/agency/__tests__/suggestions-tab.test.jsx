@@ -101,3 +101,26 @@ describe("Agency Ops' Suggestions tab", () => {
     expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
   })
 })
+
+describe("Media Buyer's and Sales Coach's Suggestions tab", () => {
+  it("lists Media Buyer's own suggestions, says whose they are, and keeps the history", () => {
+    sugg.state = state({ suggestions: [{ ...S("1", "Pause Body Sculpting", "Aura"), platform: "Meta Ads" }, { ...S("2", "Call back the missed leads", "Aura"), platform: "Hot Prospector" }] })
+    render(<SuggestionsTab section="buyer" />)
+    expect(screen.getByRole("heading", { level: 2, name: "1 suggestion from Media Buyer" })).toBeInTheDocument()
+    expect(screen.queryByText("Call back the missed leads")).not.toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "History" })).toBeInTheDocument()
+  })
+
+  it("gives Sales Coach only call suggestions, and no history of ad changes", () => {
+    render(<SuggestionsTab section="coach" />)
+    expect(screen.queryByText("Pause Body Sculpting")).not.toBeInTheDocument()
+    expect(screen.getByText(/Sales Coach has no suggestions yet/)).toBeInTheDocument()
+    expect(screen.queryByRole("complementary", { name: "History" })).not.toBeInTheDocument()
+  })
+
+  it("moves between Sales Coach's own tabs", async () => {
+    render(<SuggestionsTab section="coach" />)
+    await userEvent.click(screen.getByRole("tab", { name: /^Dashboard/ }))
+    expect(push).toHaveBeenCalledWith("/sales-coach/table")
+  })
+})

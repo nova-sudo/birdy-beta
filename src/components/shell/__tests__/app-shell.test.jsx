@@ -52,7 +52,7 @@ describe("AppShell: the rail", () => {
 
   it.each([
     ["Agency Ops", "/dashboard"],
-    ["Sales Coach", "/Sales-Hub"],
+    ["Sales Coach", "/sales-coach"],
     ["Clients", "/clients"],
     ["Settings", "/settings"],
   ])("opens %s at %s", async (name, href) => {

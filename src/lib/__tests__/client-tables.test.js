@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
+import { adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
 
 const contact = (over = {}) => ({ contactId: "c1", contactName: "Leanne Turner", dateAdded: "2026-11-04T18:31:00Z", source: "Facebook", opportunities: [], ...over })
 
@@ -66,6 +66,24 @@ describe("callRows", () => {
     expect(rows[1]).toMatchObject({ caller: "Priya", recording: "https://x/r.mp3", direction: "Outbound" })
     expect(rows[0]).toMatchObject({ caller: "", recording: "", direction: "Inbound" })
     expect(callRows(undefined)).toEqual([])
+  })
+})
+
+describe("repRows", () => {
+  it("counts each caller's calls, answers, leads reached, talk time and last call, busiest first", () => {
+    const rows = callRows([
+      { id: "h1", first_name: "Leanne", client_name: "Aura", call_logs: [
+        { call_time_iso: "2026-11-04T18:37:00Z", duration: 0, caller_name: "Priya" },
+        { call_time_iso: "2026-11-04T19:27:00Z", duration: 400, caller_name: "Priya" },
+      ] },
+      { id: "h2", first_name: "Jade", client_name: "No Client Group", call_logs: [{ call_time_iso: "2026-11-05T09:00:00Z", duration: 200, caller_name: "Priya" }, { call_time_iso: "2026-11-05T10:00:00Z", duration: 60 }] },
+    ])
+    expect(rows.map((r) => r.client)).toEqual(["", "", "Aura", "Aura"])
+    expect(repRows(rows)).toEqual([
+      { id: "Priya", name: "Priya", named: true, calls: 3, answered: 2, talk: 600, leads: 2, last: "2026-11-05T09:00:00Z", answerRate: (2 / 3) * 100, average: 300 },
+      { id: "unnamed", name: "No caller name", named: false, calls: 1, answered: 1, talk: 60, leads: 1, last: "2026-11-05T10:00:00Z", answerRate: 100, average: 60 },
+    ])
+    expect(repRows(undefined)).toEqual([])
   })
 })
 

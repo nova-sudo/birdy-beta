@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Link2, ListFilter, Megaphone, Phone, Play, SearchX, Users } from "lucide-react";
+import { Check, ChevronRight, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
 import {
-  Button, Card, ColumnsMenu, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Notice, Pill, RowArrow, SearchField, Skeleton, TabPill, Table, TableBody, TableHead, TableScroll, Td, Th, Tr,
+  Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
+import { TableCard, money, tableState, useColumns } from "./table-card";
 import {
-  AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, searchBy, sortBy, toggleSort, whenLabel,
+  AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
 } from "@/lib/client-tables";
 
 const STAGE = {
@@ -18,41 +19,6 @@ const STAGE = {
 };
 const OUTCOME = { answered: { label: "Answered", tone: "success" }, none: { label: "No answer", tone: "neutral" } };
 
-/** The card every client table sits in: a toolbar that stays put, and the table scrolling under it. */
-function TableCard({ toolbar, state, children }) {
-  return (
-    <Card className="flex min-h-0 flex-col overflow-hidden motion-safe:animate-[by-enter_var(--by-dur-base)_var(--by-ease-out)]">
-      <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-by-line px-4.5 py-3.5">{toolbar}</div>
-      {state ?? <TableScroll className="rounded-none border-0 shadow-none">{children}</TableScroll>}
-    </Card>
-  );
-}
-
-/** What a table shows instead of rows: loading, a failure, or nothing to list. */
-function tableState({ data, shown, noun, empty, icon }) {
-  if (data.error) {
-    return <div className="p-4"><Notice tone="danger" action={<Button size="sm" onClick={data.retry}>Retry</Button>}>Couldn’t load {noun}. Check your connection and try again.</Notice></div>;
-  }
-  if (data.loading) {
-    return (
-      <div aria-busy="true" aria-label={`Loading ${noun}`} className="flex flex-col gap-4 p-5">
-        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="w-full" />)}
-      </div>
-    );
-  }
-  if (data.rows.length === 0) return <EmptyState icon={icon} title={empty.title}>{empty.body}</EmptyState>;
-  if (shown === 0) return <EmptyState icon={<SearchX />} title={`No ${noun} match`}>Try a different search or tab.</EmptyState>;
-  return null;
-}
-
-/** Which of a table's optional columns are shown, with the menu that changes them. */
-function useColumns(all) {
-  const [ids, setIds] = useState(() => all.map((c) => c.id));
-  const menu = <ColumnsMenu columns={all} value={ids} onChange={setIds} />;
-  return { shows: (id) => ids.includes(id), menu };
-}
-
-const money = (symbol) => (n, decimals = 0) => `${symbol}${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 /**
  * The Leads table's filters in one menu: Source, Type, Opportunity and Tag.
@@ -215,8 +181,8 @@ const AD_COLUMNS = [{ id: "spend", label: "Spend" }, { id: "leads", label: "Lead
  * @param {{levels?: Record<string, object[]>, rows: object[]}} props.data `levels` holds the rows for each level; without it only ads are shown
  * @param {number|null} [props.cplTarget] a row over this cost per lead is marked
  */
-export function AdsTable({ data, cplTarget = null, currencySymbol = "£" }) {
-  const [level, setLevel] = useState("ads");
+export function AdsTable({ data, cplTarget = null, currencySymbol = "£", initialLevel = "ads" }) {
+  const [level, setLevel] = useState(initialLevel);
   const spec = AD_LEVELS.find((l) => l.key === level);
   const levelRows = data.levels?.[level] ?? data.rows;
   const [query, setQuery] = useState("");
@@ -284,13 +250,16 @@ export function AdsTable({ data, cplTarget = null, currencySymbol = "£" }) {
 
 const CALL_COLUMNS = [{ id: "caller", label: "Caller" }, { id: "outcome", label: "Outcome" }, { id: "when", label: "When" }, { id: "seconds", label: "Length" }, { id: "recording", label: "Recording" }];
 
-/** A client's calls, newest first, with each recording playable in place. */
-export function CallsTable({ data }) {
+/**
+ * A client's calls, newest first, with each recording playable in place.
+ * @param {boolean} [props.showClient] a Client column, for calls across the agency
+ */
+export function CallsTable({ data, showClient = false }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ id: "when", dir: "desc" });
   const [playing, setPlaying] = useState(null);
   const columns = useColumns(CALL_COLUMNS);
-  const rows = useMemo(() => sortBy(searchBy(data.rows, query, ["name", "caller"]), sort), [data.rows, query, sort]);
+  const rows = useMemo(() => sortBy(searchBy(data.rows, query, ["name", "caller", "client"]), sort), [data.rows, query, sort]);
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
 
   if (data.unavailable) {
@@ -305,6 +274,7 @@ export function CallsTable({ data }) {
         <TableHead>
           <tr>
             <Th {...header("name", "asc")} className="min-w-44">Lead</Th>
+            {showClient && <Th {...header("client", "asc")}>Client</Th>}
             {columns.shows("caller") && <Th {...header("caller", "asc")}>Caller</Th>}
             {columns.shows("outcome") && <Th>Outcome</Th>}
             {columns.shows("when") && <Th {...header("when")}>When</Th>}
@@ -318,6 +288,7 @@ export function CallsTable({ data }) {
             return (
               <Tr key={row.id}>
                 <Td className="max-w-64 truncate font-semibold" title={row.name}>{row.name}</Td>
+                {showClient && <Td className={`max-w-56 truncate ${row.client ? "" : "text-by-muted"}`} title={row.client}>{row.client || "—"}</Td>}
                 {columns.shows("caller") && <Td className={row.caller ? "" : "text-by-muted"}>{row.caller || "—"}</Td>}
                 {columns.shows("outcome") && <Td><Pill tone={outcome.tone}>{outcome.label}</Pill></Td>}
                 {columns.shows("when") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.when)}</Td>}
@@ -339,6 +310,62 @@ export function CallsTable({ data }) {
           })}
         </TableBody>
       </Table>
+      {data.capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{data.capped}</p>}
+    </TableCard>
+  );
+}
+
+// ── Reps ────────────────────────────────────────────────────────────────────
+
+const REP_COLUMNS = [{ id: "calls", label: "Calls" }, { id: "answered", label: "Answered" }, { id: "leads", label: "Leads called" }, { id: "talk", label: "Talk time" }, { id: "average", label: "Average call" }, { id: "last", label: "Last call" }];
+
+/**
+ * Who made the calls: one row per caller, counted from the same calls as the Calls table.
+ * @param {{rows: object[], loading: boolean, error: boolean, retry: () => void, capped?: string}} props.data the calls, as the Calls table takes them
+ */
+export function RepsTable({ data }) {
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState({ id: "calls", dir: "desc" });
+  const columns = useColumns(REP_COLUMNS);
+  const reps = useMemo(() => repRows(data.rows), [data.rows]);
+  const rows = useMemo(() => sortBy(searchBy(reps, query, ["name"]), sort), [reps, query, sort]);
+  const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
+
+  if (data.unavailable) {
+    return <Card><EmptyState icon={<Headset />} title="No call centre connected">This client has no dialler linked, so there are no callers to list.</EmptyState></Card>;
+  }
+  return (
+    <TableCard
+      toolbar={<><SearchField placeholder="Search callers" value={query} onChange={(e) => setQuery(e.target.value)} className="w-60" />{columns.menu}</>}
+      state={tableState({ data: { ...data, rows: reps }, shown: rows.length, noun: "callers", icon: <Headset />, empty: { title: "No calls in this range", body: "Callers appear here once the call centre makes calls." } })}
+    >
+      <Table>
+        <TableHead>
+          <tr>
+            <Th {...header("name", "asc")} className="min-w-44">Caller</Th>
+            {columns.shows("calls") && <Th numeric {...header("calls")}>Calls</Th>}
+            {columns.shows("answered") && <Th numeric {...header("answerRate")}>Answered</Th>}
+            {columns.shows("leads") && <Th numeric {...header("leads")}>Leads called</Th>}
+            {columns.shows("talk") && <Th numeric {...header("talk")}>Talk time</Th>}
+            {columns.shows("average") && <Th numeric {...header("average")}>Average call</Th>}
+            {columns.shows("last") && <Th {...header("last")}>Last call</Th>}
+          </tr>
+        </TableHead>
+        <TableBody>
+          {rows.map((row) => (
+            <Tr key={row.id}>
+              <Td className={`max-w-64 truncate font-semibold ${row.named ? "" : "text-by-muted"}`} title={row.name}>{row.name}</Td>
+              {columns.shows("calls") && <Td numeric>{row.calls.toLocaleString("en-GB")}</Td>}
+              {columns.shows("answered") && <Td numeric>{row.answered.toLocaleString("en-GB")}<span className="text-by-muted"> · {Math.round(row.answerRate)}%</span></Td>}
+              {columns.shows("leads") && <Td numeric>{row.leads.toLocaleString("en-GB")}</Td>}
+              {columns.shows("talk") && <Td numeric>{lengthLabel(row.talk)}</Td>}
+              {columns.shows("average") && <Td numeric>{lengthLabel(row.average)}</Td>}
+              {columns.shows("last") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.last)}</Td>}
+            </Tr>
+          ))}
+        </TableBody>
+      </Table>
+      {data.capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{data.capped}</p>}
     </TableCard>
   );
 }

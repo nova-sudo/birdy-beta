@@ -72,8 +72,26 @@ export function useSuggestions() {
   return { suggestions, history, loading: isLoading, error: error && !data ? error : null, refresh: () => mutate(), apply, dismiss, busy };
 }
 
-/** How many suggestions are open, for the tab's badge. Shares the tab's own request. */
-export function useSuggestionCount() {
+/**
+ * How many suggestions are open, for the tab's badge. Shares the tab's own request.
+ * @param {(s: object) => boolean} [owns] counts only the suggestions this says are the section's
+ */
+export function useSuggestionCount(owns) {
   const { data } = useSWR(KEY, fetcher, { revalidateOnFocus: false });
-  return data?.suggestions?.length ?? 0;
+  return useMemo(() => {
+    if (!owns) return data?.suggestions?.length ?? 0;
+    return shapeSummary(data).suggestions.filter(owns).length;
+  }, [data, owns]);
+}
+
+/**
+ * The open suggestions a section owns, without the actions. Shares the Suggestions tab's request.
+ * @param {(s: object) => boolean} [owns]
+ */
+export function useOpenSuggestions(owns) {
+  const { data } = useSWR(KEY, fetcher, { revalidateOnFocus: false });
+  return useMemo(() => {
+    const all = shapeSummary(data).suggestions;
+    return owns ? all.filter(owns) : all;
+  }, [data, owns]);
 }
