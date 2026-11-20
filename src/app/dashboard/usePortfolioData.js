@@ -22,6 +22,7 @@ import {
 } from "@/lib/portfolio-series";
 import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 import { isChangeActivity } from "@/lib/activity";
+import { previousValues, previousWindow } from "@/lib/birds-eye";
 import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 
 // ─── Where the figures come from ───────────────────────────────────────────
@@ -62,6 +63,8 @@ export function usePortfolioData({
   preset = DEFAULT_DATE_PRESET,
   granularity = "Daily",
   chartMetric = "leads",
+  // One client's id narrows every figure to that client; null is the whole agency.
+  clientId = null,
 } = {}) {
   // useClientGroups takes its argument as an *initial* value — it holds the
   // preset in its own state and expects callers to move it with setDatePreset.
@@ -69,7 +72,7 @@ export function usePortfolioData({
   // pushed in explicitly or the client groups stay on whatever was asked for
   // first while everything fetched here quietly moves on without them.
   const {
-    clientGroups,
+    clientGroups: allGroups,
     loading: groupsLoading,
     error: groupsError,
     datePreset,
@@ -79,6 +82,13 @@ export function usePortfolioData({
   useEffect(() => {
     if (datePreset !== preset) setDatePreset(preset);
   }, [preset, datePreset, setDatePreset]);
+
+  // Everything below is computed from this list, so narrowing it here narrows
+  // the tiles, the chart, the funnel and the per-day requests together.
+  const clientGroups = useMemo(
+    () => (clientId ? (allGroups ?? []).filter((g) => g.id === clientId) : allGroups),
+    [allGroups, clientId]
+  );
 
   // The lead fetch keys off this rather than the array itself: which clients
   // are in the portfolio is what the request depends on, and an identity check
@@ -98,7 +108,7 @@ export function usePortfolioData({
   const [previousGroups, setPreviousGroups] = useState(null);
   // One row per day: { date, leads, closes }. Counted in Mongo, so this is the
   // whole range rather than the newest 5,000 rows.
-  const [leadDays, setLeadDays] = useState([]);
+  const [leadDaysState, setLeadDays] = useState([]);
   const [rail, setRail] = useState({
     suggestions: [],
     activity: [],
@@ -135,7 +145,8 @@ export function usePortfolioData({
         const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`);
         if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setPreviousGroups(data.client_groups ?? []);
+        const groups = data.client_groups ?? [];
+        if (!cancelled) setPreviousGroups(clientId ? groups.filter((g) => g.id === clientId) : groups);
       } catch {
         // No comparison is a fine outcome — the pills just don't render.
         if (!cancelled) setPreviousGroups(null);
@@ -145,7 +156,7 @@ export function usePortfolioData({
     return () => {
       cancelled = true;
     };
-  }, [preset]);
+  }, [preset, clientId]);
 
   // ── Lead rows, for the trend chart and its closes series ────────────────
   useEffect(() => {
@@ -167,7 +178,9 @@ export function usePortfolioData({
       try {
         const { start_date, end_date } = presetToDateRange(preset);
         const params = new URLSearchParams({ groups: groupIds });
-        if (start_date) params.set("start_date", start_date);
+        // Asked for from one window earlier, so the chart can draw the period before as a dashed line.
+        const before = previousWindow(start_date, end_date);
+        if (start_date) params.set("start_date", before?.start ?? start_date);
         if (end_date) params.set("end_date", end_date);
 
         const res = await apiRequest(`/api/facebook-leads/series?${params}`, {
@@ -322,12 +335,25 @@ export function usePortfolioData({
     // Leads and closes are counted server-side across the whole range, so
     // there is no sample to scale — the days roll straight up into whichever
     // granularity is selected.
+    // The per-day rows reach one window further back than the range (see the
+    // request above); `leadDays` here is the range itself, `allLeadDays` both.
+    const allLeadDays = leadDaysState;
+    const range = presetToDateRange(preset);
+    const before = previousWindow(range.start_date, range.end_date);
+    const leadDays = range.start_date ? allLeadDays.filter((d) => d.date >= range.start_date) : allLeadDays;
+    // The dashed line only makes sense point for point, so it is offered at daily granularity only.
+    const plotted = [...new Set(leadDays.map((d) => d.date))].sort();
+    const earlier = (rows, valueOf) =>
+      before && granularity === "Daily" ? previousValues(plotted, rows, before.days, valueOf) : null;
+
     const leadSeries = {
       ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.leads),
+      previousValues: earlier(allLeadDays, (d) => d.leads),
       estimated: false,
     };
     const closeSeries = {
       ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.closes),
+      previousValues: earlier(allLeadDays, (d) => d.closes),
       estimated: false,
     };
 
@@ -341,8 +367,10 @@ export function usePortfolioData({
     const spendDays = (current.dailySpend ?? []).filter(
       (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
     );
+    const spendDates = [...new Set(spendDays.map((d) => d.date))].sort();
     const spendSeries = {
       ...bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend),
+      previousValues: before && granularity === "Daily" ? previousValues(spendDates, current.dailySpend, before.days, (d) => d.spend) : null,
       estimated: false,
     };
 
@@ -354,7 +382,27 @@ export function usePortfolioData({
       callsCapped
     );
 
+    // Cost per lead for each day: that day's spend over that day's leads. A
+    // day with no leads has no cost per lead, drawn as zero.
+    const spendByDay = new Map(spendDays.map((d) => [d.date, Number(d.spend) || 0]));
+    const cplDays = leadDays.map((d) => ({
+      date: d.date,
+      cpl: d.leads > 0 ? (spendByDay.get(d.date) ?? 0) / d.leads : 0,
+    }));
+    const cplSeries = {
+      ...bucketSeries(cplDays, (d) => d.date, "Daily", (d) => d.cpl),
+      estimated: false,
+    };
+
     return {
+      cpl: {
+        tab: "CPL",
+        title: "Cost per lead",
+        subtitle: "Spend over leads, day by day",
+        total: formatMoney(current.cpl, 2),
+        valuePrefix: currencySymbol,
+        ...cplSeries,
+      },
       leads: {
         tab: "Leads",
         title: "Total leads",
@@ -395,7 +443,7 @@ export function usePortfolioData({
       },
     };
   }, [
-    leadDays,
+    leadDaysState,
     callRows,
     callsLoading,
     granularity,
@@ -417,6 +465,15 @@ export function usePortfolioData({
   return {
     clientCount: current.clientCount,
     dateRangeLabel,
+    // The totals behind every figure, for screens that lay them out their own way.
+    current,
+    previous,
+    // The client the figures are narrowed to, when they are.
+    client: clientId ? (allGroups ?? []).find((g) => g.id === clientId) ?? null : null,
+    // The client groups behind the figures (narrowed like them), and the comparison
+    // period's, for screens that rank or chart clients one by one.
+    groups: clientGroups ?? [],
+    previousGroups,
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),

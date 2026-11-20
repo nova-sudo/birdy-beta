@@ -19,6 +19,16 @@ import {
   StepHeading,
 } from "./parts"
 
+import {
+  MAX_IMPORT_SELECTION,
+  autoCheckedIds as pickAutoChecked,
+  importPayload,
+  listedAccounts,
+  orderRows,
+  resolveRows,
+  rowMatches,
+} from "@/lib/import-review"
+
 const NO_MATCH = "No matching ad account found"
 
 // What the prep job is actually doing, in the order it does it: mint a
@@ -57,15 +67,6 @@ const LEAD_SOURCE_STYLE = {
   primary: "border-pd-primary-pale bg-pd-primary-tint text-pd-primary",
 }
 
-// The largest plan (Scale) supports 25 client groups — pre-selecting or
-// allowing more than that would just get silently truncated later by
-// check_client_limit during the actual import, so it's capped here instead.
-const MAX_IMPORT_SELECTION = 25
-
-// Module scope: one collator for every row comparison, rather than rebuilding
-// it per sort. Undefined locale so it follows the reader's own alphabet.
-const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true })
-
 export default function ReviewStep({ review, settled, importing, onImport }) {
   // Per-row edits, sparse — row defaults come from the server payload.
   const [rows, setRows] = useState({})
@@ -78,85 +79,23 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   // pairing, and on a real agency two in five sub-accounts are dormant.
   const [hideInactive, setHideInactive] = useState(true)
 
-  const unimported = useMemo(
-    () => (review?.accounts || []).filter((a) => !a.already_imported),
-    [review]
-  )
-  // The prep job decides who belongs in the list: only sub-accounts with a
-  // lead in the last 90 days (unknown recency stays visible rather than
-  // silently hiding someone's client).
-  const accounts = useMemo(
-    () => unimported.filter((a) => a.leads_recent_90 !== false),
-    [unimported]
-  )
-  const hasRecency = unimported.some((a) => a.leads_recent_90 !== null && a.leads_recent_90 !== undefined)
+  // Which sub-accounts are listed, ticked, ordered and sent is decided in
+  // lib/import-review, shared with the Clients page's Import dialog.
+  const { unimported, accounts, hasRecency } = useMemo(() => listedAccounts(review), [review])
   const fbAccounts = review?.fb_accounts || []
 
-  // Only pre-check sub-accounts with a lead in the last 7 days, most-recent
-  // first, capped at MAX_IMPORT_SELECTION — everything else still shows in
-  // the table (untouched by this), just unchecked by default.
-  const autoCheckedIds = useMemo(() => {
-    const eligible = accounts
-      .filter((a) => a.leads_recent_7)
-      .slice()
-      .sort((a, b) => new Date(b.last_lead_at || 0) - new Date(a.last_lead_at || 0))
-      .slice(0, MAX_IMPORT_SELECTION)
-    return new Set(eligible.map((a) => a.location_id))
-  }, [accounts])
+  const autoCheckedIds = useMemo(() => pickAutoChecked(accounts), [accounts])
 
-  const resolved = accounts.map((account) => {
-    const edit = rows[account.location_id] || {}
-    // Only a confident pairing arrives as fb_match, so this is the box's
-    // value. fb_suggestion is the server's near-miss and deliberately does
-    // not feed it — see the "Did you mean" affordance below.
-    const fb = edit.fb !== undefined ? edit.fb : account.fb_match
-    return {
-      ...account,
-      importChecked: edit.import !== undefined ? edit.import : autoCheckedIds.has(account.location_id),
-      birdyName: edit.birdyName !== undefined ? edit.birdyName : account.name,
-      fb,
-      suggestion: account.fb_suggestion || null,
-      // The prep job writes 0 for a sub-account it read and found nothing in,
-      // and leaves the field off entirely for one it has not reached. Those
-      // are different answers and the column shows them differently.
-      leads30dKnown: typeof account.leads_30d === "number",
-      status: edit.status || account.status_default || "active",
-      leadSource: edit.leadSource || "unknown",
-    }
-  })
+  const resolved = resolveRows(accounts, rows, autoCheckedIds)
 
-  // Ticked rows first, then everyone else, each block A–Z.
-  //
-  // The pre-selection is the answer to "which of your 174 sub-accounts is this
-  // step actually about", and it was landing scattered through an unordered
-  // list — so the one thing the user came here to check was the one thing they
-  // had to hunt for. Ticked at the top makes the selection reviewable at a
-  // glance, and unticking drops that row straight back into the alphabetical
-  // pile below, where it can be found again by name.
-  //
-  // Sorted on the GHL name, not the editable Birdy one. They are the same value
-  // until someone edits it, and sorting on the edited one would re-sort the
-  // table on every keystroke — pulling the text field the user is typing into
-  // out from under the cursor. `numeric` so "Clinic 9" precedes "Clinic 10",
-  // and `base` sensitivity so case and accents don't split the alphabet.
-  const ordered = resolved
-    .slice()
-    .sort((a, b) =>
-      a.importChecked !== b.importChecked
-        ? a.importChecked ? -1 : 1
-        : collator.compare(a.name || "", b.name || "")
-    )
+  const ordered = orderRows(resolved)
 
   // Filtering is a view concern and deliberately nothing more. Counts, the
   // auto-check cap and what actually gets imported all read `resolved`, not
   // this — searching must never silently drop a sub-account someone already
   // ticked, which is exactly what filtering the source list would do.
   const query = search.trim().toLowerCase()
-  const matchesQuery = (row) =>
-    !query ||
-    [row.birdyName, row.name, row.fb?.name, row.suggestion?.name].some(
-      (field) => (field || "").toLowerCase().includes(query)
-    )
+  const matchesQuery = (row) => rowMatches(row, query)
 
   // Dormant sub-accounts are the noise this screen is trying to see past: an
   // agency with 177 of them is really being asked about the 109 still bringing
@@ -589,18 +528,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         <PrimaryButton
           disabled={importing || importCount === 0}
           onClick={() =>
-            onImport(
-              resolved
-                .filter((r) => r.importChecked)
-                .map((r) => ({
-                  location_id: r.location_id,
-                  name: r.birdyName.trim() || r.name,
-                  meta_ad_account_id: r.fb?.id || null,
-                  ad_account_currency: r.fb?.currency || null,
-                  client_status: r.status === "active" ? "Active" : "Inactive",
-                  lead_collection_method: r.leadSource,
-                }))
-            )
+            onImport(importPayload(resolved))
           }
         >
           {importing ? "Importing…" : `Import ${importCount} sub-account${importCount === 1 ? "" : "s"}`}

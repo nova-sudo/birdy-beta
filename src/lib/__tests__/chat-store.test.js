@@ -123,3 +123,49 @@ describe("chat-store", () => {
     off()
   })
 })
+
+describe("chat-store, streaming with other agents", () => {
+  const enc = new TextEncoder()
+  const sse = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+  const stream = (chunks) => {
+    let i = 0
+    return {
+      ok: true, status: 200, headers: { get: () => "text/event-stream" },
+      body: { getReader: () => ({ read: async () => (i < chunks.length ? { done: false, value: enc.encode(chunks[i++]) } : { done: true }), cancel: async () => {} }) },
+    }
+  }
+  const ROUTE = { status: "working", seconds: 3, credits: 0, steps: [{ id: "s1", agent: "media_buyer", status: "working" }] }
+  const DONE = { ...ROUTE, status: "done", steps: [{ id: "s1", agent: "media_buyer", status: "done" }] }
+
+  it("sends the agent, shows the route while it streams, and keeps it on the reply", async () => {
+    const live = []
+    apiRequest.mockImplementation(() => Promise.resolve(stream([
+      sse("route", ROUTE),
+      sse("final", { reply: "Done", tools_used: [], session_id: "s1", route: DONE, proposals: [{ id: "p1", agent: "media_buyer", title: "Put the old form back", status: "pending" }] }),
+    ])))
+    const off = subscribeChat("k-stream", () => live.push(getChat("k-stream").route))
+    await sendChatMessage("k-stream", { text: "why?", agent: "sales_coach", stream: true })
+    off()
+    expect(apiRequest.mock.calls[0][0]).toBe("/api/chat/stream")
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body).agent).toBe("sales_coach")
+    expect(live).toContainEqual(ROUTE)
+    const chat = getChat("k-stream")
+    expect(chat.route).toBeNull()
+    expect(chat.loading).toBe(false)
+    expect(chat.messages.at(-1)).toMatchObject({ role: "assistant", content: "Done", route: DONE, proposals: [expect.objectContaining({ id: "p1" })] })
+  })
+
+  it("leaves agent and route out of a plain chat", async () => {
+    apiRequest.mockImplementation(() => reply({ reply: "Hi", tools_used: [], route: null }))
+    await sendChatMessage("k-plain", { text: "hello" })
+    expect(apiRequest.mock.calls[0][0]).toBe("/api/chat")
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body)).not.toHaveProperty("agent")
+    expect(getChat("k-plain").messages.at(-1)).toEqual({ role: "assistant", content: "Hi", tools_used: [] })
+  })
+
+  it("keeps the route it had, marked failed, when the stream breaks", async () => {
+    apiRequest.mockImplementation(() => Promise.resolve(stream([sse("route", ROUTE), sse("error", { message: "timed out" })])))
+    await sendChatMessage("k-broken", { text: "why?", stream: true })
+    expect(getChat("k-broken").messages.at(-1)).toMatchObject({ content: "Sorry, I hit an error. Please try again.", route: { ...ROUTE, status: "failed" } })
+  })
+})
