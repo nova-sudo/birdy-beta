@@ -11,6 +11,7 @@ import { BUYER_CLIENT_VIEWS, COACH_CLIENT_VIEWS, ClientDashboard } from "@/compo
 import { CallsTable, RepsTable } from "@/components/agency/client-tables";
 import { resolveSection } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
+import { SectionMore } from "@/components/agency/section-more";
 import { useOpenSuggestions } from "@/components/agency/use-suggestions";
 import { apiRequest } from "@/lib/api";
 import { AD_LEVELS, adLevelRows, callRows, repRows, searchBy, sortBy, toggleSort } from "@/lib/client-tables";
@@ -70,6 +71,7 @@ function Frame({ section, range, caption, views, children }) {
         section={section.kit}
         tabs={tabs}
         tab="dashboard"
+        more={<SectionMore section={section} tab="dashboard" />}
         onTabChange={(value) => value !== "dashboard" && router.push(sectionTabHref(section, value, search))}
         dateRange={<RangeMenu preset={range.preset} label={range.label} onPick={range.setPreset} />}
       />

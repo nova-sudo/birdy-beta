@@ -48,6 +48,33 @@ export function TextField({ label, error, help, leading, id, className, ...props
   );
 }
 
+/**
+ * A labelled box for a few lines of text. Same surface, label, help and error as TextField.
+ *
+ * @param {number} [props.rows] three by default; the box grows with a drag of its corner
+ */
+export function TextArea({ label, error, help, id, rows = 3, className, ...props }) {
+  const auto = useId();
+  const fieldId = id ?? auto;
+  const messageId = error || help ? `${fieldId}-message` : undefined;
+  return (
+    <div className={className}>
+      {label && <label htmlFor={fieldId} className="mb-1.5 block text-by-body-sm font-medium text-by-text">{label}</label>}
+      <div className={cn(SURFACE, "h-auto items-start py-2", error && INVALID)}>
+        <textarea
+          id={fieldId}
+          rows={rows}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={messageId}
+          className={cn(INPUT, "min-h-0 resize-y leading-[1.45]")}
+          {...props}
+        />
+      </div>
+      <Message id={messageId} error={error} help={help} />
+    </div>
+  );
+}
+
 /** A search field: the text field with a magnifier and the search input type. */
 export function SearchField({ placeholder = "Search", "aria-label": ariaLabel, ...props }) {
   return <TextField type="search" leading={<Search aria-hidden="true" />} placeholder={placeholder} aria-label={ariaLabel ?? placeholder} {...props} />;

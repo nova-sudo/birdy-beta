@@ -16,6 +16,12 @@ export const OPS_TABS = [
 ];
 
 /**
+ * The pages under the "More" menu at the end of the tab pill. The reference also lists Reports and
+ * Projections there; they join this list once they are built, so the menu never leads nowhere.
+ */
+export const MORE_PAGES = [{ value: "context", label: "Context" }];
+
+/**
  * A section's tabs, with the number of its open suggestions on the Suggestions tab.
  * @param {import("./sections").SectionConfig} [section] Agency Ops when left out
  */

@@ -21,7 +21,8 @@ export const PILL_EXTRA = cn(
  * @param {string} props.value the open tab
  * @param {(value: string) => void} props.onValueChange
  * @param {string} props["aria-label"] what the tabs switch between
- * @param {React.ReactNode} [props.trailing] sits inside the pill after the tabs, e.g. a "More" menu trigger (use PILL_EXTRA for its classes)
+ * @param {React.ReactNode} [props.trailing] sits inside the pill after the tabs, e.g. a "More" menu trigger (use PILL_EXTRA for its classes).
+ *   Give it `data-pill-current` while a page it leads to is open, and the chip moves under it.
  * @param {React.ReactNode} [props.toolbar] controls on the same row as the pill, pushed to the right (sort, search, columns)
  * @param {boolean} [props.fill] take the remaining height of a flex column, so a panel can hold a table that scrolls inside itself
  * @param {React.ReactNode} [props.children] TabPanel elements, one per item
@@ -35,9 +36,11 @@ export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, 
   useLayoutEffect(() => {
     const list = listRef.current;
     if (!list) return;
+    // A `trailing` element marked `data-pill-current` (the More menu while one of its pages is open)
+    // wears the chip when no tab is open.
     const measure = () => {
-      const active = list.querySelector('[data-state="active"]');
-      if (active) setChip({ left: active.offsetLeft, width: active.offsetWidth });
+      const active = list.querySelector('[role="tab"][data-state="active"]') ?? list.querySelector("[data-pill-current]");
+      setChip(active ? { left: active.offsetLeft, width: active.offsetWidth } : null);
     };
     measure();
     const observer = new ResizeObserver(measure);

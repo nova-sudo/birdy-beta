@@ -4,7 +4,7 @@ export { cn } from "./cn"
 
 // Actions and inputs
 export { Button, buttonVariants } from "./button"
-export { TextField, SearchField, DropdownTrigger } from "./field"
+export { TextField, TextArea, SearchField, DropdownTrigger } from "./field"
 export { AskBar } from "./ask-bar"
 export { AskPanel } from "./ask-panel"
 export { ChatSender, ChatTyping, UserMessage } from "./chat"

@@ -11,6 +11,7 @@ import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { OPS_SECTION, sessionKey } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
+import { SectionMore } from "@/components/agency/section-more";
 import { AdsTable, CallsTable, LeadsTable, RepsTable } from "@/components/agency/client-tables";
 import { useClientTables } from "@/components/agency/use-client-tables";
 import { groupHasCallCentre } from "@/lib/call-centre-availability";
@@ -94,6 +95,7 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
           subtitle={subtitle}
           tabs={tabs}
           tab="dashboard"
+          more={<SectionMore section={section} tab="dashboard" />}
           onTabChange={(value) => value !== "dashboard" && router.push(sectionTabHref(section, value, search))}
           dateRange={
             <Menu>
