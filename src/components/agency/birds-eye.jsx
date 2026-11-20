@@ -12,6 +12,8 @@ import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { OPS_SECTION } from "@/components/agency/sections";
+import { SectionMore } from "@/components/agency/section-more";
 import { useStoredUser } from "@/components/shell/account-menu";
 import { clientDetailHref, clientHref } from "@/components/shell/nav";
 import { CHART_COPY, buildFinding, buildTiles, chartKeys, greeting, rankCampaigns } from "@/lib/birds-eye";
@@ -137,6 +139,7 @@ export function BirdsEye() {
         subtitle={subtitle}
         tabs={tabs}
         tab="birdseye"
+        more={<SectionMore section={OPS_SECTION} tab="birdseye" />}
         onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
         dateRange={
           <Menu>

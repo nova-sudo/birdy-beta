@@ -8,6 +8,7 @@ import { AskBar, Button, EmptyState, Notice, SectionHeader, Skeleton } from "@/c
 import { useStoredUser } from "@/components/shell/account-menu";
 import { OPS_SECTION, resolveSection, sessionKey } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
+import { SectionMore } from "@/components/agency/section-more";
 import { groupConversations, scopeLine } from "@/lib/agent-chat";
 import { apiRequest } from "@/lib/api";
 import { greeting } from "@/lib/birds-eye";
@@ -148,6 +149,7 @@ export function AgencyChat({ section: which }) {
         subtitle={subtitle}
         tabs={tabs}
         tab="chat"
+        more={<SectionMore section={section} tab="chat" />}
         onTabChange={(value) => value !== "chat" && router.push(sectionTabHref(section, value, search))}
       />
 

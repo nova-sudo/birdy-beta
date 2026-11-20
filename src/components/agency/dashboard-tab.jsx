@@ -7,6 +7,8 @@ import { AskBar, AskPanel, Button, SECTIONS, SectionHeader } from "@/components/
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { OPS_SECTION } from "@/components/agency/sections";
+import { SectionMore } from "@/components/agency/section-more";
 import { ClientDashboard } from "@/components/agency/client-dashboard";
 import { ClientsList } from "@/components/clients/list/clients-list";
 
@@ -42,6 +44,7 @@ function AgencyDashboard() {
               section={OPS}
               tabs={tabs}
               tab="dashboard"
+              more={<SectionMore section={OPS_SECTION} tab="dashboard" />}
               onTabChange={(value) => value !== "dashboard" && router.push(opsTabHref(value, search))}
               dateRange={dateMenu}
             />

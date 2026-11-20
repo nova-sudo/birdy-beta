@@ -105,6 +105,21 @@ export function resetChat(sessionKey) {
   emit(sessionKey)
 }
 
+/**
+ * Change one proposal kept on a reply (its status once the owner decides, what came back), so the
+ * thread shows the decision for as long as the conversation stays open.
+ */
+export function updateProposal(sessionKey, proposalId, patch) {
+  const chat = entry(sessionKey)
+  let found = false
+  chat.messages = chat.messages.map((m) => {
+    if (!m.proposals?.some((p) => p.id === proposalId)) return m
+    found = true
+    return { ...m, proposals: m.proposals.map((p) => (p.id === proposalId ? { ...p, ...patch } : p)) }
+  })
+  if (found) emit(sessionKey)
+}
+
 export function markUISubmitted(sessionKey, uiKey) {
   const chat = entry(sessionKey)
   chat.submittedUIs = [...chat.submittedUIs, uiKey]

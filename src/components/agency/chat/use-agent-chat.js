@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { useAiCredentials } from "@/hooks/useAiCredentials";
 import { useCredits } from "@/hooks/useCredits";
-import { markUISubmitted, sendChatMessage, useChat } from "@/lib/chat-store";
+import { markUISubmitted, sendChatMessage, updateProposal as storeProposal, useChat } from "@/lib/chat-store";
 
 /**
  * One conversation with Birdy, on the app's existing chat backend.
@@ -73,8 +73,11 @@ export function useAgentChat({ sessionKey, page = null, agent = null, client = n
     send(`[UI_RESPONSE] ${JSON.stringify(values)}`);
   }, [sessionKey, send]);
 
+  // A proposal on a reply keeps the owner's decision (approved, declined, what came back).
+  const updateProposal = useCallback((proposalId, patch) => storeProposal(sessionKey, proposalId, patch), [sessionKey]);
+
   return {
     messages: chat.messages, loading: chat.loading, sessionId: chat.sessionId, submittedUIs: chat.submittedUIs, route: chat.route ?? null,
-    send, submitUI, configured, outOfCredits,
+    send, submitUI, updateProposal, configured, outOfCredits,
   };
 }

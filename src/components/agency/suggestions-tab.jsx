@@ -8,6 +8,7 @@ import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { OPS_SECTION, resolveSection, sessionKey } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
+import { SectionMore } from "@/components/agency/section-more";
 import { useSuggestions } from "@/components/agency/use-suggestions";
 import { forClient, suggestionsHeading } from "@/lib/agency-suggestions";
 import { isActive } from "@/lib/client-status";
@@ -62,7 +63,7 @@ export function SuggestionsTab({ section: which }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-by-canvas font-by-body text-by-body text-by-text selection:bg-by-accent-line selection:text-by-text">
-      <SectionHeader section={OPS} subtitle={subtitle} tabs={tabs} tab="suggestions" onTabChange={(value) => value !== "suggestions" && router.push(sectionTabHref(section, value, search))} />
+      <SectionHeader section={OPS} subtitle={subtitle} tabs={tabs} tab="suggestions" more={<SectionMore section={section} tab="suggestions" />} onTabChange={(value) => value !== "suggestions" && router.push(sectionTabHref(section, value, search))} />
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">

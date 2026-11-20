@@ -17,6 +17,7 @@ import { mdComponents } from "@/lib/chat-markdown";
 import { delatex } from "@/lib/chat-math";
 import { parseChatUI } from "@/lib/chat-ui-parser";
 import { findStep, normalizeRoute } from "@/lib/agent-route";
+import { ReplyProposals } from "./proposal-card";
 
 const PROSE =
   "prose prose-sm max-w-none font-by-body text-by-text prose-headings:font-by-display prose-headings:font-semibold prose-headings:text-by-text " +
@@ -167,6 +168,8 @@ export function ChatThread({ chat, name, compact = false, partPlacement = "auto"
           <div className={indent}>
             {message.route?.steps?.length ? mapFor(message.route, i) : null}
             <ReplyBody message={message} index={i} onUISubmit={submitUI} onSend={send} submittedUIs={submittedUIs} />
+            {/* Changes other agents proposed, under the answer that explains them. */}
+            <ReplyProposals proposals={message.proposals} onUpdate={chat.updateProposal} compact={compact} />
           </div>
         </div>
       ))}

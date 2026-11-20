@@ -61,7 +61,7 @@ export function AppShell({ children }) {
               clients={clients}
               // Picking a client inside Media Buyer or Sales Coach stays there; elsewhere it opens Agency Ops for it.
               // Leaving a client from an agent section returns to the whole agency there; anywhere else it opens the Clients list.
-              onChange={(id) => router.push(id ? clientHrefFrom(pathname, id) : activeId === "ops" ? DESTINATIONS.ops : isRebuilt(pathname) && sectionBase(pathname) ? pathname : DESTINATIONS.clients)}
+              onChange={(id) => router.push(id ? clientHrefFrom(pathname, id) : activeId === "ops" && pathname !== `${DESTINATIONS.ops}/context` ? DESTINATIONS.ops : isRebuilt(pathname) && sectionBase(pathname) ? pathname : DESTINATIONS.clients)}
               status={error ? "error" : loading ? "loading" : "ready"}
               onRetry={refresh}
             />

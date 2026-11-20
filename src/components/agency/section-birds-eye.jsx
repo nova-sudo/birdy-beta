@@ -8,6 +8,7 @@ import { Button, Card, Delta, EmptyState, Funnel, Notice, RankList, SectionHeade
 import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
 import { resolveSection } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
+import { SectionMore } from "@/components/agency/section-more";
 import { clientDetailHref } from "@/components/shell/nav";
 import { CHART_COPY, buildTiles, rankCampaigns } from "@/lib/birds-eye";
 import { LINK_SALES_TOOL_HREF, groupHasCallCentre } from "@/lib/call-centre-availability";
@@ -63,6 +64,7 @@ export function SectionBirdsEye({ section: which }) {
         subtitle={scopedSubtitle(scoped ? client : null)}
         tabs={tabs}
         tab="birdseye"
+        more={<SectionMore section={section} tab="birdseye" />}
         onTabChange={(value) => value !== "birdseye" && router.push(sectionTabHref(section, value, search))}
         dateRange={<RangeMenu preset={range.preset} label={range.label} onPick={range.setPreset} />}
       />
