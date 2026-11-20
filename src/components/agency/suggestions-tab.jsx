@@ -10,6 +10,7 @@ import { OPS_SECTION, resolveSection, sessionKey } from "@/components/agency/sec
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { SectionMore } from "@/components/agency/section-more";
 import { useSuggestions } from "@/components/agency/use-suggestions";
+import { PendingProposals } from "@/components/agency/pending-proposals";
 import { forClient, suggestionsHeading } from "@/lib/agency-suggestions";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
@@ -51,7 +52,7 @@ export function SuggestionsTab({ section: which }) {
 
   const chat = useAgentChat({
     sessionKey: sessionKey(section, `ask_sugg_${clientId ?? "agency"}`),
-    ...(ops ? { page: client ? "client_detail" : "dashboard" } : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
+    ...(ops ? { page: client ? "client_detail" : "dashboard", agent: section.chat.agent } : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });
   const [asking, setAsking] = useState(false);
@@ -70,6 +71,8 @@ export function SuggestionsTab({ section: which }) {
           <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
             <div className={`mx-auto grid max-w-[1040px] items-start gap-5 ${section.ownsHistory ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
               <section aria-labelledby="sugg-heading" className="min-w-0">
+                {/* Changes proposed in this agent's area, from chats and sub-agent runs, come first. */}
+                {!ops && <PendingProposals agent={section.chat.agent} clientId={clientId} />}
                 <div className="flex items-baseline gap-3">
                   <h2 id="sugg-heading" className="font-by-display text-by-heading font-semibold text-balance">
                     {data.loading ? "Suggestions" : !ops && !section.ownsHistory && suggestions.length === 0 ? "No suggestions yet" : suggestionsHeading(suggestions.length, client?.name, ops ? null : OPS.name)}

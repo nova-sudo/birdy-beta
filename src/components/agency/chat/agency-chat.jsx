@@ -12,7 +12,7 @@ import { SectionMore } from "@/components/agency/section-more";
 import { groupConversations, scopeLine } from "@/lib/agent-chat";
 import { apiRequest } from "@/lib/api";
 import { greeting } from "@/lib/birds-eye";
-import { hydrateChat, resetChat } from "@/lib/chat-store";
+import { hydrateChat, resetChat, syncProposals } from "@/lib/chat-store";
 import { startersFor } from "@/lib/chat-starters";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
@@ -27,8 +27,8 @@ const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", of
 /**
  * A section's Chat: saved conversations on the left, the open one on the right.
  * It talks to the same backend as the older Ask Birdy page, so the history is shared.
- * Agency Ops (Birdy) lists every conversation; Media Buyer and Sales Coach list their own,
- * and ask their own agent with that section's tools.
+ * Each lists the conversations with its own agent (Agency Ops: Birdy, and older rows that name no agent),
+ * and each asks its own agent with that section’s tools.
  *
  * @param {import("../sections").SectionConfig} [props.section] Agency Ops when left out
  */
@@ -56,6 +56,8 @@ export function AgencyChat({ section: which }) {
   const [activeId, setActiveId] = useState(null);
   const [opening, setOpening] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  // How the thread column moved to make room for an agent's part docked on the right; the composer follows.
+  const [room, setRoom] = useState(null);
 
   const loadList = useCallback(async () => {
     try {
@@ -78,8 +80,9 @@ export function AgencyChat({ section: which }) {
   }, [ops, section.key]);
   const chat = useAgentChat({
     sessionKey: SESSION_KEY,
-    // Agency Ops has always sent no page: Birdy with every tool. The other sections send theirs, and their agent.
-    ...(ops ? {} : { page: section.chat.page, agent: section.chat.agent }),
+    // Agency Ops sends no page (Birdy with every tool) and agent "birdy"; the other sections send theirs, and their agent.
+    page: section.chat.page,
+    agent: section.chat.agent,
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
     onSessionId,
     onSettled: loadList,
@@ -106,6 +109,18 @@ export function AgencyChat({ section: which }) {
     }
   }, [SESSION_KEY]);
 
+  // Quietly re-read a conversation's proposals from the server; the transcript on screen stays as it is.
+  const syncSaved = useCallback(async (sessionId) => {
+    try {
+      const res = await apiRequest(`/api/chat/conversations/${encodeURIComponent(sessionId)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      syncProposals(SESSION_KEY, data.messages || []);
+    } catch {
+      // The chat still works; its proposals show what this browser last knew.
+    }
+  }, [SESSION_KEY]);
+
   // Arriving with ?c=<id> (from a page's conversation column) opens that conversation; otherwise a fresh chat.
   const arrived = useRef(false);
   useEffect(() => {
@@ -113,7 +128,11 @@ export function AgencyChat({ section: which }) {
     arrived.current = true;
     if (wanted) open(wanted);
     else if (!chat.sessionId) newChat();
-    else setActiveId(chat.sessionId);
+    else {
+      setActiveId(chat.sessionId);
+      // The chat kept in this browser may predate a decision made elsewhere: the saved conversation says.
+      syncSaved(chat.sessionId);
+    }
     // Runs once on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -134,7 +153,8 @@ export function AgencyChat({ section: which }) {
 
   // Inside a client only that client's saved conversations are listed; in a section only that section's.
   const groups = useMemo(() => {
-    const mine = ops ? conversations : conversationsFor(conversations, section.chat.agent, sectionChatIds(section.key));
+    // Matched on each row's agent; rows without one fall back to what this browser remembers (Agency Ops keeps them all).
+    const mine = conversationsFor(conversations, section.chat.agent, sectionChatIds(section.key));
     return groupConversations(clientId ? mine.filter((c) => c.scope === "client" && c.client_group_id === clientId) : mine);
     // activeId: a conversation that just started is remembered then, and listed on the next read.
   }, [conversations, clientId, ops, section, activeId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -212,12 +232,15 @@ export function AgencyChat({ section: which }) {
                   {client ? (ops ? `Ask anything about ${client.name}.` : `Ask about ${client.name}’s ${section.askAbout.replace(/^your /, "")}.`) : section.hello}
                 </EmptyState>
               ) : null}
-              {!opening && <ChatThread chat={chat} name={OPS.name} />}
+              {!opening && <ChatThread chat={chat} name={OPS.name} onDock={setRoom} />}
             </div>
           </ChatScroll>
 
-          <div className="shrink-0 px-7 pb-5">
-            <div className="mx-auto w-full max-w-[800px]">
+          {/* Built like the thread's box above it (same width and padding), so the composer moves with
+              the thread when an agent's part is docked on the right. */}
+          <div data-composer className="shrink-0 pb-5" style={room?.gutter ? { paddingRight: room.gutter } : undefined}>
+            <div className="mx-auto w-full max-w-[800px] px-7">
+              <div style={room ? { marginLeft: -room.shift, paddingRight: room.pad } : undefined}>
               {empty && !opening && (
                 <div className="mb-2.5 flex flex-wrap gap-2">
                   {starters.map((s) => (
@@ -226,6 +249,7 @@ export function AgencyChat({ section: which }) {
                 </div>
               )}
               <AskBar placeholder={`Message ${OPS.name}`} busy={chat.loading} onSubmit={chat.send} />
+              </div>
             </div>
           </div>
         </div>

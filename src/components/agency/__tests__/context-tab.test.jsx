@@ -9,7 +9,10 @@ const route = { search: "" }
 const ctx = { state: null }
 const subs = { state: null }
 const api = { saveCard: vi.fn(), addNote: vi.fn(), changeNote: vi.fn(), removeNote: vi.fn() }
-const subApi = { pause: vi.fn(), del: vi.fn(), approve: vi.fn() }
+const subApi = { pause: vi.fn(), del: vi.fn(), approve: vi.fn(), run: vi.fn() }
+const lessons = { state: null, add: vi.fn(), change: vi.fn(), remove: vi.fn(), calls: [] }
+const runs = { state: null }
+const tools = { state: null }
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/media-buyer/context", useSearchParams: () => new URLSearchParams(route.search) }))
 vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 0 }))
@@ -17,7 +20,13 @@ vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: fa
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
 vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refresh: vi.fn() }) }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ clientGroups: [{ id: "g0", name: "Aura", client_status: "Active", health: "Critical" }], loading: false }) }))
-vi.mock("@/lib/stock-agent-api", async (orig) => ({ ...(await orig()), useStockAgent: () => ({ agent: { id: "stock1" }, isLoading: false }), useLessons: () => ({ lessons: [{ id: "l1", text: "Don't remove young ads", uses: 2, source: "chat", status: "active" }], isLoading: false, mutate: vi.fn() }) }))
+vi.mock("@/lib/team-lessons", async (orig) => ({
+  ...(await orig()),
+  useTeamLessons: (agent, clientId) => { lessons.calls.push([agent, clientId]); return lessons.state },
+  addLesson: (...a) => lessons.add(...a),
+  changeLesson: (...a) => lessons.change(...a),
+  removeLesson: (...a) => lessons.remove(...a),
+}))
 vi.mock("@/lib/context-api", async (orig) => ({
   ...(await orig()),
   useContext: () => ctx.state,
@@ -30,6 +39,9 @@ vi.mock("@/lib/sub-agents", async (orig) => ({
   pauseSubAgent: (...a) => subApi.pause(...a),
   deleteSubAgent: (...a) => subApi.del(...a),
   approveSubAgent: (...a) => subApi.approve(...a),
+  runSubAgent: (...a) => subApi.run(...a),
+  useSubAgentRuns: () => runs.state,
+  useSubAgentTools: () => tools.state,
 }))
 
 const item = (id, text, o = {}) => ({ id, text, source: "owner", editable: true, updated_at: null, ...o })
@@ -49,6 +61,13 @@ beforeEach(() => {
   route.search = ""
   ctx.state = { context: CONTEXT, unavailable: false, error: null, isLoading: false, mutate }
   subs.state = { subAgents: [sub()], unavailable: false, error: null, isLoading: false, mutate }
+  lessons.state = { lessons: [{ id: "l1", text: "Don't remove young ads", client_group_id: null, client_name: null, source: "chat", created_at: "2026-11-02T09:00:00Z", updated_at: "2026-11-02T09:00:00Z" }], unavailable: false, error: null, isLoading: false, mutate }
+  lessons.calls = []
+  lessons.add.mockResolvedValue({})
+  lessons.change.mockResolvedValue({})
+  lessons.remove.mockResolvedValue({})
+  runs.state = { runs: [], unavailable: false, error: null, isLoading: false, mutate }
+  tools.state = { tools: [], unavailable: false, error: null, isLoading: false }
   api.saveCard.mockResolvedValue()
   api.addNote.mockResolvedValue({})
   subApi.pause.mockResolvedValue({})
@@ -96,8 +115,9 @@ describe("a section's Context page", () => {
     expect(screen.getByText("Your agency")).toBeInTheDocument()
     expect(within(screen.getByRole("list", { name: "Notes about Aura" })).getByText("Owner away")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Add a note" })).toBeInTheDocument()
-    // Lessons are agency-wide, as in the reference.
-    expect(screen.queryByText("Lessons from chat")).toBeNull()
+    // Lessons are read with the client, and its own come under its name.
+    expect(lessons.calls.at(-1)).toEqual(["media_buyer", "g0"])
+    expect(within(screen.getByRole("region", { name: "Lessons" })).getByText("For Aura")).toBeInTheDocument()
   })
 
   it("says plainly when the server has no Context yet, and still lists the sub-agents", () => {
@@ -110,7 +130,7 @@ describe("a section's Context page", () => {
   it("has no sub-agents or lessons in Agency Ops", () => {
     render(<ContextTab section="ops" />)
     expect(screen.queryByRole("region", { name: "Sub-agents" })).toBeNull()
-    expect(screen.queryByText("Lessons from chat")).toBeNull()
+    expect(screen.queryByRole("region", { name: "Lessons" })).toBeNull()
   })
 })
 
@@ -137,7 +157,8 @@ describe("the Sub-agents card", () => {
 
   it("asks before deleting and offers to pause instead", async () => {
     render(<ContextTab section="buyer" />)
-    await userEvent.click(screen.getByRole("button", { name: "Delete Form checker" }))
+    await userEvent.click(screen.getByRole("button", { name: "More for Form checker" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }))
     const dialog = screen.getByRole("dialog", { name: "Delete Form checker?" })
     expect(dialog).toHaveTextContent("lessons and its schedule")
     await userEvent.click(within(dialog).getByRole("button", { name: "Pause instead" }))
@@ -157,5 +178,130 @@ describe("the Sub-agents card", () => {
     subs.state = { subAgents: [], unavailable: true, error: null, isLoading: false, mutate }
     render(<ContextTab section="buyer" />)
     expect(screen.getByRole("region", { name: "Sub-agents" })).toHaveTextContent("Sub-agents are not available yet")
+  })
+})
+
+describe("a sub-agent's runs", () => {
+  const RUN = { id: "r1", status: "done", trigger: "manual", started_at: "2026-11-20T08:00:00Z", finished_at: "2026-11-20T08:00:42Z", summary: "2 forms changed", answer: "Aura and Beaulea changed their lead forms this week.", credits: 4, proposals: [] }
+
+  it("shows the last run on the row, with how it went and what it cost", () => {
+    subs.state = { ...subs.state, subAgents: [sub({ last_run: { status: "timeout", at: "2026-11-20T08:00:00Z", summary: "Stopped at 100 seconds", credits: 3 } })] }
+    render(<ContextTab section="buyer" />)
+    const row = within(screen.getByRole("list", { name: "Media Buyer’s sub-agents" })).getAllByRole("listitem")[0]
+    expect(row).toHaveTextContent("Ran out of time")
+    expect(row).toHaveTextContent("Stopped at 100 seconds")
+    expect(row).toHaveTextContent("3 credits")
+  })
+
+  it("says when it has not run yet", () => {
+    render(<ContextTab section="buyer" />)
+    expect(screen.getByText("Not run yet")).toBeInTheDocument()
+  })
+
+  it("asks before running now, says it uses credits, then shows the result", async () => {
+    subApi.run.mockResolvedValue(RUN)
+    render(<ContextTab section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "More for Form checker" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Run now" }))
+    const dialog = screen.getByRole("dialog", { name: "Run Form checker now?" })
+    expect(dialog).toHaveTextContent("uses Birdy Credits")
+    expect(subApi.run).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole("button", { name: "Run now" }))
+    expect(subApi.run).toHaveBeenCalledWith("s1")
+    expect(await screen.findByText("2 forms changed")).toBeInTheDocument()
+    expect(screen.getByText("Aura and Beaulea changed their lead forms this week.")).toBeInTheDocument()
+    expect(screen.getByText(/Took 42s · 4 credits/)).toBeInTheDocument()
+  })
+
+  it("says plainly when running by hand is not there yet", async () => {
+    subApi.run.mockRejectedValue(Object.assign(new Error("x"), { status: 404 }))
+    render(<ContextTab section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "More for Form checker" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Run now" }))
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Run now" }))
+    expect(await screen.findByText("Running a sub-agent by hand is not available yet.")).toBeInTheDocument()
+  })
+
+  it("offers no Run now for a paused one", async () => {
+    subs.state = { ...subs.state, subAgents: [sub({ status: "paused" })] }
+    render(<ContextTab section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "More for Form checker" }))
+    expect(await screen.findByRole("menuitem", { name: "See its runs" })).toBeInTheDocument()
+    expect(screen.queryByRole("menuitem", { name: "Run now" })).toBeNull()
+  })
+
+  it("lists its runs in a table, and a row opens to its answer", async () => {
+    runs.state = { ...runs.state, runs: [RUN, { ...RUN, id: "r2", status: "error", summary: "Could not read the forms", answer: "" }] }
+    render(<ContextTab section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "More for Form checker" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "See its runs" }))
+    const table = within(screen.getByRole("dialog", { name: "Form checker’s runs" })).getByRole("table", { name: "Form checker’s runs" })
+    expect(within(table).getAllByRole("row")).toHaveLength(3)
+    expect(table).toHaveTextContent("Failed")
+    await userEvent.click(within(table).getByText("2 forms changed"))
+    expect(within(table).getByText("Aura and Beaulea changed their lead forms this week.")).toBeInTheDocument()
+  })
+})
+
+describe("editing a sub-agent's tools", () => {
+  it("offers every tool its main agent can hand out, and sends the added one", async () => {
+    tools.state = { ...tools.state, tools: [{ name: "a", label: "Lead form history" }, { name: "b", label: "Ad figures" }] }
+    const change = vi.fn().mockResolvedValue({})
+    const ctx2 = await import("@/lib/context-api")
+    vi.spyOn(ctx2, "request").mockImplementation((url, method, body) => change(url, method, body))
+    render(<ContextTab section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "Edit Form checker" }))
+    const dialog = screen.getByRole("dialog", { name: "Edit Form checker" })
+    expect(within(dialog).getByText("Lead form history")).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Ad figures/ }))
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }))
+    expect(change).toHaveBeenCalledWith("/api/agents/sub/s1", "PATCH", { tools: ["a", "b"] })
+  })
+})
+
+describe("lessons on Context", () => {
+  it("lists Sales Coach's own lessons too", () => {
+    render(<ContextTab section="coach" />)
+    expect(lessons.calls.at(-1)).toEqual(["sales_coach", null])
+    expect(within(screen.getByRole("region", { name: "Lessons" })).getByText("Don't remove young ads")).toBeInTheDocument()
+  })
+
+  it("adds a lesson for the whole agency", async () => {
+    render(<ContextTab section="buyer" />)
+    const card = screen.getByRole("region", { name: "Lessons" })
+    await userEvent.click(within(card).getByRole("button", { name: "Add a lesson" }))
+    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Media Buyer" }), "Never pause an ad in its first 3 days")
+    await userEvent.click(within(card).getByRole("button", { name: "Add lesson" }))
+    expect(lessons.add).toHaveBeenCalledWith("media_buyer", { text: "Never pause an ad in its first 3 days", clientId: null })
+  })
+
+  it("edits and deletes a lesson in place", async () => {
+    render(<ContextTab section="coach" />)
+    const card = screen.getByRole("region", { name: "Lessons" })
+    await userEvent.click(within(card).getByRole("button", { name: "Edit the lesson: Don't remove young ads" }))
+    const box = within(card).getByRole("textbox", { name: "Edit the lesson" })
+    await userEvent.clear(box)
+    await userEvent.type(box, "Keep young ads for a week")
+    await userEvent.click(within(card).getByRole("button", { name: "Save" }))
+    expect(lessons.change).toHaveBeenCalledWith("sales_coach", "l1", "Keep young ads for a week")
+    await userEvent.click(within(card).getByRole("button", { name: "Edit the lesson: Don't remove young ads" }))
+    await userEvent.click(within(card).getByRole("button", { name: "Delete" }))
+    expect(lessons.remove).toHaveBeenCalledWith("sales_coach", "l1")
+  })
+
+  it("shows the server's reason when a save is refused", async () => {
+    lessons.add.mockRejectedValue(Object.assign(new Error("x"), { status: 400, detail: "A lesson can be at most 500 characters." }))
+    render(<ContextTab section="buyer" />)
+    const card = screen.getByRole("region", { name: "Lessons" })
+    await userEvent.click(within(card).getByRole("button", { name: "Add a lesson" }))
+    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Media Buyer" }), "x")
+    await userEvent.click(within(card).getByRole("button", { name: "Add lesson" }))
+    expect(await within(card).findByText("A lesson can be at most 500 characters.")).toBeInTheDocument()
+  })
+
+  it("says plainly when lessons are not there yet", () => {
+    lessons.state = { lessons: [], unavailable: true, error: null, isLoading: false, mutate }
+    render(<ContextTab section="buyer" />)
+    expect(screen.getByRole("region", { name: "Lessons" })).toHaveTextContent("Lessons are not available yet")
   })
 })

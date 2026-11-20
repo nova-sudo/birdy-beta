@@ -28,7 +28,7 @@ const CONTEXT_PATH = { media_buyer: "/media-buyer/context", sales_coach: "/sales
 export function SubAgentProposal({ proposal, onUpdate, compact = false }) {
   const record = useMemo(() => normalizeSubAgent(proposal.payload?.sub_agent), [proposal.payload]);
   if (!record) return <Notice tone="warning">This sub-agent proposal came without its details, so it can’t be shown.</Notice>;
-  const decided = proposal.status === "approved" || proposal.status === "dismissed" || record.status !== "proposed";
+  const decided = ["approved", "dismissed", "expired"].includes(proposal.status) || record.status !== "proposed";
   return decided ? <Decided proposal={proposal} record={record} /> : <Walkthrough proposal={proposal} record={record} onUpdate={onUpdate} compact={compact} />;
 }
 
@@ -37,14 +37,14 @@ function Face({ record }) {
 }
 
 function Decided({ proposal, record }) {
-  const declined = proposal.status === "dismissed";
+  const declined = proposal.status === "dismissed" || proposal.status === "expired";
   const parent = PARENT_NAMES[record.parent] ?? "its main agent";
   return (
     <Card className={cn("flex items-center gap-2.5 px-3.5 py-3 text-by-body-sm", declined && "opacity-[0.62]")}>
       <Face record={record} />
       <span className="min-w-0 flex-1">
         <b className="block font-semibold text-by-text">{record.name}</b>
-        <span className="text-by-text-2">{declined ? "Declined. Nothing was saved." : `Set up under ${parent}. ${record.status === "paused" ? "It is paused." : "It is active."}`}</span>
+        <span className="text-by-text-2">{proposal.status === "expired" ? "It lapsed before you decided. Nothing was saved." : declined ? "Declined. Nothing was saved." : `Set up under ${parent}. ${record.status === "paused" ? "It is paused." : "It is active."}`}</span>
       </span>
       {!declined && CONTEXT_PATH[record.parent] && (
         <Link href={`${CONTEXT_PATH[record.parent]}#sub-agents`} className="inline-flex shrink-0 items-center gap-1 font-semibold text-by-accent hover:underline">

@@ -11,9 +11,9 @@
  * by-coach); `icon` is a name the kit maps to an icon, so this file stays free of React.
  */
 export const AGENTS = {
-  birdy: { key: "birdy", name: "Birdy", role: "ops", icon: "mascot", kind: "orchestrator", chat: "/dashboard/chat" },
-  media_buyer: { key: "media_buyer", name: "Media Buyer", role: "buyer", icon: "megaphone", kind: "main", chat: "/media-buyer/chat" },
-  sales_coach: { key: "sales_coach", name: "Sales Coach", role: "coach", icon: "phone", kind: "main", chat: "/sales-coach/chat" },
+  birdy: { key: "birdy", name: "Birdy", role: "ops", icon: "mascot", kind: "orchestrator", chat: "/dashboard/chat", context: "/dashboard/context" },
+  media_buyer: { key: "media_buyer", name: "Media Buyer", role: "buyer", icon: "megaphone", kind: "main", chat: "/media-buyer/chat", context: "/media-buyer/context" },
+  sales_coach: { key: "sales_coach", name: "Sales Coach", role: "coach", icon: "phone", kind: "main", chat: "/sales-coach/chat", context: "/sales-coach/context" },
 };
 
 const ROUTE_STATUS = ["working", "done", "failed"];
@@ -37,6 +37,7 @@ export function agentInfo(key, { name, parent = null } = {}) {
   const main = AGENTS[key];
   if (main) return { ...main, name: str(name) || main.name, parent: null };
   const parentInfo = AGENTS[parent] && parent !== "birdy" ? AGENTS[parent] : null;
+  const subId = isSub(key) ? key.slice(4) : null;
   return {
     key: str(key) || "unknown",
     name: str(name) || "Sub-agent",
@@ -46,7 +47,18 @@ export function agentInfo(key, { name, parent = null } = {}) {
     chat: parentInfo?.chat ?? null,
     parent: parentInfo?.key ?? null,
     parentName: parentInfo?.name ?? null,
+    // Where the sub-agent is kept: its row on its main agent's Context page.
+    context: subId && parentInfo ? subAgentContextHref(parentInfo.key, subId) : null,
   };
+}
+
+/** The anchor of a sub-agent's row on Context. */
+export const subAgentAnchor = (id) => `sub-agent-${String(id ?? "").replace(/[^A-Za-z0-9_-]/g, "-")}`;
+
+/** The address of a sub-agent on its main agent's Context page, or null for an unknown main agent. */
+export function subAgentContextHref(parent, id) {
+  const base = AGENTS[parent]?.context;
+  return base && parent !== "birdy" && id ? `${base}#${subAgentAnchor(id)}` : null;
 }
 
 /** The link to an agent's own chat. A sub-agent's work lives in its main agent's chat. */
@@ -188,6 +200,35 @@ export function askedByName(route, step) {
   const byId = route.steps.find((s) => s.id === step.asked_by);
   if (byId) return byId.info.name;
   return route.steps.find((s) => s.agent === step.asked_by)?.info.name ?? AGENTS[step.asked_by]?.name ?? null;
+}
+
+const TIME_OUT = /ran out of time|timed? ?out/i;
+const NO_TIME = /no time left/i;
+const CHAIN = /chain|too deep|depth/i;
+const ASKS = /limit of \d+ asks|asks? limit/i;
+const ALREADY = /already (asked|in)|asked again|repeat/i;
+
+/**
+ * Why a step was skipped or couldn't finish, in plain words, from the route's `limit_hit` and the
+ * step's own data (its summary and time). Null for a step that worked.
+ */
+export function stepReason(route, step) {
+  if (!step || (step.status !== "skipped" && step.status !== "failed")) return null;
+  const name = step.info?.name ?? "This agent";
+  const said = step.summary ?? "";
+  const took = step.seconds > 0 ? ` after ${formatSeconds(step.seconds)}` : "";
+  if (step.status === "skipped") {
+    const limit = ASKS.test(said) ? "asks" : CHAIN.test(said) ? "depth" : ALREADY.test(said) ? "repeat" : route?.limit_hit ?? null;
+    if (limit === "asks") return `${name} wasn’t asked because this reply had already used its 3 agent asks. Ask it on its own to get its answer.`;
+    if (limit === "depth") return `${name} wasn’t asked because the chain of agents was already as long as it can go: an agent, Birdy, another agent and one of its sub-agents.`;
+    if (limit === "repeat") return `${name} was already part of this reply, and each agent is asked only once per reply, so the second ask was skipped.`;
+    return said ? `${name} wasn’t asked in the end. The note it left: “${said}”.` : `${name} wasn’t asked in the end.`;
+  }
+  if (NO_TIME.test(said)) return `${name} wasn’t asked because the reply had no time left for it. Ask it on its own to get its answer.`;
+  if (TIME_OUT.test(said)) return `${name} ran out of time${took} before it could answer. Each reply has a few minutes in all, so a long ask can be cut short. Ask it in its own chat to give it the time.`;
+  return said && !/could ?n.t finish|could not finish/i.test(said)
+    ? `${name} couldn’t finish its part${took}. The note it left: “${said}”.`
+    : `${name} hit a problem and couldn’t finish its part${took}. Try again, or ask it in its own chat.`;
 }
 
 /** The step with this id, or null. */

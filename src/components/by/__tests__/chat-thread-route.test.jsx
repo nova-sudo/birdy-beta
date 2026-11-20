@@ -1,6 +1,6 @@
 // The Agency chat thread with route maps. The thread lives in components/agency/chat;
 // its test sits with the kit's because the map and the part are kit components.
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "./jsdom"
@@ -75,5 +75,29 @@ describe("ChatThread with route maps", () => {
   it("stacks the map in the narrow side conversation", () => {
     const { container } = render(<ChatThread name="Agency Ops" compact chat={chatWith({ messages: [{ role: "assistant", content: "Ok", route: ROUTE }] })} />)
     expect(container.querySelector("[data-layout]")).toHaveAttribute("data-layout", "stacked")
+  })
+
+  it("tells the page how the thread moved for a docked part, so the composer can follow, and when it closes", async () => {
+    const onDock = vi.fn()
+    const { container } = render(
+      <div data-testid="scroller" style={{ overflowY: "auto" }}>
+        <div data-testid="box" style={{ paddingLeft: "28px", paddingRight: "28px" }}>
+          <ChatThread name="Agency Ops" onDock={onDock} chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />
+        </div>
+      </div>,
+    )
+    const scroller = container.querySelector("[data-testid=scroller]")
+    const box = container.querySelector("[data-testid=box]")
+    Object.defineProperty(scroller, "clientWidth", { value: 1100 })
+    Object.defineProperty(scroller, "offsetWidth", { value: 1115 })
+    Object.defineProperty(scroller, "clientHeight", { value: 700 })
+    scroller.getBoundingClientRect = () => ({ left: 300, top: 80, right: 1415, bottom: 780, width: 1115, height: 700 })
+    box.getBoundingClientRect = () => ({ left: 450, top: 80, right: 1250, bottom: 780, width: 800, height: 700 })
+    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    expect(screen.getByRole("complementary", { name: "Agent’s part" })).toBeInTheDocument()
+    // Dock left edge 1400 - 340 = 1060; the column's right (1222) must clear 1036, moving left first (by 154).
+    expect(onDock).toHaveBeenLastCalledWith({ shift: 154, pad: 186, gutter: 15 })
+    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    expect(onDock).toHaveBeenLastCalledWith(null)
   })
 })

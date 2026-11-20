@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest"
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-import { clientsLine, daysLine, draftErrors, draftOf, normalizeSubAgent, patchOf, scheduleLine, sortSubAgents, subAgentErrorMessage } from "../sub-agents"
+import {
+  clientsLine, daysLine, draftErrors, draftOf, normalizeRun, normalizeSubAgent, patchOf, runErrorMessage, runSeconds, scheduleLine, sortSubAgents, subAgentErrorMessage,
+  subAgentRunsKey, subAgentToolsKey, toolOptions,
+} from "../sub-agents"
 
 const raw = {
   id: "s1", parent: "media_buyer", kind: "specialist", name: "Form checker", purpose: "Flags form changes", instructions: "Check daily",
@@ -51,5 +54,45 @@ describe("draftErrors", () => {
   it("names each field that can't be saved", () => {
     const draft = { ...draftOf(normalizeSubAgent(raw)), name: " ", purpose: "", tools: [], clients: [], schedule: { time: "", timezone: "UTC", days: [] } }
     expect(Object.keys(draftErrors(draft)).sort()).toEqual(["clients", "name", "purpose", "schedule", "tools"])
+  })
+})
+
+describe("runs", () => {
+  it("keeps the last run on a record, with a known outcome", () => {
+    const rec = normalizeSubAgent({ ...raw, last_run: { status: "timeout", at: "2026-11-20T08:00:00Z", summary: "Stopped", credits: 3 } })
+    expect(rec.last_run).toEqual({ status: "timeout", at: "2026-11-20T08:00:00Z", summary: "Stopped", credits: 3 })
+    expect(rec.last_run_at).toBe("2026-11-20T08:00:00Z")
+    expect(normalizeSubAgent({ ...raw, last_run: null }).last_run).toBeNull()
+    expect(normalizeSubAgent({ ...raw, last_run: { status: "odd", credits: -2 } }).last_run).toMatchObject({ status: "error", credits: 0 })
+  })
+  it("makes a run safe to draw", () => {
+    expect(normalizeRun({ id: "r1", status: "ok", summary: "Fine", credits: "4", proposals: [{ id: "p" }, null] })).toMatchObject({ id: "r1", status: "done", summary: "Fine", answer: "", credits: 4, proposals: [{ id: "p" }] })
+  })
+  it("reads the server's outcomes, and shows an unknown one as failed", () => {
+    expect(normalizeRun({ status: "done" }).status).toBe("done")
+    expect(normalizeRun({ status: "running", trigger: "manual" })).toMatchObject({ status: "running", trigger: "manual" })
+    expect(normalizeRun({ status: "???", trigger: "elsewhere" })).toMatchObject({ status: "error", trigger: null })
+  })
+  it("works out how long a run took, or nothing", () => {
+    expect(runSeconds({ started_at: "2026-11-20T08:00:00Z", finished_at: "2026-11-20T08:01:40Z" })).toBe(100)
+    expect(runSeconds({ started_at: "2026-11-20T08:00:00Z" })).toBeNull()
+  })
+  it("asks the server for runs and tools at the right addresses", () => {
+    expect(subAgentRunsKey("s 1")).toBe("/api/agents/sub/s%201/runs?limit=20")
+    expect(subAgentToolsKey("sales_coach")).toBe("/api/agents/sub/tools?parent=sales_coach")
+    expect(subAgentToolsKey(null)).toBeNull()
+  })
+  it("says why a run did not start", () => {
+    expect(runErrorMessage({ status: 404 })).toBe("Running a sub-agent by hand is not available yet.")
+    expect(runErrorMessage({ status: 409, code: "wrong_status" })).toMatch(/Resume it first/)
+    expect(runErrorMessage({ status: 400, detail: "Too many runs today." })).toBe("Too many runs today.")
+  })
+})
+
+describe("toolOptions", () => {
+  it("offers the tools it has, then the rest its main agent can hand out, once each", () => {
+    const rec = normalizeSubAgent(raw)
+    expect(toolOptions(rec, [{ name: "b", label: "B" }, { name: "c", label: "C" }, { name: "" }]).map((t) => t.name)).toEqual(["a", "b", "c"])
+    expect(toolOptions(rec, undefined).map((t) => t.name)).toEqual(["a", "b"])
   })
 })

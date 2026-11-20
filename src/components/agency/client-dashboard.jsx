@@ -78,7 +78,8 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
   // One thread per table, so a conversation started on Leads does not carry into Calls.
   const chat = useAgentChat({
     sessionKey: sessionKey(section, `ask_${view}_${clientId}`),
-    ...(ops ? {} : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
+    // Agency Ops talks to Birdy with every tool (no page of its own); the others to their own agent.
+    ...(ops ? { agent: section.chat.agent } : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });
   const [asking, setAsking] = useState(false);

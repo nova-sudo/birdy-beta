@@ -7,7 +7,9 @@ import { useMemo, useState } from "react";
 import { Button, Checkbox, Dialog, DialogBody, DialogContent, DialogFooter, Notice, OptionCard, TextArea, TextField, cn } from "@/components/by";
 import { isActive } from "@/lib/client-status";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
-import { ALL_CLIENTS, DAYS, NAME_MAX, PARENT_NAMES, changeSubAgent, draftErrors, draftOf, localTimezone, patchOf, subAgentErrorMessage } from "@/lib/sub-agents";
+import {
+  ALL_CLIENTS, DAYS, NAME_MAX, PARENT_NAMES, changeSubAgent, draftErrors, draftOf, localTimezone, patchOf, subAgentErrorMessage, toolOptions, useSubAgentTools,
+} from "@/lib/sub-agents";
 import { useClientGroups } from "@/lib/useClientGroups";
 
 /**
@@ -51,7 +53,8 @@ export function JobFields({ purpose, instructions, onChange, errors = {}, hint, 
 }
 
 /**
- * The tools it may use: only the ones on offer (the proposal's own list), never more.
+ * The tools it may use: only the ones on offer, never more. A proposal offers the tools its main
+ * agent picked; the Edit dialog offers every tool the main agent can hand out.
  * @param {{name: string, label: string}[]} props.tools
  */
 export function ToolsChoice({ tools, value, onChange, error }) {
@@ -59,9 +62,12 @@ export function ToolsChoice({ tools, value, onChange, error }) {
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">Tools</legend>
-      {tools.map((t) => (
-        <OptionCard key={t.name} role="checkbox" selected={value.includes(t.name)} onSelect={() => toggle(t.name)} title={t.label} />
-      ))}
+      {/* A long list goes in two columns, so the dialog stays short. */}
+      <div className={cn("grid gap-2", tools.length > 4 && "sm:grid-cols-2")}>
+        {tools.map((t) => (
+          <OptionCard key={t.name} role="checkbox" selected={value.includes(t.name)} onSelect={() => toggle(t.name)} title={t.label} />
+        ))}
+      </div>
       {error && <p className="text-by-caption text-by-danger">{error}</p>}
     </fieldset>
   );
@@ -147,7 +153,8 @@ export function ScheduleChoice({ value, onChange, error, pick, parentName = "Its
 
 /**
  * Edit a sub-agent on Context: every field at once, saved with one PATCH of what changed.
- * Tools can be taken away but not added: the list on offer is the one it has.
+ * Tools it has can be taken away, and any tool its main agent can hand out
+ * (GET /api/agents/sub/tools?parent=) can be added.
  *
  * @param {object} props.record a normalized sub-agent
  * @param {(saved: object) => void} props.onSaved
@@ -166,6 +173,9 @@ function EditForm({ record, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState(null);
   const { options, loading } = useClientOptions(record);
+  const { tools: available, unavailable: noToolList, isLoading: toolsLoading } = useSubAgentTools(record.parent);
+  const tools = useMemo(() => toolOptions(record, available), [record, available]);
+  const parentName = PARENT_NAMES[record.parent] ?? "Its main agent";
   const errors = shown ? draftErrors(draft) : {};
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -196,8 +206,15 @@ function EditForm({ record, onClose, onSaved }) {
           <NameField value={draft.name} onChange={(name) => set({ name })} error={errors.name ?? (failure?.code === "duplicate_name" ? "That name is taken." : undefined)} />
           <JobFields purpose={draft.purpose} instructions={draft.instructions} onChange={set} errors={errors} />
           <section aria-labelledby="sa-edit-tools">
-            <h3 id="sa-edit-tools" className="mb-1.5 text-by-body-sm font-medium">Tools</h3>
-            <ToolsChoice tools={record.tools} value={draft.tools} onChange={(tools) => set({ tools })} error={errors.tools} />
+            <h3 id="sa-edit-tools" className="text-by-body-sm font-medium">Tools</h3>
+            <p className="mb-2 text-by-caption text-by-muted">
+              {noToolList
+                ? "Adding tools is not available yet. You can take tools away."
+                : toolsLoading
+                  ? `Loading the tools ${parentName} can hand out…`
+                  : `Any tool ${parentName} has can be given to it. It works only in ${parentName}’s area.`}
+            </p>
+            <ToolsChoice tools={tools} value={draft.tools} onChange={(next) => set({ tools: next })} error={errors.tools} />
           </section>
           <section aria-labelledby="sa-edit-clients">
             <h3 id="sa-edit-clients" className="mb-1.5 text-by-body-sm font-medium">Clients</h3>
@@ -205,7 +222,7 @@ function EditForm({ record, onClose, onSaved }) {
           </section>
           <section aria-labelledby="sa-edit-schedule">
             <h3 id="sa-edit-schedule" className="mb-1.5 text-by-body-sm font-medium">When it runs</h3>
-            <ScheduleChoice value={draft.schedule} onChange={(schedule) => set({ schedule })} error={errors.schedule} parentName={PARENT_NAMES[record.parent]} />
+            <ScheduleChoice value={draft.schedule} onChange={(schedule) => set({ schedule })} error={errors.schedule} parentName={parentName} />
           </section>
         </DialogBody>
         <DialogFooter className="justify-end">

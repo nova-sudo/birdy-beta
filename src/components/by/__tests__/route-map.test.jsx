@@ -134,6 +134,27 @@ describe("AgentPart", () => {
     expect(screen.getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
   })
 
+  it("links a sub-agent to its row on its main agent's Context page", () => {
+    const route = { ...DONE, steps: [...DONE.steps, step({ id: "s4", agent: "sub:fc1", name: "Form checker", kind: "sub", asked_by: "s3" })] }
+    render(<AgentPart route={route} stepId="s4" />)
+    expect(screen.getByRole("link", { name: /See Form checker in Context/ })).toHaveAttribute("href", "/media-buyer/context#sub-agent-fc1")
+  })
+
+  it("says why a skipped agent was not asked, from the route's limit", () => {
+    const route = { ...DONE, limit_hit: "asks", steps: [...DONE.steps, step({ id: "s4", agent: "sub:fc1", name: "Form checker", kind: "sub", asked_by: "s3", status: "skipped", summary: "Not asked: limit of 3 asks" })] }
+    render(<AgentPart route={route} stepId="s4" />)
+    expect(screen.getByText("Why it was skipped")).toBeInTheDocument()
+    expect(screen.getByText(/Form checker wasn’t asked because this reply had already used its 3 agent asks/)).toBeInTheDocument()
+    expect(screen.queryByText("This agent was not asked in the end.")).toBeNull()
+  })
+
+  it("says why an agent stopped, from its own data", () => {
+    const route = { ...DONE, steps: [DONE.steps[0], { ...DONE.steps[2], status: "failed", summary: "Ran out of time", answer: null, seconds: 100 }] }
+    render(<AgentPart route={route} stepId="s3" />)
+    expect(screen.getByText("Why it stopped")).toBeInTheDocument()
+    expect(screen.getByText(/Media Buyer ran out of time after 1m 40s before it could answer/)).toBeInTheDocument()
+  })
+
   it("draws nothing for an unknown agent", () => {
     const { container } = render(<AgentPart route={DONE} stepId="nope" />)
     expect(container).toBeEmptyDOMElement()
