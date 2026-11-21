@@ -5,7 +5,7 @@ import { Calendar, ChevronDown, Plus } from "lucide-react";
 import { money as formatMoney } from "@/lib/stock-agent-api";
 import {
   AskBar, Card, ClientSwitcher, CplChip, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger,
-  PILL_EXTRA, Pill, Radio, RadioGroup, Rail, SECTIONS, SectionHeader, Table, TableBody, TableHead, Td, Th, Tr,
+  PILL_EXTRA, Pill, Radio, RadioGroup, Rail, SECTIONS, SectionHeader, SetupRing, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
 import { CLIENTS, COUNTS, ROWS, STATUS_LABEL, TABS } from "./sample-data";
 
@@ -31,6 +31,7 @@ export default function KitShellPage() {
         counts={COUNTS}
         credits={{ left: 4359, percent: 44 }}
         user={{ name: "Hadley" }}
+        setup={<SetupRing percent={44} onOpen={() => setNote("Opened the setup checklist")} />}
         switcher={
           <ClientSwitcher
             clients={CLIENTS}

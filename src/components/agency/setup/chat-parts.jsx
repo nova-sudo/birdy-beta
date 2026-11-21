@@ -1,0 +1,89 @@
+"use client";
+
+import { Check, Loader2, RotateCcw } from "lucide-react";
+import { Button, ChatSender, UserMessage, cn } from "@/components/by";
+
+const ENTER = "motion-safe:animate-[by-enter_var(--by-dur-base)_var(--by-ease-out)]";
+
+/**
+ * One of the agent's messages in a setup chat. The sender line shows on the
+ * first of a run. `id` is what the checklist scrolls to.
+ */
+export function Bubble({ name, first = false, id, className, children }) {
+  return (
+    <div id={id} className={cn("flex scroll-mt-6 flex-col gap-1.5", ENTER, className)}>
+      {first && <ChatSender name={name} />}
+      <div className="flex flex-col gap-3 text-by-body-lg sm:pl-10 text-by-text [&_p]:leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+/** The person's answer, on the right. */
+export const Reply = ({ children }) => <UserMessage>{children}</UserMessage>;
+
+/** A heading-weight first line inside a bubble. */
+export const Lead = ({ children }) => <span className="block font-by-display text-by-heading font-semibold">{children}</span>;
+
+/**
+ * Quick replies instead of a form.
+ * @param {string[]} props.items
+ * @param {(item: string) => void} props.onPick
+ * @param {string} [props.recommended] marked "Recommended"
+ * @param {string} [props.busy] the item being saved; all are blocked meanwhile
+ */
+export function Chips({ items, onPick, recommended, busy, label }) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <Button key={item} className="rounded-full font-medium" loading={busy === item} disabled={Boolean(busy) && busy !== item} onClick={() => onPick(item)}>
+          {item}
+          {item === recommended && <span className="rounded-by-sm bg-by-accent-soft px-1.5 py-0.5 text-by-caption font-semibold text-by-accent">Recommended</span>}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+/** What an agent already knows, each line ticked. */
+export function Known({ items }) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {items.filter(Boolean).map((item) => (
+        <li key={item} className="flex items-start gap-2">
+          <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-by-success" strokeWidth={2.5} />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * A tool to connect, in the chat: Connect, Connecting…, Connected, or what went wrong and Retry.
+ * @param {"todo"|"connecting"|"done"|"error"|"issue"} props.state `issue`: connected once, needs connecting again
+ * @param {string} [props.problem] says what went wrong in the error and issue states
+ */
+export function ConnectCard({ name, what, state, problem, onConnect, connectLabel = "Connect", children }) {
+  const bad = state === "error" || state === "issue";
+  return (
+    <div className={cn("rounded-by-lg border bg-by-surface p-3.5 shadow-by-card", bad ? "border-by-danger" : "border-by-line")}>
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-by-md bg-by-accent-soft font-by-display text-by-body-lg font-bold text-by-accent">{name[0]}</span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-semibold text-by-text">{name}</b>
+          <span className={cn("block text-by-body-sm", bad ? "text-by-danger" : "text-by-muted")}>{bad && problem ? problem : what}</span>
+        </span>
+        {state === "done" ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-by-body-sm font-semibold text-by-success"><Check aria-hidden="true" className="size-4" strokeWidth={2.5} />Connected</span>
+        ) : state === "connecting" ? (
+          <span role="status" className="inline-flex shrink-0 items-center gap-1.5 text-by-body-sm font-semibold text-by-accent"><Loader2 aria-hidden="true" className="size-4 motion-safe:animate-spin" />Connecting…</span>
+        ) : onConnect ? (
+          <Button kind={bad ? "secondary" : "primary"} size="sm" className="shrink-0" onClick={onConnect} aria-label={`${bad ? "Retry" : connectLabel} ${name}`}>
+            {bad ? <><RotateCcw aria-hidden="true" />Retry</> : connectLabel}
+          </Button>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  );
+}

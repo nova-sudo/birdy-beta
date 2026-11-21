@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { SESSION_COOKIE, ADMIN_HOME, parseSession, isExpired } from "@/lib/session"
-import { PUBLIC_ROUTES, isProtectedPath } from "@/lib/constants"
+import { PUBLIC_ROUTES, SETUP_PATH, isProtectedPath, isSetupPath } from "@/lib/constants"
 import { HANDOFF_COOKIE, isIntegrationCallback, isSafeHandoffPath } from "@/lib/oauth-handoff"
 
 /**
@@ -111,8 +111,8 @@ export function proxy(request) {
     return isAdminRoute ? NextResponse.next() : redirectTo(request, ADMIN_HOME)
   }
 
-  if (session.ob && pathname !== "/onboarding" && !isPublicRoute) {
-    return redirectTo(request, "/onboarding")
+  if (session.ob && !isSetupPath(pathname) && !isPublicRoute) {
+    return redirectTo(request, SETUP_PATH)
   }
 
   if (isAdminRoute && session.role !== "admin") {
@@ -121,7 +121,7 @@ export function proxy(request) {
 
   // Signed in, the landing page and the auth screens have nothing to offer.
   if (isPublicRoute) {
-    return redirectTo(request, session.ob ? "/onboarding" : "/clients")
+    return redirectTo(request, session.ob ? SETUP_PATH : "/clients")
   }
 
   return NextResponse.next()

@@ -35,6 +35,7 @@ export { Rail, RailMenuTile, RailAccount } from "./shell/rail"
 export { ClientSwitcher } from "./shell/client-switcher"
 export { SectionHeader } from "./shell/section-header"
 export { CreditsRing } from "./shell/credits-ring"
+export { SetupRing } from "./shell/setup-ring"
 
 // Overlays, flows and feedback
 export { Dialog, DialogContent, DialogBody, DialogFooter } from "./dialog"

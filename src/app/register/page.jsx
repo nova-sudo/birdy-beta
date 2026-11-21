@@ -74,7 +74,7 @@ export default function RegisterPage() {
         localStorage.setItem("onboarding_incomplete", "1")
 
         flashBirdy("celebrate")
-        router.push("/onboarding")
+        router.push("/welcome")
       } else {
         setError(data.detail || "Registration failed. Please try again.")
         flashBirdy("error")
