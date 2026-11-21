@@ -31,8 +31,9 @@ function Message({ id, error, help }) {
  * @param {string} [props.error] names the problem; turns the field red and is read out
  * @param {string} [props.help] a quiet hint under the field (hidden while there is an error)
  * @param {React.ReactNode} [props.leading] an icon before the text
+ * @param {React.ReactNode} [props.trailing] something after the text, such as a small icon button
  */
-export function TextField({ label, error, help, leading, id, className, ...props }) {
+export function TextField({ label, error, help, leading, trailing, id, className, ...props }) {
   const auto = useId();
   const fieldId = id ?? auto;
   const messageId = error || help ? `${fieldId}-message` : undefined;
@@ -42,6 +43,7 @@ export function TextField({ label, error, help, leading, id, className, ...props
       <div className={cn(SURFACE, error && INVALID)}>
         {leading}
         <input id={fieldId} aria-invalid={error ? true : undefined} aria-describedby={messageId} className={INPUT} {...props} />
+        {trailing}
       </div>
       <Message id={messageId} error={error} help={help} />
     </div>
