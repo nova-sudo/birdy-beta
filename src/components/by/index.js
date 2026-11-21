@@ -15,6 +15,7 @@ export { Switch, Checkbox, RadioGroup, Radio } from "./choice"
 export { TabPill, TabPanel, PILL_EXTRA } from "./tab-pill"
 export { Menu, MenuTrigger, MenuContent, MenuItem, MenuLabel, MenuSeparator } from "./popover-menu"
 export { Tooltip } from "./tooltip"
+export { Segmented } from "./segmented"
 
 // Data display
 export { Pill, CplChip, CountBadge } from "./pill"

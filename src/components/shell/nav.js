@@ -44,7 +44,8 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/welcome" || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`))
+export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/welcome" || pathname === "/settings" || /^\/contacts\/[^/]+$/.test(pathname)
+  || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`))
   // One report's page under Reports.
   || SECTION_BASES.some((base) => pathname.startsWith(`${base}/reports/`));
 

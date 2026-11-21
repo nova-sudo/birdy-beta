@@ -1,114 +1,66 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import "@/components/by/__tests__/jsdom"
+
+// The composer sends a real SMS or email to a real person. These pin the old
+// page's send flow, unchanged, and that a send only ever follows an explicit
+// Send: the button, or Enter in an SMS.
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 
 import { apiRequest } from "@/lib/api"
-import { threadDays } from "@/lib/lead-detail"
-import { LeadThread } from "../LeadThread"
-import { LeadComposer } from "../LeadComposer"
+import { LeadComposer } from "../lead-composer"
 
 const msg = (extra = {}) => ({
-  id: "m1",
-  channel: "SMS",
-  direction: "inbound",
-  body: "Hello there",
-  subject: null,
-  status: "delivered",
-  date: "2026-07-17T12:00:00+00:00",
-  attachments: [],
-  source: "app",
-  ...extra,
+  id: "m1", channel: "SMS", direction: "outbound", body: "Hi", subject: null, status: "delivered",
+  date: "2026-07-17T12:00:00+00:00", attachments: [], source: "app", ...extra,
 })
-
-const renderThread = (messages, props = {}) =>
-  render(
-    <LeadThread
-      days={threadDays([], messages)}
-      leadName="Rebecca Becirspahic"
-      messagesStatus="ok"
-      onRetry={() => {}}
-      {...props}
-    />
-  )
+const box = () => screen.getByRole("textbox", { name: "Message" })
 
 beforeEach(() => vi.clearAllMocks())
 
-describe("LeadThread messages", () => {
-  it("puts inbound on the left with the lead's initials and outbound on the right", () => {
-    renderThread([msg({ id: "a" }), msg({ id: "b", direction: "outbound", body: "Hi Rebecca" })])
-    const inbound = screen.getByText("Hello there").closest("[data-direction]")
-    const outbound = screen.getByText("Hi Rebecca").closest("[data-direction]")
-    expect(inbound).toHaveAttribute("data-direction", "inbound")
-    expect(inbound.className).toContain("justify-start")
-    expect(inbound).toHaveTextContent("RB")
-    expect(outbound).toHaveAttribute("data-direction", "outbound")
-    expect(outbound.className).toContain("justify-end")
-    expect(outbound).not.toHaveTextContent("RB")
+describe("LeadComposer: nothing sends without an explicit Send", () => {
+  const contact = { id: "c1", phone: "07393 421825", email: "a@b.co" }
+
+  it("makes no request on render, typing, switching channel or leaving the box", async () => {
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    await user.type(box(), "Hello there")
+    await user.click(screen.getByRole("button", { name: "Email" }))
+    await user.type(screen.getByLabelText("Subject"), "Quote")
+    await user.click(screen.getByRole("button", { name: "SMS" }))
+    await user.tab()
+    expect(apiRequest).not.toHaveBeenCalled()
   })
 
-  it("shows a channel · time meta line", () => {
-    renderThread([msg({ channel: "WhatsApp" })])
-    expect(screen.getByText(/^WhatsApp · /)).toBeInTheDocument()
+  it("Enter in an email adds a line and does not send", async () => {
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Email" }))
+    await user.type(screen.getByLabelText("Subject"), "Quote")
+    await user.type(box(), "Hello{Enter}there")
+    expect(box()).toHaveValue("Hello\nthere")
+    expect(apiRequest).not.toHaveBeenCalled()
   })
 
-  it("shows an email subject in bold and never renders the body as markup", () => {
-    const { container } = renderThread([
-      msg({ channel: "Email", subject: "Your quote", body: "<b>bold</b> <img src=x onerror=alert(1)>" }),
-    ])
-    expect(screen.getByText("Your quote").tagName).toBe("P")
-    expect(screen.getByText("Your quote").className).toContain("font-semibold")
-    expect(screen.getByText("<b>bold</b> <img src=x onerror=alert(1)>")).toBeInTheDocument()
-    expect(container.querySelector("img")).toBeNull()
-    expect(container.querySelector("b")).toBeNull()
-    expect(screen.getByText(/^<b>bold/).className).toContain("whitespace-pre-wrap")
+  it("never sends while Send is off, even with a draft", async () => {
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="reconnect" onSent={() => {}} />)
+    await user.type(box(), "Hi{Enter}")
+    fireEvent.submit(box().closest("form"))
+    expect(apiRequest).not.toHaveBeenCalled()
   })
 
-  it("links attachments", () => {
-    renderThread([msg({ attachments: ["https://x.test/a.jpg", "https://x.test/b.pdf"] })])
-    expect(screen.getByRole("link", { name: "Attachment 1" })).toHaveAttribute("href", "https://x.test/a.jpg")
-    expect(screen.getByRole("link", { name: "Attachment 2" })).toHaveAttribute("href", "https://x.test/b.pdf")
-  })
-
-  it("still renders calls", () => {
-    const days = threadDays([{ id: "c", direction: "outbound", status: "completed", started_at: "2026-07-17T12:00:00+00:00" }], [])
-    render(<LeadThread days={days} messagesStatus="ok" />)
-    expect(screen.getByText("Outbound call · completed")).toBeInTheDocument()
-    expect(screen.queryByText("No messages yet.")).toBeNull()
-  })
-})
-
-describe("LeadThread status notes", () => {
-  it("loading shows one loader and holds back the calls already known", () => {
-    const days = threadDays([{ id: "c", direction: "outbound", status: "completed", started_at: "2026-07-17T12:00:00+00:00" }], [])
-    render(<LeadThread days={days} messagesStatus="loading" />)
-    expect(screen.getByRole("status")).toHaveTextContent("Loading the conversation…")
-    expect(screen.queryByText("Outbound call · completed")).toBeNull()
-  })
-
-  it("reconnect links to settings", () => {
-    renderThread([], { messagesStatus: "reconnect" })
-    expect(screen.getByText(/Reconnect GoHighLevel in Settings to see and send messages\./)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /settings/i })).toHaveAttribute("href", "/settings")
-  })
-
-  it("unavailable offers a retry", async () => {
-    const onRetry = vi.fn()
-    renderThread([], { messagesStatus: "unavailable", onRetry })
-    expect(screen.getByText("Messages couldn't be loaded.")).toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }))
-    expect(onRetry).toHaveBeenCalledTimes(1)
-  })
-
-  it("ok and empty says no messages yet", () => {
-    renderThread([], { messagesStatus: "ok" })
-    expect(screen.getByText("No messages yet.")).toBeInTheDocument()
-  })
-
-  it("renders the composer under the thread", () => {
-    renderThread([], { composer: <div>composer slot</div> })
-    expect(screen.getByText("composer slot")).toBeInTheDocument()
+  it("sends exactly once on one click of Send", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ ok: true, status: 201, json: async () => ({ message: msg() }) })
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    await user.type(box(), "Hi")
+    expect(apiRequest).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: /^send$/i }))
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(1))
+    expect(apiRequest.mock.calls[0][1].method).toBe("POST")
   })
 })
 
@@ -145,9 +97,9 @@ describe("LeadComposer", () => {
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
     expect(sendButton()).toBeDisabled()
     expect(screen.queryByLabelText("Subject")).toBeNull()
-    await user.type(screen.getByPlaceholderText("Type a message…"), "  ")
+    await user.type(box(), "  ")
     expect(sendButton()).toBeDisabled()
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     expect(sendButton()).toBeEnabled()
     await user.click(screen.getByRole("button", { name: "Email" }))
     expect(screen.getByLabelText("Subject")).toBeInTheDocument()
@@ -163,7 +115,7 @@ describe("LeadComposer", () => {
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={onSent} />)
 
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
 
     await waitFor(() => expect(onSent).toHaveBeenCalledWith(sent))
@@ -171,7 +123,7 @@ describe("LeadComposer", () => {
       method: "POST",
       body: JSON.stringify({ channel: "SMS", message: "Hi" }),
     })
-    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("")
+    expect(box()).toHaveValue("")
   })
 
   it("sends the subject with an email", async () => {
@@ -180,7 +132,7 @@ describe("LeadComposer", () => {
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
     await user.click(screen.getByRole("button", { name: "Email" }))
     await user.type(screen.getByLabelText("Subject"), "Quote")
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hello")
+    await user.type(box(), "Hello")
     await user.click(sendButton())
     await waitFor(() => expect(apiRequest).toHaveBeenCalled())
     expect(JSON.parse(vi.mocked(apiRequest).mock.calls[0][1].body)).toEqual({
@@ -199,11 +151,11 @@ describe("LeadComposer", () => {
     const onSent = vi.fn()
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={onSent} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
     expect(await screen.findByRole("alert")).toHaveTextContent("Reconnect GoHighLevel to send messages")
     expect(onSent).not.toHaveBeenCalled()
-    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("Hi")
+    expect(box()).toHaveValue("Hi")
   })
 
   it("makes one request on a double click", async () => {
@@ -211,31 +163,31 @@ describe("LeadComposer", () => {
     vi.mocked(apiRequest).mockReturnValue(new Promise((r) => (resolve = r)))
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.dblClick(sendButton())
     expect(apiRequest).toHaveBeenCalledTimes(1)
     resolve(okResponse(msg()))
-    await waitFor(() => expect(screen.getByPlaceholderText("Type a message…")).toHaveValue(""))
+    await waitFor(() => expect(box()).toHaveValue(""))
   })
 
   it("Enter sends SMS; Shift+Enter does not", async () => {
     vi.mocked(apiRequest).mockResolvedValue(okResponse(msg()))
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
-    const box = screen.getByPlaceholderText("Type a message…")
-    await user.type(box, "Hi{Shift>}{Enter}{/Shift}there")
+    const input = box()
+    await user.type(input, "Hi{Shift>}{Enter}{/Shift}there")
     expect(apiRequest).not.toHaveBeenCalled()
-    expect(box).toHaveValue("Hi\nthere")
-    await user.type(box, "{Enter}")
+    expect(input).toHaveValue("Hi\nthere")
+    await user.type(input, "{Enter}")
     await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(1))
   })
 
   it("ignores Enter while an IME is composing", () => {
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
-    const box = screen.getByPlaceholderText("Type a message…")
-    fireEvent.change(box, { target: { value: "こん" } })
-    fireEvent.keyDown(box, { key: "Enter", isComposing: true })
-    fireEvent.keyDown(box, { key: "Enter", keyCode: 229 })
+    const input = box()
+    fireEvent.change(input, { target: { value: "こん" } })
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true })
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 })
     expect(apiRequest).not.toHaveBeenCalled()
   })
 
@@ -243,7 +195,7 @@ describe("LeadComposer", () => {
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
     await user.click(screen.getByRole("button", { name: "Email" }))
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hello")
+    await user.type(box(), "Hello")
     expect(screen.getByText("Add a subject")).toBeInTheDocument()
   })
 
@@ -254,10 +206,10 @@ describe("LeadComposer", () => {
     const onUnconfirmed = vi.fn()
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={onSent} onUnconfirmed={onUnconfirmed} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
     expect(await screen.findByRole("alert")).toHaveTextContent(detail)
-    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("")
+    expect(box()).toHaveValue("")
     expect(onUnconfirmed).toHaveBeenCalledTimes(1)
     expect(onSent).not.toHaveBeenCalled()
   })
@@ -269,10 +221,10 @@ describe("LeadComposer", () => {
     const onUnconfirmed = vi.fn()
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} onUnconfirmed={onUnconfirmed} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
     expect(await screen.findByRole("alert")).toHaveTextContent("GoHighLevel rejected the message.")
-    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("Hi")
+    expect(box()).toHaveValue("Hi")
     expect(onUnconfirmed).not.toHaveBeenCalled()
   })
 
@@ -280,7 +232,7 @@ describe("LeadComposer", () => {
     vi.mocked(apiRequest).mockResolvedValue(okResponse(msg()))
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} contactId="route-id" status="ok" onSent={() => {}} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
     expect(apiRequest.mock.calls[0][0]).toBe("/api/leads/contact/route-id/messages")
   })
@@ -291,28 +243,11 @@ describe("LeadComposer", () => {
     })
     const user = userEvent.setup()
     render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
-    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.type(box(), "Hi")
     await user.click(sendButton())
     expect(await screen.findByRole("alert")).toHaveTextContent("String should have at most 1600 characters")
     vi.mocked(apiRequest).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) })
     await user.click(sendButton())
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Couldn't send the message."))
-  })
-})
-
-describe("LeadThread notes and keys", () => {
-  it("shows the partial note only when status is ok", () => {
-    const { rerender } = renderThread([msg()], { messagesNote: "Some messages couldn't be loaded." })
-    expect(screen.getByText("Some messages couldn't be loaded.")).toBeInTheDocument()
-    rerender(<LeadThread days={threadDays([], [msg()])} messagesStatus="unavailable" messagesNote="Some messages couldn't be loaded." />)
-    expect(screen.queryByText("Some messages couldn't be loaded.")).toBeNull()
-  })
-
-  it("tolerates duplicate attachment urls", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
-    renderThread([msg({ attachments: ["https://x.test/a", "https://x.test/a"] })])
-    expect(screen.getAllByRole("link")).toHaveLength(2)
-    expect(spy).not.toHaveBeenCalled()
-    spy.mockRestore()
   })
 })

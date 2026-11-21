@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Calendar, Columns3, Plus, Search, Trash2, Zap } from "lucide-react";
 import { AskBar, Button, Checkbox, DropdownTrigger, Radio, RadioGroup, SearchField, SelectField, Switch, TextField } from "@/components/by";
 import { Row, Section, Sub } from "../kit-parts";
+import { SegmentedDemo } from "./segmented-demo";
 
 const KINDS = ["primary", "secondary", "soft", "ghost", "danger"];
 
@@ -82,6 +83,8 @@ export function ControlsSection() {
           </RadioGroup>
         </div>
       </Sub>
+
+      <SegmentedDemo />
     </Section>
   );
 }
