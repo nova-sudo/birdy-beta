@@ -59,9 +59,16 @@ describe("Media Buyer's Dashboard tab", () => {
     expect(swr.keys.find((k) => k?.startsWith("/api/campaigns/opp-rollup"))).toMatch(/groups=a%2Cb/)
   })
 
-  it("opens a client in the same tab", async () => {
+  it("narrows the table to a client's campaigns when its row is clicked", async () => {
     render(<SectionDashboard section="buyer" />)
     await userEvent.click(screen.getByText("Beaulea Clinic"))
+    expect(push).toHaveBeenCalledWith("/media-buyer/table?level=campaigns&group=b")
+  })
+
+  it("still opens a client's own dashboard, from its filter chip", async () => {
+    route.search = "level=campaigns&group=b"
+    render(<SectionDashboard section="buyer" />)
+    await userEvent.click(screen.getByRole("button", { name: "Open Beaulea Clinic's own dashboard" }))
     expect(push).toHaveBeenCalledWith("/media-buyer/table?client=b")
   })
 
