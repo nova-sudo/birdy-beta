@@ -107,7 +107,7 @@ export default function LoginForm() {
               role: data.user?.role ?? null,
               onboardingIncomplete: true,
             })
-            router.push("/onboarding")
+            router.push("/welcome")
             return
           }
           localStorage.removeItem("onboarding_incomplete")

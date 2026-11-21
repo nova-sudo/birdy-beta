@@ -50,11 +50,13 @@ function SectionButton({ section, active, count, onSelect }) {
  * @param {React.ReactNode} [props.extra] sits under the sections, e.g. a RailMenuTile for pages without a tile
  * @param {React.ReactNode} [props.account] replaces the plain avatar, e.g. a RailAccount
  * @param {object[]} [props.sections] defaults to SECTIONS; disabled ones are skipped
+ * @param {React.ReactNode} [props.setup] sits under the switcher while setup isn't finished: a SetupRing
  */
-export function Rail({ activeId, onSelect, counts = {}, switcher, credits, user, extra, account, sections = SECTIONS, className, ...props }) {
+export function Rail({ activeId, onSelect, counts = {}, switcher, credits, user, extra, account, sections = SECTIONS, setup, className, ...props }) {
   return (
     <aside className={cn("flex w-17 shrink-0 flex-col items-center gap-3 border-r border-by-line bg-by-rail pt-4 pb-3.5", SELECTION, className)} {...props}>
       {switcher}
+      {setup}
       <span aria-hidden="true" className="my-0.5 h-px w-8 bg-by-line" />
       <nav aria-label="Sections" className="flex flex-col items-center gap-3">
         {visibleSections(sections).map((section) => (

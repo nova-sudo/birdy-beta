@@ -2,12 +2,14 @@
 
 import { Suspense, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ClientSwitcher, MenuItem, Rail, RailMenuTile } from "@/components/by";
+import { ClientSwitcher, MenuItem, Rail, RailMenuTile, SetupRing } from "@/components/by";
 import { useCredits } from "@/hooks/useCredits";
 import { useAgentWorkCount } from "@/lib/agents-api";
 import { isActive } from "@/lib/client-status";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { useClientGroups } from "@/lib/useClientGroups";
+import { allDone, pctDone } from "@/lib/setup-steps";
+import { useSetup } from "@/lib/use-setup";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
 import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, sectionBase } from "./nav";
@@ -43,6 +45,10 @@ export function AppShell({ children }) {
   );
 
   const activeId = activeRailId(pathname);
+  // Setup's progress ring, while setup isn't finished. Off /welcome a finished account asks for nothing more.
+  const onSetup = pathname === "/welcome";
+  const setup = useSetup({ full: onSetup });
+  const showSetup = setup.ready && !setup.failed && (onSetup || !setup.completed) && !allDone(setup.steps);
   const hasCredits = credits.status != null && credits.allowance > 0;
 
   return (
@@ -78,6 +84,7 @@ export function AppShell({ children }) {
           </RailMenuTile>
         }
         account={<AccountMenu />}
+        setup={showSetup ? <SetupRing percent={pctDone(setup.steps)} active={onSetup} onOpen={() => router.push("/welcome?s=ops&checklist=1")} /> : null}
       />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>

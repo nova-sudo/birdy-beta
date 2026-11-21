@@ -19,8 +19,8 @@ import { apiRequest } from "@/lib/api"
 
 // In the order the design lists them.
 //
-// Adding a field here means adding it to the wizard's own TARGET_FIELDS list
-// in app/onboarding/page.jsx too — that list is what decides whether a client
+// Adding a field here means adding it to setup's TARGET_FIELDS list
+// in lib/setup-steps.js too — that list is what decides whether a client
 // counts as having any target at all, and a client whose only target is one
 // this form knows about and that list does not reads there as untargeted.
 const FIELDS = [
