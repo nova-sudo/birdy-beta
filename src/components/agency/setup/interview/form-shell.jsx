@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { Button, Card, Notice, cn } from "@/components/by";
+import { refusalText } from "@/lib/team-setup";
 
-/** What a refusal says, in words the owner can act on. */
-export function saveError(err) {
-  if (err?.status === 409) return err.message && !err.message.startsWith("HTTP") ? err.message : "Answer the questions in order: this one comes later.";
-  if (err?.message && !err.message.startsWith("HTTP")) return err.message;
-  return "Couldn’t save that. Check your connection and try again.";
-}
+export const saveError = refusalText;
 
 /**
  * Runs a save, keeping its busy state and what went wrong.

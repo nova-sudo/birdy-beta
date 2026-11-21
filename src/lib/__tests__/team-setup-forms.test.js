@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
-  clientsBody, clientsInitial, cplBody, cplInitial, outcomeChoices, outcomesBody, permissionsBody, practiceLines, scheduleBody, scheduleInitial, speedBody,
+  clientsBody, clientsInitial, playbookLines, cplBody, cplInitial, outcomeChoices, outcomesBody, permissionsBody, practiceLines, scheduleBody, scheduleInitial, speedBody,
 } from "../team-setup-forms"
 
 describe("setup interview forms", () => {
@@ -47,11 +47,24 @@ describe("setup interview forms", () => {
 
   it("shows a practice summary's numbers and short texts only", () => {
     expect(practiceLines({ changes: 3, clients_checked: 12, note: "All fine", alerts: [1, 2], nested: { a: 1 } })).toEqual([
-      { key: "changes", label: "Changes", value: "3" },
+      { key: "changes", label: "Changes it would propose", value: "3" },
       { key: "clients_checked", label: "Clients checked", value: "12" },
       { key: "note", label: "Note", value: "All fine" },
       { key: "alerts", label: "Alerts", value: "2" },
     ])
     expect(practiceLines(null)).toEqual([])
+    expect(practiceLines({ clients: 7, client_states: { ok: 7 }, cards: 2, changes: 5, ended_early: false, finished_at: "2026-11-21T10:00:00Z" })).toEqual([
+      { key: "clients", label: "Clients checked", value: "7" },
+      { key: "cards", label: "Cards it would post", value: "2" },
+      { key: "changes", label: "Changes it would propose", value: "5" },
+    ])
+  })
+
+  it("reads the playbook's modes and scoring as lines, skipping what is missing", () => {
+    expect(playbookLines({ modes: { remove: "auto", add: "nonsense" }, scoring: { min_days: 7 } })).toEqual([
+      { label: "Pausing ads", value: "Acts on its own" },
+      { label: "Judges an ad after", value: "7 days" },
+    ])
+    expect(playbookLines(null)).toEqual([])
   })
 })

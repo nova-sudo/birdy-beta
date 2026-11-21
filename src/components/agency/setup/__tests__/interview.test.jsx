@@ -128,14 +128,48 @@ describe("The agent interview", () => {
     expect(screen.queryByRole("form")).not.toBeInTheDocument()
   })
 
-  it("lists the playbook the reply carries", async () => {
+  it("lists the playbook the reply carries, to confirm", async () => {
     replies["GET /api/team/setup"] = [200, team({ mb: { steps: { clients: true, cpl: true }, current: "playbook" } })]
-    chat.messages = [{ role: "assistant", content: "Here are your rules.", agent_changes: [{ ui_block: "playbook", playbook: [{ kind: "flag_no_spend", params: { hours: 24 } }] }] }]
+    replies["PUT /api/team/setup/media_buyer/playbook"] = [200, team()]
+    chat.messages = [{ role: "assistant", content: "Here is how I’ll work.", agent_changes: [{ ui_block: { type: "playbook", agent: "media_buyer", value: null, modes: { remove: "ask", add: "flag", revive: "ask" }, scoring: { min_days: 7, lose_cpl_multiple: 1.3 } } }] }]
     page()
     const form = await screen.findByRole("form", { name: "Playbook" })
-    expect(within(form).getByText("Flag no spend: Live ad set with no spend for 24 hrs.")).toBeInTheDocument()
-    await userEvent.click(within(form).getByRole("button", { name: "Change something" }))
-    expect(send).toHaveBeenCalledWith("I want to change a rule")
+    expect(within(form).getByText("Pausing ads").nextSibling).toHaveTextContent("Asks you first")
+    expect(within(form).getByText("Adding ads").nextSibling).toHaveTextContent("Only suggests")
+    expect(within(form).getByText("Cost per lead over 1.3× the target")).toBeInTheDocument()
+    await userEvent.click(within(form).getByRole("button", { name: "Yes, that’s it" }))
+    await waitFor(() => expect(calls.find((c) => c.method === "PUT")).toMatchObject({ url: "/api/team/setup/media_buyer/playbook", body: { confirmed: true } }))
+  })
+
+  it("uses the block's own data: the saved answer and the clients it lists", async () => {
+    replies["GET /api/team/setup"] = [200, team({ mb: { steps: { clients: true }, current: "cpl" } })]
+    chat.messages = [{ role: "assistant", content: "What CPL limit?", agent_changes: [{ ui_block: { type: "cpl", agent: "media_buyer", value: { default: null, clients: { g9: 12 } }, currency: "USD", clients: [{ id: "g9", name: "Harbor Dental", currency: "USD", target: 10 }] } }] }]
+    page()
+    const form = await screen.findByRole("form", { name: "Cost per lead limits" })
+    expect(within(form).getByLabelText("Harbor Dental’s cost per lead limit")).toHaveValue("12")
+  })
+
+  it("names the step to answer first when the server says they're out of order", async () => {
+    replies["GET /api/team/setup"] = [200, team()]
+    replies["PUT /api/team/setup/media_buyer/schedule"] = [409, { detail: { code: "step_out_of_order", agent: "media_buyer", step: "schedule", expected: "permissions" } }]
+    chat.messages = ask("schedule")
+    page()
+    const form = await screen.findByRole("form", { name: "Schedule" })
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }))
+    expect(await within(form).findByRole("alert")).toHaveTextContent("Answer Permissions first")
+  })
+
+  it("reopens the interview's own conversation", async () => {
+    replies["GET /api/team/setup"] = [200, team({ mb: { chat_session_id: "sess-1" } })]
+    replies["GET /api/chat/conversations/sess-1"] = [200, { messages: [{ role: "assistant", content: "Earlier question" }] }]
+    page()
+    await waitFor(() => expect(calls.some((c) => c.url === "/api/chat/conversations/sess-1")).toBe(true))
+  })
+
+  it("says what Media Buyer still misses before it can switch on", async () => {
+    replies["GET /api/team/setup"] = [200, team({ mb: { status: "done", current: null, activation: { status: "not_ready", missing: ["Connect a Meta ad account"] } }, sc: { status: "open", waits_on: null } })]
+    page()
+    expect(await screen.findByText("Connect a Meta ad account")).toBeInTheDocument()
   })
 
   it("changes an answer from what the agent knows, filled in with the saved one", async () => {

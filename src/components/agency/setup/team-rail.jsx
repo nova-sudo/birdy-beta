@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Bot, Check, Lock } from "lucide-react";
 import { AgentAvatar, BirdyAvatar, cn } from "@/components/by";
 import { agentInfo } from "@/lib/agent-route";
@@ -34,8 +35,17 @@ export function teamLine(team, agent) {
  * @param {(section: string) => void} props.onOpen
  */
 export function TeamRail({ team, open, onOpen }) {
+  // On a phone the strip scrolls sideways: keep the open agent in view.
+  const nav = useRef(null);
+  useEffect(() => {
+    const strip = nav.current;
+    const item = strip?.querySelector("[aria-current=step]");
+    if (!strip || !item || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollLeft = item.offsetLeft - (strip.clientWidth - item.offsetWidth) / 2;
+  }, [open]);
   return (
     <nav
+      ref={nav}
       aria-label="Your team"
       className={cn(
         "flex shrink-0 gap-1 border-by-line bg-by-surface",

@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { AgentAvatar, AskBar, Button, ChatSender, Dialog, DialogBody, DialogContent } from "@/components/by";
+import { AgentAvatar, AskBar, Button, ChatSender, Dialog, DialogBody, DialogContent, Notice } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
+import { apiRequest } from "@/lib/api";
+import { hydrateChat } from "@/lib/chat-store";
 import { agentInfo } from "@/lib/agent-route";
 import { AGENT_NAMES, answerMessage, answered, knownLines, normalizeTeam, replyBlock, saveStep } from "@/lib/team-setup";
 import { KnowsPanel } from "./knows-panel";
@@ -76,7 +78,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
     if (!last || !block || !hasForm(block.type) || !a.order.includes(block.type) || answeredAt.includes(index)) return null;
     return (
       <div className="mt-3">
-        <StepForm key={index} step={block.type} initial={a.values[block.type]} data={block.data} ctx={formCtx} onSubmit={answerFrom(index, block.type)} />
+        <StepForm key={index} step={block.type} initial={block.data.value ?? a.values[block.type]} data={block.data} ctx={formCtx} onSubmit={answerFrom(index, block.type)} />
       </div>
     );
   };
@@ -87,7 +89,27 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
     scroller.current?.scrollTo?.({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [chat.messages.length, chat.loading, a.status]);
 
+  // Coming back: reopen the interview's own conversation (it isn't in the chat history list).
+  const sessionId = a.chat_session_id;
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (hydrated.current || !sessionId || chat.messages.length || chat.loading) return;
+    hydrated.current = true;
+    (async () => {
+      try {
+        const res = await apiRequest(`/api/chat/conversations/${encodeURIComponent(sessionId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.messages) && data.messages.length) hydrateChat(interviewKey(agent), { sessionId, messages: data.messages });
+      } catch { /* the interview starts again from the server's state */ }
+    })();
+  }, [sessionId, agent, chat.messages.length, chat.loading]);
+
   const started = chat.messages.length > 0;
+  // A reopened conversation may end on a reply without its form: offer to carry on.
+  const lastReply = [...chat.messages].reverse().find((m) => m.role === "assistant");
+  const waiting = started && !chat.loading && a.status !== "done" && !(lastReply && replyBlock(lastReply) && !answeredAt.includes(chat.messages.indexOf(lastReply)));
+  const activation = agent === "media_buyer" && a.status === "done" ? a.activation : null;
   const editLine = lines.find((l) => l.step === editing);
 
   return (
@@ -117,11 +139,24 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
               </div>
             </div>
             <ChatThread chat={chat} name={name} avatar={avatar} renderAfter={renderAfter} partPlacement="inline" />
+            {waiting && chat.messages[chat.messages.length - 1]?.role === "assistant" && (
+              <div className="sm:pl-10">
+                <Button onClick={() => chat.send("Let’s carry on.")}>Carry on<ArrowRight aria-hidden="true" /></Button>
+              </div>
+            )}
             {a.status === "done" && !chat.loading && (
               <div className="flex flex-col gap-1.5">
                 <ChatSender name={name} avatar={avatar} />
                 <div className="flex flex-col gap-3 text-by-body-lg text-by-text sm:pl-10">
                   <p><b className="font-semibold">{name} is ready.</b> {NEXT[agent] === "sub-agents" ? "One last step: sub-agents." : `${NEXT[agent]} is unlocked next.`}</p>
+                  {activation?.status === "not_ready" && (
+                    <Notice tone="warning">
+                      <p className="font-semibold">It can’t switch on yet. Still missing:</p>
+                      {activation.missing.length ? (
+                        <ul className="mt-1 list-disc pl-5">{activation.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+                      ) : <p>Something it needs isn’t ready yet.</p>}
+                    </Notice>
+                  )}
                   <div><Button kind="primary" onClick={onNext}>Set up {NEXT[agent]}<ArrowRight aria-hidden="true" /></Button></div>
                 </div>
               </div>
@@ -138,7 +173,8 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
       <Dialog open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)}>
         {editing && (
           <DialogContent title={`Change ${editLine?.label ?? "this answer"}`} description={`What ${name} knows now: ${editLine?.value ?? "answered"}`}>
-            <DialogBody>
+            {/* The form drops its card here: the dialog is its frame. */}
+            <DialogBody className="[&>[role=form]]:border-0 [&>[role=form]]:p-0 [&>[role=form]]:shadow-none">
               <StepForm
                 step={editing}
                 initial={a.values[editing]}

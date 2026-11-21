@@ -13,7 +13,7 @@
 
 import useSWR from "swr"
 import { fetcher } from "@/lib/fetcher"
-import { request } from "@/lib/context-api"
+import { apiRequest } from "@/lib/api"
 
 export const TEAM_KEY = "/api/team/setup"
 export const TEAM_ORDER = ["birdy", "media_buyer", "sales_coach", "sub_agents"]
@@ -61,6 +61,12 @@ function normalizeAgent(raw, key) {
     values: obj(a.values),
     skipped: Boolean(a.skipped),
     completed_at: a.completed_at ?? null,
+    // The interview's own conversation (team_setup chats are left out of the chat history), to reopen it.
+    chat_session_id: typeof a.chat_session_id === "string" && a.chat_session_id ? a.chat_session_id : null,
+    // Media Buyer, once its interview is done: switched on, or what its readiness check still misses.
+    activation: a.activation && typeof a.activation === "object"
+      ? { status: a.activation.status === "active" ? "active" : "not_ready", missing: (Array.isArray(a.activation.missing) ? a.activation.missing : []).filter((m) => typeof m === "string") }
+      : null,
   }
 }
 
@@ -178,6 +184,42 @@ export function answerMessage(team, agent, step) {
 // ─── Server ──────────────────────────────────────────────────────────────────
 
 const enc = encodeURIComponent
+
+/**
+ * One request to a team setup route. A refusal throws an Error with `status`,
+ * `code` and the server's `detail` (a string, or an object such as
+ * {code: "step_out_of_order", agent, step, expected}).
+ */
+async function request(endpoint, method = "GET", body) {
+  const res = await apiRequest(endpoint, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // Empty or not JSON.
+  }
+  if (!res.ok) {
+    const detail = data?.detail ?? null
+    const err = new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`)
+    err.status = res.status
+    err.code = (detail && typeof detail === "object" ? detail.code : null) ?? data?.code ?? null
+    err.detail = detail
+    throw err
+  }
+  return data
+}
+
+/** What a refused save says, in words the owner can act on. */
+export function refusalText(err) {
+  if (err?.code === "step_out_of_order") {
+    const expected = err.detail?.expected
+    return expected ? `Answer ${STEP_LABELS[expected] ?? expected} first: the questions go in order.` : "Answer the questions in order: this one comes later."
+  }
+  if (err?.code === "practice_not_finished") return "Let the practice run finish first."
+  if (err?.code === "agent_locked") return "This agent isn’t open yet."
+  if (err?.message && !err.message.startsWith("HTTP")) return err.message
+  return "Couldn’t save that. Check your connection and try again."
+}
 
 export const saveStep = (agent, step, body) => request(`${TEAM_KEY}/${enc(agent)}/${enc(step)}`, "PUT", body)
 export const finishSubAgents = (skipped) => request(`${TEAM_KEY}/sub_agents/finish`, "POST", { skipped: Boolean(skipped) })

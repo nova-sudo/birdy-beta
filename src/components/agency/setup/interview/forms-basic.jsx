@@ -14,12 +14,13 @@ const symbolOf = (code) => getSymbolFromCurrency(code || "GBP") || code || "£";
 const decimal = (v) => v.replace(/[^\d.]/g, "");
 
 /** Which clients the agent works on: all of them, or the ones picked. */
-export function ClientsForm({ initial, ctx, onSubmit, saveLabel }) {
+export function ClientsForm({ initial, data, ctx, onSubmit, saveLabel }) {
   const start = clientsInitial(initial);
   const [mode, setMode] = useState(start.mode);
   const [ids, setIds] = useState(start.ids);
   const { busy, error, setError, run } = useSave(onSubmit);
-  const clients = ctx.clients;
+  // The reply lists the account's clients (`options`); without it, the active ones the app already has.
+  const clients = Array.isArray(data?.options) ? data.options.filter((o) => o?.id).map((o) => ({ id: o.id, name: o.name || o.id })) : ctx.clients;
   const save = () => {
     const body = clientsBody(mode, ids);
     if (!body) return setError("Pick at least one client.");
@@ -29,7 +30,7 @@ export function ClientsForm({ initial, ctx, onSubmit, saveLabel }) {
   return (
     <FormShell label="Clients" error={error} busy={busy} onSave={save} saveLabel={saveLabel}>
       <RadioGroup value={mode} onValueChange={setMode} aria-label="Which clients" className="flex-col gap-2">
-        <Radio value={ALL} label={`All active clients${clients.length ? ` (${clients.length})` : ""}`} />
+        <Radio value={ALL} label={Array.isArray(data?.options) ? `All clients${clients.length ? ` (${clients.length})` : ""}` : `All active clients${clients.length ? ` (${clients.length})` : ""}`} />
         <Radio value="some" label="Only some of them" />
       </RadioGroup>
       {mode === "some" && (
@@ -50,13 +51,17 @@ export function ClientsForm({ initial, ctx, onSubmit, saveLabel }) {
 }
 
 /** Cost-per-lead limits: one for every client, or one each. */
-export function CplForm({ initial, ctx, onSubmit, saveLabel }) {
+export function CplForm({ initial, data, ctx, onSubmit, saveLabel }) {
   const start = cplInitial(initial);
   const [mode, setMode] = useState(start.mode);
   const [all, setAll] = useState(start.all);
   const [each, setEach] = useState(start.each);
   const { busy, error, setError, run } = useSave(onSubmit);
-  const sym = symbolOf(ctx.currency);
+  const sym = symbolOf(data?.currency || ctx.currency);
+  // The reply lists the clients Media Buyer watches with their currency and current CPL target.
+  const watched = Array.isArray(data?.clients)
+    ? data.clients.filter((c) => c?.id).map((c) => ({ id: c.id, name: c.name || c.id, ad_account_currency: c.currency, target: c.target }))
+    : ctx.watched;
   const save = () => {
     const out = cplBody(mode, all, each);
     if (out.error) return setError(out.error);
@@ -81,15 +86,16 @@ export function CplForm({ initial, ctx, onSubmit, saveLabel }) {
           help="I flag any client whose leads cost more than this."
           className="max-w-56"
         />
-      ) : ctx.watched.length ? (
+      ) : watched.length ? (
         <ul className={LIST} aria-label="Limits per client">
-          {ctx.watched.map((g) => (
+          {watched.map((g) => (
             <li key={g.id} className="flex items-center gap-3 border-t border-by-line-soft px-3 py-2 first:border-t-0">
               <span className="min-w-0 flex-1 truncate text-by-body">{g.name}</span>
               <TextField
                 aria-label={`${g.name}’s cost per lead limit`}
                 inputMode="decimal"
                 value={each[g.id] ?? ""}
+                placeholder={g.target != null ? String(g.target) : undefined}
                 onChange={(e) => setEach({ ...each, [g.id]: decimal(e.target.value) })}
                 leading={<span aria-hidden="true" className="text-by-muted">{symbolOf(g.ad_account_currency || ctx.currency)}</span>}
                 className="w-32 shrink-0"
@@ -123,8 +129,9 @@ export function PermissionsForm({ initial, onSubmit, saveLabel }) {
 }
 
 /** When it runs: a time, a time zone, every day or weekdays. */
-export function ScheduleForm({ initial, onSubmit, saveLabel }) {
-  const [state, setState] = useState(() => scheduleInitial(initial));
+export function ScheduleForm({ initial, data, onSubmit, saveLabel }) {
+  // Nothing saved yet: the reply's suggestion (the owner's time zone), else 07:00 in the browser's.
+  const [state, setState] = useState(() => scheduleInitial(initial ?? data?.default));
   const { busy, error, setError, run } = useSave(onSubmit);
   const zones = useMemo(() => zonesWith(state.tz).map((z) => ({ value: z, label: z.replace(/_/g, " ") })), [state.tz]);
   const save = () => {

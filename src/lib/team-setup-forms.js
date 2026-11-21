@@ -132,15 +132,39 @@ const humanize = (key) => {
 
 /**
  * A practice run's summary as lines to show: its numbers and short texts, in
- * the order the server sent them. Lists show as a count; nested objects are skipped.
+ * the order the server sent them. Lists show as a count; nested objects, flags and timestamps are skipped.
  */
+// The words for the fields the practice run's summary has today (ai/team/setup.py practice_status).
+const PRACTICE_LABELS = { clients: "Clients checked", cards: "Cards it would post", changes: "Changes it would propose" }
+const ISO = /^\d{4}-\d{2}-\d{2}T/
+
 export function practiceLines(summary) {
   if (!summary || typeof summary !== "object") return []
   const out = []
   for (const [key, v] of Object.entries(summary)) {
-    if (typeof v === "number" && Number.isFinite(v)) out.push({ key, label: humanize(key), value: v.toLocaleString("en-GB") })
-    else if (typeof v === "string" && v.trim() && v.length <= 160) out.push({ key, label: humanize(key), value: v.trim() })
+    const label = PRACTICE_LABELS[key] ?? humanize(key)
+    if (typeof v === "number" && Number.isFinite(v)) out.push({ key, label, value: v.toLocaleString("en-GB") })
+    else if (typeof v === "string" && v.trim() && v.length <= 160 && !ISO.test(v)) out.push({ key, label, value: v.trim() })
     else if (Array.isArray(v)) out.push({ key, label: humanize(key), value: v.length.toLocaleString("en-GB") })
   }
+  return out
+}
+
+const MODE_WORDS = { flag: "Only suggests", ask: "Asks you first", auto: "Acts on its own" }
+const MODE_KINDS = [["remove", "Pausing ads"], ["add", "Adding ads"], ["revive", "Turning old ads back on"]]
+const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null)
+
+/**
+ * Media Buyer's playbook as lines to review, from the playbook block's
+ * `modes` and `scoring` (the stock agent's own settings). Only what the block
+ * carries is shown; `creative` is left out until its fields have agreed words.
+ */
+export function playbookLines(block) {
+  const out = []
+  const modes = block?.modes && typeof block.modes === "object" ? block.modes : null
+  if (modes) for (const [kind, label] of MODE_KINDS) if (MODE_WORDS[modes[kind]]) out.push({ label, value: MODE_WORDS[modes[kind]] })
+  const s = block?.scoring && typeof block.scoring === "object" ? block.scoring : {}
+  if (num(s.min_days) !== null) out.push({ label: "Judges an ad after", value: `${s.min_days} days` })
+  if (num(s.lose_cpl_multiple) !== null) out.push({ label: "A loser", value: `Cost per lead over ${s.lose_cpl_multiple}× the target` })
   return out
 }

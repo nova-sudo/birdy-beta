@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/api";
 import { fetcher } from "@/lib/fetcher";
 import { playbookRules, ruleSentence } from "@/lib/rule-copy";
 import { OUTCOME_OPTIONS_KEY, practiceStatus, startPractice } from "@/lib/team-setup";
-import { outcomeChoices, outcomeId, outcomesBody, practiceLines } from "@/lib/team-setup-forms";
+import { outcomeChoices, outcomeId, outcomesBody, playbookLines, practiceLines } from "@/lib/team-setup-forms";
 import { FormShell, saveError, useSave } from "./form-shell";
 
 export const PRACTICE_POLL_MS = 2000;
@@ -22,6 +22,7 @@ const chipTone = (on) => (on ? "border-by-accent bg-by-accent-soft text-by-accen
  */
 export function PlaybookForm({ data, ctx, onSubmit, saveLabel = "Yes, that’s it" }) {
   const rules = playbookRules(data?.playbook);
+  const lines = playbookLines(data);
   const { busy, error, run } = useSave(onSubmit);
   const sym = getSymbolFromCurrency(ctx.currency || "GBP") || "£";
   return (
@@ -32,23 +33,34 @@ export function PlaybookForm({ data, ctx, onSubmit, saveLabel = "Yes, that’s i
       actions={
         <>
           <Button kind="primary" loading={busy} onClick={() => run({ confirmed: true })}>{saveLabel}</Button>
-          {ctx.onSend && <Button disabled={busy} onClick={() => ctx.onSend("I want to change a rule")}>Change something</Button>}
+          {ctx.onSend && <Button disabled={busy} onClick={() => ctx.onSend("I have a question about the playbook")}>Ask about it</Button>}
         </>
       }
     >
-      {rules.length ? (
+      {lines.length ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-by-body-sm">
+          {lines.map((l) => (
+            <div key={l.label} className="contents">
+              <dt className="text-by-muted">{l.label}</dt>
+              <dd className="text-by-text">{l.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : rules.length ? (
         <ol className="flex list-decimal flex-col gap-2 pl-5 text-by-body text-by-text marker:text-by-muted">
           {rules.map((r, i) => <li key={`${r.kind}-${i}`}>{ruleSentence(r, sym)}</li>)}
         </ol>
       ) : (
-        <p className="text-by-body-sm text-by-muted">The rules aren’t listed here. Ask in the chat to see them before you confirm.</p>
+        <p className="text-by-body-sm text-by-muted">The playbook isn’t listed here. Ask in the chat to see it before you confirm.</p>
       )}
     </FormShell>
   );
 }
 
 /** Where it posts: a Slack channel, or nowhere. Uses the same channel list as Settings. */
-export function SlackForm({ initial, onSubmit }) {
+export function SlackForm({ initial, data, onSubmit }) {
+  // The reply says whether Slack is connected; when it isn't, there is no list to ask for.
+  const offline = data?.connected === false;
   const [channels, setChannels] = useState(null);
   const [failed, setFailed] = useState(false);
   const [other, setOther] = useState("");
@@ -56,6 +68,7 @@ export function SlackForm({ initial, onSubmit }) {
   const { busy, error, run } = useSave(onSubmit);
 
   useEffect(() => {
+    if (offline) return undefined;
     let live = true;
     (async () => {
       try {
@@ -68,7 +81,7 @@ export function SlackForm({ initial, onSubmit }) {
       }
     })();
     return () => { live = false; };
-  }, []);
+  }, [offline]);
 
   const save = (channel_id) => {
     setPicked(channel_id);
@@ -90,7 +103,9 @@ export function SlackForm({ initial, onSubmit }) {
       busy={busy}
       actions={<Button kind="ghost" loading={busy && picked === null} disabled={busy} onClick={() => save(null)}>Not in Slack</Button>}
     >
-      {failed ? (
+      {offline ? (
+        <Notice tone="warning">Slack isn’t connected. Connect it in Settings, or carry on without it.</Notice>
+      ) : failed ? (
         <Notice tone="warning">I couldn’t list your Slack channels. Connect Slack in Settings, or carry on without it.</Notice>
       ) : channels === null ? (
         <div aria-busy="true" aria-label="Loading channels" className="flex gap-2"><Skeleton className="h-8 w-28" /><Skeleton className="h-8 w-24" /></div>
@@ -127,8 +142,9 @@ export function SlackForm({ initial, onSubmit }) {
  * The practice run: a real run on the agent's clients that changes nothing in
  * Meta and sends nothing to Slack. Start it, wait for it, read the summary, confirm.
  */
-export function PracticeForm({ onSubmit, saveLabel = "Looks right" }) {
-  const [state, setState] = useState({ status: "loading", summary: null });
+export function PracticeForm({ data, onSubmit, saveLabel = "Looks right" }) {
+  // The reply carries the practice run's status as it was; it is read again on arrival.
+  const [state, setState] = useState(() => ({ status: ["none", "running", "done", "failed"].includes(data?.status) ? data.status : "loading", summary: data?.summary ?? null }));
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState(null);
   const timer = useRef(null);
@@ -155,9 +171,10 @@ export function PracticeForm({ onSubmit, saveLabel = "Looks right" }) {
     setStarting(true);
     setProblem(null);
     try {
-      await startPractice();
-      setState({ status: "running", summary: null });
-      timer.current = setTimeout(poll, PRACTICE_POLL_MS);
+      const res = await startPractice();
+      const status = ["running", "done", "failed"].includes(res?.status) ? res.status : "running";
+      setState({ status, summary: null });
+      timer.current = setTimeout(poll, status === "running" ? PRACTICE_POLL_MS : 0);
     } catch (err) {
       setProblem(saveError(err));
     } finally {
@@ -207,8 +224,11 @@ export function PracticeForm({ onSubmit, saveLabel = "Looks right" }) {
 }
 
 /** What counts as booked and as closed: a tag or a pipeline stage, from the account's GoHighLevel. */
-export function OutcomesForm({ initial, onSubmit, saveLabel }) {
-  const { data, error: loadError, isLoading } = useSWR(OUTCOME_OPTIONS_KEY, fetcher, { revalidateOnFocus: false });
+export function OutcomesForm({ initial, data: block, onSubmit, saveLabel }) {
+  // The reply carries the choices (`options`); the route is asked only when it doesn't.
+  const given = block?.options && typeof block.options === "object" ? block.options : null;
+  const { data: fetched, error: loadError, isLoading } = useSWR(given ? null : OUTCOME_OPTIONS_KEY, fetcher, { revalidateOnFocus: false });
+  const data = given ?? fetched;
   const choices = useMemo(() => outcomeChoices(data), [data]);
   const [booked, setBooked] = useState(outcomeId(initial?.booked));
   const [closed, setClosed] = useState(outcomeId(initial?.closed));

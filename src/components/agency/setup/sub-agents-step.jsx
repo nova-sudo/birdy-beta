@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Bot } from "lucide-react";
 import { AgentAvatar, AskBar, Button, ChatSender, Notice, Segmented, Skeleton } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
@@ -36,6 +36,16 @@ export function SubAgentsStep({ team, onApply, onDone }) {
   const [busy, setBusy] = useState(null);
   const [problem, setProblem] = useState(null);
   const done = team.agents.sub_agents.status === "done";
+  // On a phone the proposal cards drop their step bar for a one-line "Step 2 of 6".
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(max-width: 639px)");
+    if (!mq) return undefined;
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
 
   const waiting = PARENTS.flatMap((p) => lists[p].subAgents.filter((s) => s.status === "proposed"));
   const working = PARENTS.reduce((n, p) => n + lists[p].subAgents.filter((s) => s.status === "active").length, 0);
@@ -77,7 +87,7 @@ export function SubAgentsStep({ team, onApply, onDone }) {
             {loading ? (
               <div aria-busy="true" aria-label="Loading sub-agents" className="flex flex-col gap-2"><Skeleton className="h-24 w-full rounded-by-lg" /></div>
             ) : waiting.length ? (
-              waiting.map((record) => <SubAgentProposal key={record.id} proposal={asProposal(record)} onUpdate={refresh} />)
+              waiting.map((record) => <SubAgentProposal key={record.id} proposal={asProposal(record)} onUpdate={refresh} compact={narrow} />)
             ) : (
               <p className="text-by-body text-by-muted">Nothing proposed yet. Ask either agent for ideas below.</p>
             )}
