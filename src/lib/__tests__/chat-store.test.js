@@ -168,4 +168,17 @@ describe("chat-store, streaming with other agents", () => {
     await sendChatMessage("k-broken", { text: "why?", stream: true })
     expect(getChat("k-broken").messages.at(-1)).toMatchObject({ content: "Sorry, I hit an error. Please try again.", route: { ...ROUTE, status: "failed" } })
   })
+
+  it("hands a locked agent's 423 to on423 and takes the message back", async () => {
+    const body = { detail: { code: "agent_locked", agent: "sales_coach", waits_on: "media_buyer" } }
+    apiRequest.mockImplementation(() => Promise.resolve({ ok: false, status: 423, json: async () => body, headers: { get: () => "application/json" } }))
+    const on423 = vi.fn()
+    await sendChatMessage("k-locked", { text: "hi", page: "sales_coach", agent: "sales_coach", stream: true }, { on423 })
+    expect(on423).toHaveBeenCalledWith(body)
+    expect(getChat("k-locked").messages).toEqual([])
+    expect(getChat("k-locked").loading).toBe(false)
+    // Without a handler the old "something went wrong" reply stands.
+    await sendChatMessage("k-locked-2", { text: "hi", page: "sales_coach" })
+    expect(getChat("k-locked-2").messages.map((m) => m.role)).toEqual(["user", "assistant"])
+  })
 })

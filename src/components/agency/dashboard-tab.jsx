@@ -15,7 +15,7 @@ import { ClientsList } from "@/components/clients/list/clients-list";
 const OPS = SECTIONS.find((s) => s.id === "ops");
 
 /**
- * Agency Ops' Dashboard tab. For the agency it is the Clients table with the
+ * Birdy's Dashboard tab. For the agency it is the Clients table with the
  * ask bar under it; inside a client (`?client=<id>`) it is that client's Leads,
  * Ads and Calls tables.
  */
@@ -24,7 +24,7 @@ export function DashboardTab() {
   return clientId ? <ClientDashboard clientId={clientId} /> : <AgencyDashboard />;
 }
 
-/** The Clients table under the Agency Ops header. A question opens the conversation in a column beside it. */
+/** The Clients table under the Birdy header. A question opens the conversation in a column beside it. */
 function AgencyDashboard() {
   const router = useRouter();
   const tabs = useOpsTabs();

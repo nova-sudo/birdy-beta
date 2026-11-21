@@ -44,20 +44,6 @@ export function Chips({ items, onPick, recommended, busy, label }) {
   );
 }
 
-/** What an agent already knows, each line ticked. */
-export function Known({ items }) {
-  return (
-    <ul className="flex flex-col gap-1.5">
-      {items.filter(Boolean).map((item) => (
-        <li key={item} className="flex items-start gap-2">
-          <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-by-success" strokeWidth={2.5} />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /**
  * A tool to connect, in the chat: Connect, Connecting…, Connected, or what went wrong and Retry.
  * @param {"todo"|"connecting"|"done"|"error"|"issue"} props.state `issue`: connected once, needs connecting again

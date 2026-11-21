@@ -17,6 +17,7 @@ import { mdComponents } from "@/lib/chat-markdown";
 import { delatex } from "@/lib/chat-math";
 import { parseChatUI } from "@/lib/chat-ui-parser";
 import { findStep, normalizeRoute, routeWorthShowing } from "@/lib/agent-route";
+import { AgentLocked } from "@/components/agency/agent-locked";
 import { ReplyProposals } from "./proposal-card";
 
 const PROSE =
@@ -120,11 +121,14 @@ function useDock(rootRef, active) {
  *   pressed. auto: beside the thread when there is room for it, otherwise under the map. Compact threads always open it inline.
  * @param {(room: {shift: number, pad: number, gutter: number}|null) => void} [props.onDock] told how the thread column moved to make room
  *   for a docked part (null once it closes), so whatever sits under the thread (the composer) can line up with it
+ * @param {React.ReactNode} [props.avatar] the answering agent's face over its replies; Birdy in its frame when left out
+ * @param {(message: object, index: number, info: {last: boolean}) => React.ReactNode} [props.renderAfter] drawn under a
+ *   reply, after its proposals: e.g. the form the reply asks for. `last` is true for the newest reply while none is in flight.
  *
  * A reply that other agents helped with carries a route map above it; while
  * agents are still at work, the live map stands in for the typing dots.
  */
-export function ChatThread({ chat, name, compact = false, partPlacement = "auto", onDock }) {
+export function ChatThread({ chat, name, compact = false, partPlacement = "auto", onDock, avatar, renderAfter }) {
   const { messages, loading, send, submitUI, submittedUIs, configured, outOfCredits } = chat;
   const shown = messages.filter((m) => !(m.role === "user" && m.content?.startsWith("[UI_RESPONSE]")));
   const indent = compact ? "" : "pl-10";
@@ -179,21 +183,23 @@ export function ChatThread({ chat, name, compact = false, partPlacement = "auto"
       ) : (
         <div key={i} className="flex flex-col gap-1.5 motion-safe:animate-[by-enter_var(--by-dur-base)_var(--by-ease-out)]">
           {/* The face shows once per run of replies. */}
-          {shown[i - 1]?.role !== "assistant" && <ChatSender name={name} />}
+          {shown[i - 1]?.role !== "assistant" && <ChatSender name={name} avatar={avatar} />}
           <div className={indent}>
             {routeWorthShowing(message.route) ? mapFor(message.route, i) : null}
             <ReplyBody message={message} index={i} onUISubmit={submitUI} onSend={send} submittedUIs={submittedUIs} />
             {/* Changes other agents proposed, under the answer that explains them. */}
             <ReplyProposals proposals={message.proposals} onUpdate={chat.updateProposal} compact={compact} />
+            {renderAfter?.(message, messages.indexOf(message), { last: !loading && i === shown.length - 1 })}
           </div>
         </div>
       ))}
       {loading && (
         <div className="flex flex-col gap-1.5">
-          {shown[shown.length - 1]?.role !== "assistant" && <ChatSender name={name} />}
+          {shown[shown.length - 1]?.role !== "assistant" && <ChatSender name={name} avatar={avatar} />}
           <div className={indent}>{liveRoute ? mapFor(liveRoute, shown.length) : <ChatTyping label={`${name} is replying`} />}</div>
         </div>
       )}
+      {chat.locked && <AgentLocked agent={chat.locked.agent} waitsOn={chat.locked.waits_on} compact />}
       {!configured && (
         <Notice tone="warning" action={<Link href="/settings" className="font-semibold underline">Open Settings</Link>}>Add your AI key in Settings to chat.</Notice>
       )}

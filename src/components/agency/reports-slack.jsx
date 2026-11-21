@@ -81,7 +81,7 @@ function ReportSwitch({ report, api, onError }) {
   );
 }
 
-/** Agency Ops › Reports: the account's Slack reports, each with its status, channel, next and last run and its switch. */
+/** Birdy › Reports: the account's Slack reports, each with its status, channel, next and last run and its switch. */
 export function SlackReportsList() {
   const router = useRouter();
   const data = useSlackReportData();

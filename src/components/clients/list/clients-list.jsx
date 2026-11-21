@@ -69,12 +69,12 @@ function useCurrencySymbol() {
 /**
  * Every client: tabs by status, sort, search, columns, and the two ways of adding more.
  *
- * Agency Ops' Dashboard tab shows this same table under its own header:
+ * Birdy's Dashboard tab shows this same table under its own header:
  * @param {(range: {datePreset: string, rangeLabel: string, setDatePreset: (value: string) => void, dateMenu: React.ReactNode}) => React.ReactNode} [props.header]
  *   replaces the "Clients" header; it is handed the date range and a ready-made date menu
  * @param {React.ReactNode} [props.footer] sits under the table and stays in place, e.g. an ask bar
  * @param {string} [props.viewKey] which saved column view this table reads and writes
- * @param {boolean} [props.column] keep the tabs, toolbar and table to the 1040px centred column the Agency Ops pages use
+ * @param {boolean} [props.column] keep the tabs, toolbar and table to the 1040px centred column the Birdy pages use
  */
 export function ClientsList({ header, footer, viewKey = "clients", column = false } = {}) {
   const router = useRouter();

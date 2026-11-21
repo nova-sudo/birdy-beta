@@ -52,7 +52,7 @@ describe("TabPill", () => {
 
   it("says why a tab is disabled and shows a badge after a label", () => {
     const items = [
-      { value: "ops", label: "Agency Ops" },
+      { value: "ops", label: "Birdy" },
       { value: "buyer", label: "Media Buyer", badge: <span>New</span> },
       { value: "coach", label: "Sales Coach", disabled: true, hint: "Unlocks after Media Buyer" },
       { value: "later", label: "Later", disabled: true },

@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, ChevronDown, Lock, Minus } from "lucide-react";
-import { Button, Card, SECTIONS, cn } from "@/components/by";
-import { STEPS, pctDone, stepsLeft, unlocked, waitsOn } from "@/lib/setup-steps";
+import { Check, ChevronDown, Minus } from "lucide-react";
+import { Button, Card, cn } from "@/components/by";
+import { STEPS, pctDone, stepsLeft } from "@/lib/setup-steps";
 
 const LABEL = { done: "Done", setup: "In setup", issue: "Issue", todo: "To do" };
 const TONE = {
@@ -11,7 +11,6 @@ const TONE = {
   issue: "bg-by-danger-bg text-by-danger",
   todo: "bg-by-sunken text-by-text-2",
 };
-const nameOf = (id) => SECTIONS.find((s) => s.id === id)?.name ?? id;
 
 /** The thin bar the checklist folds to. */
 function Track({ pct, big = false }) {
@@ -24,8 +23,7 @@ function Track({ pct, big = false }) {
 
 /**
  * The setup checklist: "% done", then one row per step as Done, In setup,
- * Issue or To do. A row jumps to its step; a step in a locked section can't be
- * opened yet. Folds to a thin progress bar.
+ * Issue or To do. A row jumps to its step. Folds to a thin progress bar.
  *
  * @param {Record<string, string>} props.steps from deriveSteps
  * @param {(id: string) => void} props.onJump
@@ -64,14 +62,11 @@ export function Checklist({ steps, onJump, folded, onFold }) {
       <ol className="flex flex-col">
         {STEPS.map((step, i) => {
           const state = steps[step.id];
-          const open = unlocked(steps, step.section);
           return (
             <li key={step.id} className="border-t border-by-line-soft first:border-t-0">
               <button
                 type="button"
-                disabled={!open}
                 onClick={() => onJump(step.id)}
-                title={open ? undefined : `Unlocks after ${nameOf(waitsOn(step.section))}`}
                 className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-by-md px-1.5 py-2 text-left transition-colors duration-(--by-dur-fast) ease-by-out hover:bg-by-canvas disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent"
               >
                 <span
@@ -83,12 +78,8 @@ export function Checklist({ steps, onJump, folded, onFold }) {
                 >
                   {state === "done" ? <Check className="size-3.5" strokeWidth={3} /> : state === "issue" ? "!" : i + 1}
                 </span>
-                <span className={cn("min-w-0 flex-1 text-by-body", open ? "text-by-text" : "text-by-muted")}>{step.label}</span>
-                {open ? (
-                  <span className={cn("shrink-0 rounded-by-sm px-2 py-0.5 text-by-caption font-semibold", TONE[state])}>{LABEL[state]}</span>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center gap-1 text-by-caption font-semibold text-by-muted"><Lock aria-hidden="true" className="size-3" />Locked</span>
-                )}
+                <span className="min-w-0 flex-1 text-by-body text-by-text">{step.label}</span>
+                <span className={cn("shrink-0 rounded-by-sm px-2 py-0.5 text-by-caption font-semibold", TONE[state])}>{LABEL[state]}</span>
               </button>
             </li>
           );

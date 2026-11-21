@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
+import { SWRConfig } from "swr"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
 import { deriveSteps } from "@/lib/setup-steps"
@@ -22,6 +23,7 @@ vi.mock("@/lib/use-setup", () => ({
 }))
 vi.mock("@/lib/oauth-handoff", () => ({ setOAuthHandoff: (p) => handoff(p), takeOAuthHandoff: () => null }))
 vi.mock("@/components/shell/client-actions", () => ({ useClientActions: () => ({ openAddClient, openImport }) }))
+vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ clientGroups: [], loading: false, error: null, invalidate: vi.fn(), refresh: vi.fn() }) }))
 vi.mock("@/lib/api", () => ({
   apiRequest: async (url, opts = {}) => {
     const method = opts.method || "GET"
@@ -42,6 +44,10 @@ const OPS_DONE = {
   clients: [C("a", { targets: { cpa: 40, cpl: 6 } }), C("b"), C("c", { targets: { cpl: 9 } })],
 }
 const sent = (method, url) => calls.filter((c) => c.method === method && c.url === url)
+const page = () => render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><SetupPage /></SWRConfig>)
+const locked = (waits) => ({ status: "locked", waits_on: waits, order: ["clients"], steps: {}, current: null, known: [], values: {}, completed_at: null })
+// Birdy still setting up, so every agent after it is locked.
+const FRESH_TEAM = { agents: { birdy: { status: "open" }, media_buyer: locked("birdy"), sales_coach: locked("media_buyer"), sub_agents: { status: "locked", waits_on: "sales_coach" } } }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -53,17 +59,20 @@ beforeEach(() => {
 })
 
 describe("SetupPage", () => {
-  it("shows the checklist from the account's state, with Media Buyer locked", () => {
-    render(<SetupPage />)
+  it("shows the checklist from the account's state, with Media Buyer locked in the team", async () => {
+    replies["GET /api/team/setup"] = [200, FRESH_TEAM]
+    page()
     const list = screen.getByRole("region", { name: "Set up Birdy" })
     expect(within(list).getByRole("button", { name: /Agency basics/ })).toHaveTextContent("In setup")
     expect(within(list).getByRole("button", { name: /Connect Meta/ })).toHaveTextContent("To do")
-    expect(within(list).getByRole("button", { name: /CPL limits/ })).toBeDisabled()
-    expect(screen.getByRole("tab", { name: /Media Buyer/ })).toHaveAttribute("title", "Unlocks after Agency Ops")
+    const team = await screen.findByRole("navigation", { name: "Your team" })
+    expect(within(team).getByRole("button", { name: /Birdy/ })).toHaveAttribute("aria-current", "step")
+    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toBeDisabled()
+    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("title", "Unlocks after Birdy")
   })
 
   it("saves the basics to the account", async () => {
-    render(<SetupPage />)
+    page()
     await userEvent.type(screen.getByLabelText("Agency name"), "Northside Media")
     await userEvent.click(screen.getByRole("radio", { name: "USD" }))
     await userEvent.click(screen.getByRole("button", { name: "Continue" }))
@@ -75,7 +84,7 @@ describe("SetupPage", () => {
   it("starts Meta's login with a way back to setup", async () => {
     state.facts = { ...state.facts, onboarding: ob() }
     replies["GET /api/connect/facebook"] = [200, { auth_url: "https://facebook.example/oauth" }]
-    render(<SetupPage />)
+    page()
     await userEvent.click(screen.getByRole("button", { name: "Connect Meta" }))
     expect(handoff).toHaveBeenCalledWith("/welcome")
     expect(sent("GET", "/api/connect/facebook")).toHaveLength(1)
@@ -84,7 +93,7 @@ describe("SetupPage", () => {
   it("says what the server said when a connection can't start", async () => {
     state.facts = { ...state.facts, onboarding: ob() }
     replies["GET /api/connect"] = [500, { detail: "GoHighLevel isn’t configured" }]
-    render(<SetupPage />)
+    page()
     await userEvent.click(screen.getByRole("button", { name: "Connect GoHighLevel" }))
     expect(await screen.findByText("GoHighLevel isn’t configured")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Retry GoHighLevel" })).toBeInTheDocument()
@@ -92,7 +101,7 @@ describe("SetupPage", () => {
 
   it("asks for a Hot Prospector key and sends it", async () => {
     state.facts = { ...state.facts, onboarding: ob({}, { sales_tool: "hp" }), status: both, hp: { connected: false } }
-    render(<SetupPage />)
+    page()
     await userEvent.type(screen.getByLabelText("API UID"), "uid-1")
     await userEvent.type(screen.getByLabelText("API key"), "key-1")
     await userEvent.click(screen.getByRole("button", { name: "Connect Hot Prospector" }))
@@ -102,14 +111,14 @@ describe("SetupPage", () => {
 
   it("adds the first client with the app's Add client dialog", async () => {
     state.facts = { ...state.facts, onboarding: ob({}, { sales_tool: "ghl" }), status: both }
-    render(<SetupPage />)
+    page()
     await userEvent.click(screen.getByRole("button", { name: "Add your first client" }))
     expect(openAddClient).toHaveBeenCalled()
   })
 
   it("saves targets on the first client and on the others too", async () => {
     state.facts = { ...state.facts, onboarding: ob({}, { sales_tool: "ghl" }), status: both, clients: [C("a"), C("b"), C("c", { targets: { something_else: 3 } })] }
-    render(<SetupPage />)
+    page()
     await userEvent.type(screen.getByLabelText("Cost per acquisition"), "45")
     await userEvent.type(screen.getByLabelText("Close rate"), "15")
     await userEvent.click(screen.getByRole("button", { name: "Save targets" }))
@@ -119,39 +128,45 @@ describe("SetupPage", () => {
     expect(refresh).toHaveBeenCalledWith("clients")
   })
 
-  it("finishes Agency Ops and opens Media Buyer", async () => {
+  it("finishes Birdy and opens Media Buyer", async () => {
     state.facts = OPS_DONE
+    replies["GET /api/team/setup"] = [200, FRESH_TEAM]
     localStorage.setItem("onboarding_incomplete", "1")
-    render(<SetupPage />)
-    await userEvent.click(screen.getByRole("button", { name: /Set up Media Buyer/ }))
+    page()
+    await userEvent.click(await screen.findByRole("button", { name: /Set up Media Buyer/ }))
     expect(sent("POST", "/api/onboarding/complete")).toHaveLength(1)
+    // The server opens Media Buyer once Birdy is done, so its state is read again.
+    await waitFor(() => expect(sent("GET", "/api/team/setup").length).toBeGreaterThan(1))
     expect(localStorage.getItem("onboarding_incomplete")).toBeNull()
     expect(push).toHaveBeenCalledWith("/welcome?s=buyer")
   })
 
-  it("opens Agency Ops instead of a section that is still locked", () => {
+  it("opens Birdy instead of an agent that is still locked", async () => {
+    replies["GET /api/team/setup"] = [200, FRESH_TEAM]
     route.search = "s=mb"
-    render(<SetupPage />)
-    expect(screen.getByRole("heading", { name: "Agency Ops", level: 1 })).toBeInTheDocument()
+    page()
+    await screen.findByRole("navigation", { name: "Your team" })
+    expect(screen.getByRole("heading", { name: "Birdy", level: 1 })).toBeInTheDocument()
   })
 
-  it("gives the agency CPL limit to the clients that have none", async () => {
-    state.facts = { ...OPS_DONE, onboarding: ob({ completed: true }, { sales_tool: "ghl" }) }
-    route.search = "s=buyer"
-    render(<SetupPage />)
-    const field = screen.getByLabelText("Cost per lead limit")
-    expect(field).toHaveValue("6")
-    await userEvent.click(screen.getByRole("button", { name: /Use £6 for every client/ }))
-    expect(calls.filter((c) => c.method === "PUT").map((c) => [c.url, c.body])).toEqual([["/api/client-groups/b/targets", { cpl: 6 }]])
-  })
-
-  it("folds the checklist to a bar and jumps to a step in another section", async () => {
+  it("shows only Birdy's setup when the team state can't be read", async () => {
+    replies["GET /api/team/setup"] = [404, { detail: "Not Found" }]
     state.facts = OPS_DONE
-    render(<SetupPage />)
-    await userEvent.click(screen.getByRole("button", { name: /CPL limits/ }))
-    expect(push).toHaveBeenCalledWith("/welcome?s=buyer")
+    route.search = "s=buyer"
+    page()
+    expect(await screen.findByRole("heading", { name: "Birdy", level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole("region", { name: "Set up Birdy" })).toBeInTheDocument())
+    expect(screen.queryByRole("navigation", { name: "Your team" })).not.toBeInTheDocument()
+    // No team to hand over to: the last step only opens the app.
+    expect(screen.queryByRole("button", { name: /Set up Media Buyer/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Open Birdy" })).toBeInTheDocument()
+  })
+
+  it("folds the checklist to a bar", async () => {
+    state.facts = { ...OPS_DONE, clients: OPS_DONE.clients.slice(0, 1) }
+    page()
     await userEvent.click(screen.getByRole("button", { name: "Fold the checklist" }))
-    expect(screen.getByRole("button", { name: /Setup 89% done. Show the checklist/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Setup 88% done. Show the checklist/ })).toBeInTheDocument()
     expect(localStorage.getItem("birdy_setup_checklist_folded")).toBe("true")
   })
 })

@@ -24,7 +24,7 @@ const chatWith = (over) => ({
 
 describe("ChatThread with route maps", () => {
   it("leaves a reply without a route as it was", () => {
-    render(<ChatThread name="Agency Ops" chat={chatWith({ messages: [{ role: "user", content: "Hi" }, { role: "assistant", content: "Hello there" }] })} />)
+    render(<ChatThread name="Birdy" chat={chatWith({ messages: [{ role: "user", content: "Hi" }, { role: "assistant", content: "Hello there" }] })} />)
     expect(screen.getByText("Hello there")).toBeInTheDocument()
     expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
   })
@@ -68,12 +68,12 @@ describe("ChatThread with route maps", () => {
   })
 
   it("shows the typing dots while no other agent is involved", () => {
-    render(<ChatThread name="Agency Ops" chat={chatWith({ messages: [{ role: "user", content: "Hi" }], loading: true })} />)
-    expect(screen.getByRole("status", { name: "Agency Ops is replying" })).toBeInTheDocument()
+    render(<ChatThread name="Birdy" chat={chatWith({ messages: [{ role: "user", content: "Hi" }], loading: true })} />)
+    expect(screen.getByRole("status", { name: "Birdy is replying" })).toBeInTheDocument()
   })
 
   it("stacks the map in the narrow side conversation", () => {
-    const { container } = render(<ChatThread name="Agency Ops" compact chat={chatWith({ messages: [{ role: "assistant", content: "Ok", route: ROUTE }] })} />)
+    const { container } = render(<ChatThread name="Birdy" compact chat={chatWith({ messages: [{ role: "assistant", content: "Ok", route: ROUTE }] })} />)
     expect(container.querySelector("[data-layout]")).toHaveAttribute("data-layout", "stacked")
   })
 
@@ -82,7 +82,7 @@ describe("ChatThread with route maps", () => {
     const { container } = render(
       <div data-testid="scroller" style={{ overflowY: "auto" }}>
         <div data-testid="box" style={{ paddingLeft: "28px", paddingRight: "28px" }}>
-          <ChatThread name="Agency Ops" onDock={onDock} chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />
+          <ChatThread name="Birdy" onDock={onDock} chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />
         </div>
       </div>,
     )

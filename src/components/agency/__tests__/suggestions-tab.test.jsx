@@ -33,7 +33,7 @@ beforeEach(() => {
   sugg.state = state()
 })
 
-describe("Agency Ops' Suggestions tab", () => {
+describe("Birdy's Suggestions tab", () => {
   it("lists what is suggested with its client and reason, and counts them on the tab", () => {
     render(<SuggestionsTab />)
     expect(screen.getByRole("tab", { name: /^Suggestions/ })).toHaveAttribute("aria-selected", "true")
@@ -99,9 +99,9 @@ describe("Agency Ops' Suggestions tab", () => {
 
   it("opens the conversation beside the page when a question is asked", async () => {
     render(<SuggestionsTab />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about these suggestions" }), "Which first?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Birdy about these suggestions" }), "Which first?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_sugg_agency", expect.objectContaining({ text: "Which first?", page: "dashboard" }), expect.any(Object))
-    expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Birdy conversation" })).toBeInTheDocument()
   })
 })
 
@@ -121,7 +121,7 @@ describe("Media Buyer's and Sales Coach's Suggestions tab", () => {
     expect(screen.queryByRole("complementary", { name: "History" })).not.toBeInTheDocument()
   })
 
-  it("puts what waits for approval first in Media Buyer's and Sales Coach's, not in Agency Ops'", () => {
+  it("puts what waits for approval first in Media Buyer's and Sales Coach's, not in Birdy's", () => {
     pending.agents = []
     const { unmount } = render(<SuggestionsTab />)
     expect(screen.queryByRole("region", { name: "Waiting for your approval" })).toBeNull()

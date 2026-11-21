@@ -153,7 +153,7 @@ describe("from the agency table into a client", () => {
   })
 })
 
-describe("Agency Ops inside a client", () => {
+describe("Birdy inside a client", () => {
   it("opens its Ads table on the ads, with the same drill", async () => {
     show("client=a&view=ads", DashboardTab, "/dashboard/table")
     expect(levelTabs().getByRole("tab", { selected: true })).toHaveTextContent("Ads")

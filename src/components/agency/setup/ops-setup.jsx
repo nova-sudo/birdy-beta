@@ -10,12 +10,12 @@ import { SlackStep } from "./ops-slack";
 import { CallingStep, ToolsStep } from "./ops-tools";
 
 /**
- * Agency Ops' setup chat, in order: the basics, Meta and GoHighLevel, calling,
+ * Birdy's setup chat, in order: the basics, Meta and GoHighLevel, calling,
  * the first client, its targets, Slack, the rest of the clients. Each part
  * appears once the one before it is done, so coming back shows the answers
  * so far and the next question.
  */
-export function OpsSetup({ ctx, onFinish, finishing }) {
+export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
   const { steps, names } = ctx;
   const done = (id) => steps[id] === "done";
   const tools = done("basics");
@@ -36,10 +36,14 @@ export function OpsSetup({ ctx, onFinish, finishing }) {
       {slack && <ImportStep ctx={ctx} />}
       {all && (
         <Bubble name={ctx.agentName} id="step-ops-done">
-          <p><Lead>{names.ops} is set up.</Lead>{names.buyer} is unlocked: it already knows your clients, tools and targets, so it only needs one thing from you.</p>
+          {withTeam ? (
+            <p><Lead>{names.ops} is set up.</Lead>{names.buyer} is next. It already knows your clients, tools and targets, and it will ask you a few questions of its own before it starts.</p>
+          ) : (
+            <p><Lead>{names.ops} is set up.</Lead>Your clients, tools and targets are in. Your clients’ history keeps loading in the background.</p>
+          )}
           <div className="flex flex-wrap gap-2">
-            <Button kind="primary" loading={finishing === "buyer"} disabled={Boolean(finishing)} onClick={() => onFinish("buyer")}>Set up {names.buyer}<ArrowRight aria-hidden="true" /></Button>
-            <Button loading={finishing === "app"} disabled={Boolean(finishing)} onClick={() => onFinish("app")}>Open {names.ops}</Button>
+            {withTeam && <Button kind="primary" loading={finishing === "buyer"} disabled={Boolean(finishing)} onClick={() => onFinish("buyer")}>Set up {names.buyer}<ArrowRight aria-hidden="true" /></Button>}
+            <Button kind={withTeam ? "secondary" : "primary"} loading={finishing === "app"} disabled={Boolean(finishing)} onClick={() => onFinish("app")}>Open {names.ops}</Button>
           </div>
         </Bubble>
       )}

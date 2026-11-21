@@ -8,7 +8,8 @@ import { useAgentWorkCount } from "@/lib/agents-api";
 import { isActive } from "@/lib/client-status";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { useClientGroups } from "@/lib/useClientGroups";
-import { allDone, pctDone } from "@/lib/setup-steps";
+import { STEPS, allDone } from "@/lib/setup-steps";
+import { lockedSections, nextSection, setupPercent, teamDone, useTeamSetup } from "@/lib/team-setup";
 import { useSetup } from "@/lib/use-setup";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
@@ -48,7 +49,11 @@ export function AppShell({ children }) {
   // Setup's progress ring, while setup isn't finished. Off /welcome a finished account asks for nothing more.
   const onSetup = pathname === "/welcome";
   const setup = useSetup({ full: onSetup });
-  const showSetup = setup.ready && !setup.failed && (onSetup || !setup.completed) && !allDone(setup.steps);
+  // The agents' interviews count too. Without their state (the request failed) only Birdy's checklist does.
+  const { team } = useTeamSetup();
+  const birdyLeft = (onSetup || !setup.completed) && !allDone(setup.steps);
+  const showSetup = setup.ready && !setup.failed && (birdyLeft || (team !== null && !teamDone(team)));
+  const setupPct = setupPercent(setup.steps, team, { completed: setup.completed, total: STEPS.length });
   const hasCredits = credits.status != null && credits.allowance > 0;
 
   return (
@@ -59,13 +64,14 @@ export function AppShell({ children }) {
         activeId={activeId}
         onSelect={(id) => router.push(DESTINATIONS[id])}
         counts={{ buyer: openWork ?? 0 }}
+        locks={lockedSections(team)}
         credits={hasCredits ? { left: credits.balance, percent: (credits.remainingAllowance / credits.allowance) * 100 } : undefined}
         switcher={
           // Reading the address's query needs a Suspense boundary; until it resolves the switcher shows the path's client.
           <Suspense fallback={<WiredSwitcher clients={clients} value={clientIdFromPath(pathname)} onChange={() => {}} status="loading" />}>
             <LocatedSwitcher
               clients={clients}
-              // Picking a client inside Media Buyer or Sales Coach stays there; elsewhere it opens Agency Ops for it.
+              // Picking a client inside Media Buyer or Sales Coach stays there; elsewhere it opens Birdy for it.
               // Leaving a client from an agent section returns to the whole agency there; anywhere else it opens the Clients list.
               onChange={(id) => router.push(id ? clientHrefFrom(pathname, id) : activeId === "ops" && pathname !== `${DESTINATIONS.ops}/context` ? DESTINATIONS.ops : isRebuilt(pathname) && sectionBase(pathname) ? pathname : DESTINATIONS.clients)}
               status={error ? "error" : loading ? "loading" : "ready"}
@@ -84,7 +90,13 @@ export function AppShell({ children }) {
           </RailMenuTile>
         }
         account={<AccountMenu />}
-        setup={showSetup ? <SetupRing percent={pctDone(setup.steps)} active={onSetup} onOpen={() => router.push("/welcome?s=ops&checklist=1")} /> : null}
+        setup={showSetup ? (
+          <SetupRing
+            percent={setupPct}
+            active={onSetup}
+            onOpen={() => router.push(birdyLeft || !team ? "/welcome?s=ops&checklist=1" : `/welcome?s=${nextSection(team)}`)}
+          />
+        ) : null}
       />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>

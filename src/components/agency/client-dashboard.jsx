@@ -43,17 +43,17 @@ export const COACH_CLIENT_VIEWS = [
   { value: "reps", label: "Callers", ask: "callers" },
 ];
 const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
-// Agency Ops' Ads table opens on the ads themselves, as it always has; Media Buyer's on the campaigns.
+// Birdy's Ads table opens on the ads themselves, as it always has; Media Buyer's on the campaigns.
 const OPS_ADS_DRILL = { ...CLIENT_DRILL, first: "ads" };
 
 /**
  * A section's Dashboard tab inside one client: its tables on the redesign's
  * table, each scrolling inside its card, and the ask bar. Every question asked
- * here is limited to this client. Agency Ops shows Leads, Ads and Calls; Media
+ * here is limited to this client. Birdy shows Leads, Ads and Calls; Media
  * Buyer and Sales Coach show their own (see BUYER_CLIENT_VIEWS, COACH_CLIENT_VIEWS).
  *
  * @param {string} props.clientId
- * @param {import("./sections").SectionConfig} [props.section] Agency Ops when left out
+ * @param {import("./sections").SectionConfig} [props.section] Birdy when left out
  * @param {{value: string, label: string, ask: string}[]} [props.views] the tables, the first one opening by default
  */
 export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIENT_VIEWS }) {
@@ -83,7 +83,7 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
   // One thread per table, so a conversation started on Leads does not carry into Calls.
   const chat = useAgentChat({
     sessionKey: sessionKey(section, `ask_${view}_${clientId}`),
-    // Agency Ops talks to Birdy with every tool (no page of its own); the others to their own agent.
+    // The Birdy section talks to Birdy with every tool (no page of its own); the others to their own agent.
     ...(ops ? { agent: section.chat.agent } : { page: section.chat.page, agent: section.chat.agent, onSessionId: (id) => rememberSectionChat(section.key, id) }),
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });

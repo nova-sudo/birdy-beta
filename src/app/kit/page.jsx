@@ -36,7 +36,7 @@ const STATUS = [
   ["Success", "bg-by-success-bg text-by-success", "bg-by-success-solid"],
 ];
 const SECTIONS = [
-  ["Agency Ops", "bg-by-ops-bg text-by-ops", "bg-by-ops"],
+  ["Birdy", "bg-by-ops-bg text-by-ops", "bg-by-ops"],
   ["Media Buyer", "bg-by-buyer-bg text-by-buyer", "bg-by-buyer"],
   ["Sales Coach", "bg-by-coach-bg text-by-coach", "bg-by-coach"],
   ["Clients", "bg-by-clients-bg text-by-clients", "bg-by-clients"],

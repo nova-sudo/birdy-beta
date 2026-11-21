@@ -3,13 +3,14 @@ import { cn } from "./cn";
 
 /**
  * The line over a reply: Birdy in its frame, who is speaking, and an optional note.
- * @param {string} props.name e.g. "Agency Ops"
+ * @param {string} props.name e.g. "Birdy"
  * @param {React.ReactNode} [props.note] e.g. the time, or the tools used
+ * @param {React.ReactNode} [props.avatar] another agent's face (32px); Birdy in its frame when left out
  */
-export function ChatSender({ name, note, className, ...props }) {
+export function ChatSender({ name, note, avatar, className, ...props }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-2 font-by-body", className)} {...props}>
-      <BirdyAvatar size={32} />
+      {avatar ?? <BirdyAvatar size={32} />}
       <b className="font-by-display text-by-body-lg font-semibold text-by-text">{name}</b>
       {note && <span className="text-by-body-sm text-by-muted">{note}</span>}
     </div>

@@ -3,7 +3,7 @@
 // The conversation list the backend serves (`/api/chat/conversations`) says
 // which agent each thread is with (`agent`). Older rows have none; for those,
 // each section remembers in this browser the conversations it started, and
-// lists those. Agency Ops (Birdy) lists Birdy's rows and every row without an
+// lists those. The Birdy section lists Birdy's rows and every row without an
 // agent, as it always has.
 
 const KEY = "by_section_chats";

@@ -1,33 +1,30 @@
-// Setup (/welcome), in funnel order: Agency Ops first, then Media Buyer, then
-// Sales Coach. Every step's state is worked out from what the account really
-// has (connections, clients, targets, the answers saved with
-// /api/onboarding/state), never from a flag kept in the browser. A section
-// stays locked until the one before it is set up.
+// Birdy's own setup (/welcome), before the agents interview the owner (those
+// live in lib/team-setup). Every step's state is worked out from what the
+// account really has (connections, clients, targets, the answers saved with
+// /api/onboarding/state), never from a flag kept in the browser.
 
-import { isActive } from "./client-status"
-
-/** @typedef {"ops"|"buyer"|"coach"} SetupSection */
+/** @typedef {"ops"|"buyer"|"coach"|"subs"} SetupSection */
 /** @typedef {"todo"|"setup"|"issue"|"done"} StepState */
 
-/** The checklist, in order. `section`: whose setup chat asks it. */
+/** Birdy's checklist, in order. */
 export const STEPS = [
-  { id: "basics", section: "ops", label: "Agency basics" },
-  { id: "meta", section: "ops", label: "Connect Meta" },
-  { id: "ghl", section: "ops", label: "Connect GoHighLevel" },
-  { id: "calling", section: "ops", label: "Calling: GoHighLevel or Hot Prospector" },
-  { id: "client", section: "ops", label: "Your first client" },
-  { id: "targets", section: "ops", label: "Targets" },
-  { id: "slack", section: "ops", label: "Slack: alerts and reports" },
-  { id: "import", section: "ops", label: "The rest of your clients" },
-  { id: "cpl", section: "buyer", label: "Media Buyer: CPL limits per client" },
+  { id: "basics", label: "Agency basics" },
+  { id: "meta", label: "Connect Meta" },
+  { id: "ghl", label: "Connect GoHighLevel" },
+  { id: "calling", label: "Calling: GoHighLevel or Hot Prospector" },
+  { id: "client", label: "Your first client" },
+  { id: "targets", label: "Targets" },
+  { id: "slack", label: "Slack: alerts and reports" },
+  { id: "import", label: "The rest of your clients" },
 ]
 
-export const SECTION_ORDER = ["ops", "buyer", "coach"]
+export const SECTION_ORDER = ["ops", "buyer", "coach", "subs"]
 
-/** `?s=` on /welcome: the reference's names (birdy, mb, sales) and the rail's ids both work. */
+/** `?s=` on /welcome: the reference's names (birdy, mb, sales), the rail's ids and the server's agent keys all work. */
 export function sectionParam(value) {
-  if (value === "mb" || value === "buyer") return "buyer"
-  if (value === "sales" || value === "coach") return "coach"
+  if (value === "mb" || value === "buyer" || value === "media_buyer") return "buyer"
+  if (value === "sales" || value === "coach" || value === "sales_coach") return "coach"
+  if (value === "subs" || value === "sub_agents") return "subs"
   return "ops"
 }
 
@@ -43,12 +40,6 @@ const filled = (v) => v !== null && v !== undefined && v !== ""
 export function hasAnyTarget(targets) {
   if (!targets) return false
   return TARGET_FIELDS.some((field) => filled(targets[field]))
-}
-
-/** A client's cost-per-lead limit, or null when it has none. */
-export function cplOf(group) {
-  const v = Number(group?.targets?.cpl)
-  return filled(group?.targets?.cpl) && Number.isFinite(v) && v > 0 ? v : null
 }
 
 /**
@@ -124,7 +115,6 @@ export function deriveSteps(facts) {
   const onboarding = facts.onboarding || {}
   const data = onboarding.data || {}
   const clients = facts.clients || []
-  const active = clients.filter(isActive)
   const b = basicsOf(facts.onboarding)
   const fb = facts.status?.facebook || {}
   const ghl = facts.status?.gohighlevel?.agency || {}
@@ -145,63 +135,12 @@ export function deriveSteps(facts) {
     ? slack.needs_reconnect ? "issue" : slack.notify_channel_id || data.slack ? "done" : "setup"
     : "todo"
   const importState = clients.length >= 2 || data.wants_sync === false || onboarding.completed ? "done" : "todo"
-  const withCpl = active.filter((g) => cplOf(g) !== null).length
-  const cpl = active.length > 0 && withCpl === active.length ? "done" : withCpl > 0 ? "setup" : "todo"
-
-  return { basics, meta, ghl: ghlState, calling, client, targets, slack: slackState, import: importState, cpl }
+  return { basics, meta, ghl: ghlState, calling, client, targets, slack: slackState, import: importState }
 }
-
-/** A section is set up when all its steps are. Sales Coach has none of its own yet. */
-export const sectionDone = (steps, section) => STEPS.filter((s) => s.section === section).every((s) => steps[s.id] === "done")
-
-/** Agency Ops is always open; Media Buyer opens once Agency Ops is set up, Sales Coach once Media Buyer is. */
-export function unlocked(steps, section) {
-  if (section === "buyer") return sectionDone(steps, "ops")
-  if (section === "coach") return sectionDone(steps, "ops") && sectionDone(steps, "buyer")
-  return true
-}
-
-/** The section a locked one waits on. */
-export const waitsOn = (section) => (section === "coach" ? "buyer" : "ops")
 
 export const pctDone = (steps) => Math.round((STEPS.filter((s) => steps[s.id] === "done").length / STEPS.length) * 100)
 export const allDone = (steps) => STEPS.every((s) => steps[s.id] === "done")
 export const stepsLeft = (steps) => STEPS.filter((s) => steps[s.id] !== "done").length
 
-/** The first step of a section that isn't done, or null. */
-export const nextStep = (steps, section) => STEPS.find((s) => s.section === section && steps[s.id] !== "done")?.id ?? null
-
-/** The CPL limit most active clients already share, to suggest it; null when none has one. */
-export function commonCpl(clients) {
-  const counts = new Map()
-  for (const g of (clients || []).filter(isActive)) {
-    const v = cplOf(g)
-    if (v !== null) counts.set(v, (counts.get(v) || 0) + 1)
-  }
-  let best = null
-  for (const [v, n] of counts) if (best === null || n > counts.get(best)) best = v
-  return best
-}
-
-/**
- * Which CPL limits to write. `edits` maps a client id to the limit typed for
- * it; every other active client without a limit gets `all`. A limit someone
- * already set is only changed when it was edited here. Anything that isn't a
- * positive number is skipped.
- * @returns {{id: string, cpl: number}[]}
- */
-export function cplWrites(clients, all, edits = {}) {
-  const valid = (v) => {
-    const n = Number(String(v ?? "").trim())
-    return String(v ?? "").trim() !== "" && Number.isFinite(n) && n > 0 && n < 100000 ? n : null
-  }
-  const fallback = valid(all)
-  const out = []
-  for (const g of (clients || []).filter(isActive)) {
-    const own = cplOf(g)
-    const edited = g.id in edits ? valid(edits[g.id]) : null
-    const next = edited ?? (own === null ? fallback : null)
-    if (next !== null && next !== own) out.push({ id: g.id, cpl: next })
-  }
-  return out
-}
+/** The first step that isn't done, or null. */
+export const nextStep = (steps) => STEPS.find((s) => steps[s.id] !== "done")?.id ?? null

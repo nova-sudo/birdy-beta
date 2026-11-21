@@ -1,4 +1,4 @@
-// The three agent sections that share one set of screens: Agency Ops, Media
+// The three agent sections that share one set of screens: Birdy, Media
 // Buyer and Sales Coach. Each one is the same four tabs (Chat, Bird's Eye,
 // Dashboard, Suggestions); what differs lives here, so the screens read it
 // instead of being copied three times.
@@ -35,7 +35,7 @@ export const SECTION_CONFIG = {
     key: "ops",
     kit: kit("ops"),
     paths: { chat: "/dashboard/chat", birdseye: "/dashboard", dashboard: "/dashboard/table", suggestions: "/dashboard/suggestions", context: "/dashboard/context", reports: "/dashboard/reports" },
-    // Agency Ops' chat goes out with no page of its own (Birdy with every tool), addressed to Birdy.
+    // The Birdy section's chat goes out with no page of its own (every tool), addressed to Birdy.
     chat: { page: null, agent: "birdy", session: "ops", starters: "dashboard" },
     hello: "Ask about your clients, campaigns, leads or calls.",
     askAbout: "these numbers",

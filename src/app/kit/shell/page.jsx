@@ -29,6 +29,8 @@ export default function KitShellPage() {
         activeId={sectionId}
         onSelect={(id) => { if (id !== "settings") setSectionId(id); }}
         counts={COUNTS}
+        // A section whose agent isn't set up yet shows a lock.
+        locks={{ coach: true }}
         credits={{ left: 4359, percent: 44 }}
         user={{ name: "Hadley" }}
         setup={<SetupRing percent={44} onOpen={() => setNote("Opened the setup checklist")} />}
