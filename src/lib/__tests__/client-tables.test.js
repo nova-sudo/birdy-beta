@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
+import { adLeadRow, adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
 
 const contact = (over = {}) => ({ contactId: "c1", contactName: "Leanne Turner", dateAdded: "2026-11-04T18:31:00Z", source: "Facebook", opportunities: [], ...over })
 
@@ -148,5 +148,51 @@ describe("adLevelRows", () => {
   it("copes with no roll-up yet and with a client that has no ad sets", () => {
     expect(adLevelRows(group, undefined, "campaigns")[0]).toMatchObject({ inCrm: 0, closed: 0 })
     expect(adLevelRows({ facebook: {} }, rollup, "adsets")).toEqual([])
+  })
+})
+
+describe("adLeadRow", () => {
+  const lead = (over = {}) => ({
+    lead_id: "L1", full_name: "Leanne Turner", ad_id: "a1", ad_name: "Timelapse", adset_id: "s1", campaign_id: "c1", campaign_name: "Body Sculpt",
+    client_group_id: "g1", group_name: "Old name", created_time: "2026-11-04T18:31:00Z", lead_source: "instant_form",
+    ghl_matched: false, ghl_tags: [], ghl_opportunity_status: "", ghl_opportunity_value: 0, ...over,
+  })
+
+  it("shapes a lead like the Leads table's rows, with the ad it came from", () => {
+    expect(adLeadRow(lead())).toMatchObject({
+      id: "L1", name: "Leanne Turner", campaign: "Body Sculpt", ad: "Timelapse", source: "Meta instant form",
+      added: "2026-11-04T18:31:00Z", groupId: "g1", campaignId: "c1", adsetId: "s1", adId: "a1",
+    })
+  })
+
+  it("puts it in a stage from the CRM's view of it, never Called, which this source can't tell", () => {
+    expect(adLeadRow(lead()).stage).toBe("new")
+    expect(adLeadRow(lead({ ghl_matched: true, ghl_opportunity_status: "open" })).stage).toBe("crm")
+    expect(adLeadRow(lead({ ghl_matched: true, ghl_opportunity_status: "won", ghl_opportunity_value: "349" }))).toMatchObject({ stage: "closed", value: 349, statuses: ["won"] })
+    expect(adLeadRow(lead({ ghl_matched: true, ghl_opportunity_status: "abandoned" })).stage).toBe("lost")
+    expect(adLeadRow(lead()).calls).toBeNull()
+  })
+
+  it("only opens a CRM contact when the lead is one", () => {
+    expect(adLeadRow(lead()).contactId).toBeNull()
+    expect(adLeadRow(lead({ lead_source: "ghl_attribution", lead_id: "ghl-9", ghl_matched: true })).contactId).toBe("ghl-9")
+    // An instant-form lead matched in the CRM opens the contact it was matched to.
+    expect(adLeadRow(lead({ ghl_matched: true, ghl_contact_id: "ghl-4" })).contactId).toBe("ghl-4")
+  })
+
+  it("works with the Leads table's filters", () => {
+    const rows = [adLeadRow(lead({ ghl_tags: ["hot"] })), adLeadRow(lead({ lead_id: "L2", lead_source: "ghl_attribution", ghl_matched: true }))]
+    expect(leadFilterOptions(rows).source).toEqual(["CRM form", "Meta instant form"])
+    expect(filterLeads(rows, { tag: ["hot"] }).map((r) => r.id)).toEqual(["L1"])
+    expect(leadCounts(rows)).toMatchObject({ all: 2, new: 1, crm: 1 })
+  })
+})
+
+describe("adLevelRows ids", () => {
+  it("carries the campaign and ad set each row sits under", () => {
+    const group = { facebook: { campaigns: [{ id: "c1", name: "C", spend: 1 }], adsets: [{ id: "s1", name: "S", campaign_id: "c1", spend: 1 }], ads: [{ id: "a1", name: "A", campaign_id: "c1", adset_id: "s1", spend: 1 }] } }
+    expect(adLevelRows(group, {}, "campaigns")[0]).toMatchObject({ campaignId: "c1", adsetId: "" })
+    expect(adLevelRows(group, {}, "adsets")[0]).toMatchObject({ campaignId: "c1", adsetId: "s1" })
+    expect(adLevelRows(group, {}, "ads")[0]).toMatchObject({ campaignId: "c1", adsetId: "s1" })
   })
 })

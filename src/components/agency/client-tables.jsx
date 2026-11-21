@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
 import {
   Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
@@ -16,6 +16,8 @@ const STAGE = {
   called: { label: "Called", tone: "warning", icon: <Phone /> },
   closed: { label: "Closed", tone: "success", icon: <Check /> },
   lost: { label: "Lost", tone: "neutral", icon: null },
+  // Only ad-attributed leads have it: from an ad, never matched to the CRM.
+  new: { label: "Not in CRM", tone: "neutral", icon: <CircleDashed /> },
 };
 const OUTCOME = { answered: { label: "Answered", tone: "success" }, none: { label: "No answer", tone: "neutral" } };
 
@@ -24,7 +26,7 @@ const OUTCOME = { answered: { label: "Answered", tone: "success" }, none: { labe
  * The Leads table's filters in one menu: Source, Type, Opportunity and Tag.
  * Several values can be ticked in each; the menu stays open while choosing.
  */
-function LeadFilters({ options, chosen, onChange }) {
+export function LeadFilters({ options, chosen, onChange }) {
   const total = Object.values(chosen).reduce((n, list) => n + list.length, 0);
   const groups = LEAD_FILTERS.filter((f) => options[f.id]?.length);
   const toggle = (id, value) => {
@@ -79,15 +81,25 @@ const LEAD_COLUMNS = [
 
 /**
  * A client's leads: tabs by how far each got, search, and where each came from.
- * @param {{rows: object[], total: number|null, loading: boolean, error: boolean, retry: () => void}} props.data
+ * Media Buyer's agency table reuses it for its Leads level, with its own controls around it.
+ *
+ * @param {{rows: object[], total: number|null, loading: boolean, error: boolean, retry: () => void, capped?: string}} props.data
+ * @param {boolean} [props.showClient] a Client column, for leads across the agency (rows carry `client`)
+ * @param {boolean} [props.stageTabs] the stage tabs; off where the toolbar already has a level switch
+ * @param {boolean} [props.calls] the Calls column; off when the rows don't say whether a lead was called
+ * @param {boolean} [props.columnsMenu] the menu that hides columns; off where the toolbar has no room for it
+ * @param {React.ReactNode} [props.toolbarStart] drawn first in the toolbar
+ * @param {React.ReactNode} [props.toolbarEnd] drawn beside the search, before the filters
+ * @param {React.ReactNode} [props.toolbarBelow] a full-width line under the toolbar's controls
+ * @param {{title: string, body: string}} [props.empty] what to say when there are no leads
  */
-export function LeadsTable({ data, currencySymbol = "£" }) {
+export function LeadsTable({ data, currencySymbol = "£", showClient = false, stageTabs = true, calls = true, columnsMenu = true, toolbarStart, toolbarEnd, toolbarBelow, empty }) {
   const router = useRouter();
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ id: "added", dir: "desc" });
   const [filters, setFilters] = useState({});
-  const columns = useColumns(LEAD_COLUMNS);
+  const columns = useColumns(calls ? LEAD_COLUMNS : LEAD_COLUMNS.filter((c) => c.id !== "calls"));
   const fmt = money(currencySymbol);
 
   const options = useMemo(() => leadFilterOptions(data.rows), [data.rows]);
@@ -95,36 +107,43 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
   const filtered = useMemo(() => filterLeads(data.rows, filters), [data.rows, filters]);
   const counts = useMemo(() => leadCounts(filtered), [filtered]);
   const rows = useMemo(
-    () => sortBy(searchBy(filtered.filter((r) => tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source"]), sort),
-    [filtered, tab, query, sort],
+    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source", "client"]), sort),
+    [filtered, stageTabs, tab, query, sort],
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
-  const open = (row) => row.id && router.push(`/contacts/${encodeURIComponent(row.id)}`);
-  const capped = data.total != null && data.total > data.rows.length;
+  const contactOf = (row) => (row.contactId === undefined ? row.id : row.contactId);
+  const open = (row) => contactOf(row) && router.push(`/contacts/${encodeURIComponent(contactOf(row))}`);
+  const capped = data.capped || (data.total != null && data.total > data.rows.length ? `Showing the newest ${data.rows.length.toLocaleString("en-GB")} of ${data.total.toLocaleString("en-GB")} leads.` : "");
 
   return (
     <TableCard
       toolbar={
         <>
-          <TabPill
-            aria-label="Leads by stage"
-            value={tab}
-            onValueChange={setTab}
-            items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
-          />
+          {toolbarStart}
+          {stageTabs && (
+            <TabPill
+              aria-label="Leads by stage"
+              value={tab}
+              onValueChange={setTab}
+              items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
+            />
+          )}
           <div className="ml-auto flex items-center gap-2.5">
-            <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className="w-52" />
+            <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className={toolbarStart ? "w-44" : "w-52"} />
+            {toolbarEnd}
             <LeadFilters options={options} chosen={filters} onChange={setFilters} />
-            {columns.menu}
+            {columnsMenu && columns.menu}
           </div>
+          {toolbarBelow}
         </>
       }
-      state={tableState({ data, shown: rows.length, noun: "leads", icon: <Users />, empty: { title: "No leads in this range", body: "Leads appear here once they reach the CRM. Try a longer date range." } })}
+      state={tableState({ data, shown: rows.length, noun: "leads", icon: <Users />, empty: empty ?? { title: "No leads in this range", body: "Leads appear here once they reach the CRM. Try a longer date range." } })}
     >
       <Table>
         <TableHead>
           <tr>
             <Th {...header("name", "asc")} className="min-w-44">Name</Th>
+            {showClient && <Th {...header("client", "asc")}>Client</Th>}
             {columns.shows("stage") && <Th>Stage</Th>}
             {columns.shows("from") && <Th>Came from</Th>}
             {columns.shows("added") && <Th {...header("added")}>Added</Th>}
@@ -135,10 +154,12 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
         </TableHead>
         <TableBody>
           {rows.map((row) => {
-            const stage = STAGE[row.stage];
+            const stage = STAGE[row.stage] ?? STAGE.crm;
+            const opens = Boolean(contactOf(row));
             return (
-              <Tr key={row.id} interactive onClick={() => open(row)}>
+              <Tr key={row.id} interactive={opens} onClick={opens ? () => open(row) : undefined}>
                 <Td className="max-w-64 truncate font-semibold" title={row.name}>{row.name}</Td>
+                {showClient && <Td className={`max-w-48 truncate ${row.client ? "text-by-text-2" : "text-by-muted"}`} title={row.client}>{row.client || "—"}</Td>}
                 {columns.shows("stage") && (
                   <Td>
                     <span className="flex items-center gap-2">
@@ -161,13 +182,13 @@ export function LeadsTable({ data, currencySymbol = "£" }) {
                 {columns.shows("added") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.added)}</Td>}
                 {columns.shows("calls") && <Td numeric className={row.calls ? "" : "text-by-muted"}>{row.calls || "None"}</Td>}
                 {columns.shows("value") && <Td numeric className={row.value ? "" : "text-by-muted"}>{row.value ? fmt(row.value) : "—"}</Td>}
-                <RowArrow />
+                {opens ? <RowArrow /> : <Td aria-hidden="true" className="w-9" />}
               </Tr>
             );
           })}
         </TableBody>
       </Table>
-      {capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">Showing the newest {data.rows.length.toLocaleString("en-GB")} of {data.total.toLocaleString("en-GB")} leads.</p>}
+      {capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{capped}</p>}
     </TableCard>
   );
 }

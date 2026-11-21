@@ -24,6 +24,8 @@ export function leadRow(contact) {
   const meta = contact.meta_enrichment ?? {};
   return {
     id: contact.contactId,
+    // The CRM contact the row opens.
+    contactId: contact.contactId,
     name: contact.contactName || "Unknown",
     stage,
     // What the CRM says about it, beside the stage: the pipeline stage's name where the CRM gives one.
@@ -44,8 +46,45 @@ export function leadRow(contact) {
 /** How many leads sit in each stage, plus the total. */
 export function leadCounts(rows) {
   const counts = { all: rows.length, crm: 0, called: 0, closed: 0, lost: 0 };
-  for (const row of rows) counts[row.stage] += 1;
+  for (const row of rows) counts[row.stage] = (counts[row.stage] ?? 0) + 1;
   return counts;
+}
+
+/** What `lead_source` on an ad-attributed lead means, in words. */
+export const AD_LEAD_SOURCES = { instant_form: "Meta instant form", ghl_attribution: "CRM form", tracker: "Tracked form" };
+
+/**
+ * One row of the Leads table, from an ad-attributed lead of `/api/facebook-leads/filtered`
+ * (the leads the Marketing Hub listed): the same shape as `leadRow`, plus the ad it came from.
+ *
+ * That endpoint does not say whether a lead was called, so `calls` is null rather than zero and
+ * no lead is put in the Called stage. A lead the CRM never matched is `new`: from the ad, not in the CRM.
+ * It only names the CRM contact for leads GoHighLevel itself attributed, so only those open one.
+ */
+export function adLeadRow(lead) {
+  const status = String(lead.ghl_opportunity_status ?? "").toLowerCase();
+  const stage = status === "won" ? "closed" : status === "lost" || status === "abandoned" ? "lost" : lead.ghl_matched ? "crm" : "new";
+  return {
+    id: String(lead.lead_id ?? ""),
+    // The CRM contact this lead opens: the matched contact where the API gives one, else a CRM-form lead's own id.
+    contactId: lead.ghl_contact_id ? String(lead.ghl_contact_id) : lead.lead_source === "ghl_attribution" && lead.lead_id ? String(lead.lead_id) : null,
+    name: String(lead.full_name ?? "").trim() || "Unknown",
+    stage,
+    stageNote: "",
+    campaign: lead.campaign_name || "",
+    ad: lead.ad_name || "",
+    source: AD_LEAD_SOURCES[lead.lead_source] ?? (lead.lead_source || ""),
+    tags: Array.isArray(lead.ghl_tags) ? lead.ghl_tags.filter(Boolean).map(String) : [],
+    type: "",
+    statuses: status ? [status] : [],
+    added: lead.created_time || lead.ghl_date_added || "",
+    calls: null,
+    value: num(lead.ghl_opportunity_value),
+    groupId: String(lead.client_group_id ?? ""),
+    campaignId: String(lead.campaign_id ?? ""),
+    adsetId: String(lead.adset_id ?? ""),
+    adId: String(lead.ad_id ?? ""),
+  };
 }
 
 /** The four ways the Leads table can be narrowed, in menu order. Each lists the values present in the loaded leads. */
@@ -102,6 +141,9 @@ export function adLevelRows(group, rollup = {}, level = "ads") {
       return {
         id: String(item.id),
         name: item.name || `Unnamed ${spec.noun.toLowerCase()}`,
+        // What it sits under, by id, for narrowing one level to a row of the level above.
+        campaignId: level === "campaigns" ? String(item.id) : String(item.campaign_id ?? ""),
+        adsetId: level === "ads" ? String(item.adset_id ?? "") : level === "adsets" ? String(item.id) : "",
         parent: level === "campaigns" ? "" : campaigns.get(String(item.campaign_id)) ?? "",
         // Kept under its old name too: the search and older callers read `campaign`.
         campaign: level === "campaigns" ? "" : campaigns.get(String(item.campaign_id)) ?? "",
