@@ -30,10 +30,10 @@ const ICON_TONE = { danger: "bg-by-danger-bg text-by-danger", warning: "bg-by-wa
 /**
  * A section's Suggestions tab: what it suggests doing, most impact first,
  * each with "Do it for me" and Dismiss, and the history of what was done or dismissed.
- * Agency Ops lists every suggestion; Media Buyer and Sales Coach list their own.
+ * Birdy lists every suggestion; Media Buyer and Sales Coach list their own.
  * With `?client=<id>` only that client's suggestions and history show.
  *
- * @param {import("./sections").SectionConfig} [props.section] Agency Ops when left out
+ * @param {import("./sections").SectionConfig} [props.section] Birdy when left out
  */
 export function SuggestionsTab({ section: which }) {
   const section = resolveSection(which);

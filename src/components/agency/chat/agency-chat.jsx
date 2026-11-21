@@ -27,10 +27,10 @@ const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", of
 /**
  * A section's Chat: saved conversations on the left, the open one on the right.
  * It talks to the same backend as the older Ask Birdy page, so the history is shared.
- * Each lists the conversations with its own agent (Agency Ops: Birdy, and older rows that name no agent),
+ * Each lists the conversations with its own agent (the Birdy section: Birdy, and older rows that name no agent),
  * and each asks its own agent with that section’s tools.
  *
- * @param {import("../sections").SectionConfig} [props.section] Agency Ops when left out
+ * @param {import("../sections").SectionConfig} [props.section] Birdy when left out
  */
 export function AgencyChat({ section: which }) {
   const section = resolveSection(which);
@@ -80,7 +80,7 @@ export function AgencyChat({ section: which }) {
   }, [ops, section.key]);
   const chat = useAgentChat({
     sessionKey: SESSION_KEY,
-    // Agency Ops sends no page (Birdy with every tool) and agent "birdy"; the other sections send theirs, and their agent.
+    // The Birdy section sends no page (Birdy with every tool) and agent "birdy"; the other sections send theirs, and their agent.
     page: section.chat.page,
     agent: section.chat.agent,
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
@@ -153,7 +153,7 @@ export function AgencyChat({ section: which }) {
 
   // Inside a client only that client's saved conversations are listed; in a section only that section's.
   const groups = useMemo(() => {
-    // Matched on each row's agent; rows without one fall back to what this browser remembers (Agency Ops keeps them all).
+    // Matched on each row's agent; rows without one fall back to what this browser remembers (Birdy keeps them all).
     const mine = conversationsFor(conversations, section.chat.agent, sectionChatIds(section.key));
     return groupConversations(clientId ? mine.filter((c) => c.scope === "client" && c.client_group_id === clientId) : mine);
     // activeId: a conversation that just started is remembered then, and listed on the next read.

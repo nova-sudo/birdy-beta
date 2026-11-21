@@ -18,7 +18,7 @@ const section = (id) => SECTIONS.find((s) => s.id === id)
 
 describe("sections", () => {
   it("keeps Creative Strategist off the rail", () => {
-    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Media Buyer", "Sales Coach", "Clients"])
+    expect(visibleSections().map((s) => s.name)).toEqual(["Birdy", "Media Buyer", "Sales Coach", "Clients"])
   })
 })
 
@@ -38,9 +38,16 @@ describe("Rail", () => {
     expect(screen.getByRole("button", { name: "Sales Coach" })).toBeInTheDocument()
   })
 
-  it("shows the mascot for Agency Ops inside its round frame", () => {
+  it("puts a lock on a section whose agent isn't set up, in place of its dot", () => {
+    render(<Rail activeId="ops" counts={{ coach: 3 }} locks={{ coach: true }} />)
+    const button = screen.getByRole("button", { name: "Sales Coach, locked" })
+    expect(button.querySelector("[data-lock]")).not.toBeNull()
+    expect(screen.getByRole("button", { name: "Media Buyer" }).querySelector("[data-lock]")).toBeNull()
+  })
+
+  it("shows the mascot for Birdy inside its round frame", () => {
     render(<Rail activeId="ops" />)
-    const frame = screen.getByRole("button", { name: "Agency Ops" }).querySelector(".rounded-full.overflow-hidden")
+    const frame = screen.getByRole("button", { name: "Birdy" }).querySelector(".rounded-full.overflow-hidden")
     expect(frame).not.toBeNull()
     expect(frame.querySelector("svg")).not.toBeNull()
   })
@@ -158,6 +165,12 @@ describe("SectionHeader", () => {
     expect(screen.getByRole("tablist", { name: "Media Buyer views" })).toBeInTheDocument()
   })
 
+  it("leaves the tab pill out when it has no tabs", () => {
+    render(<SectionHeader section={section("buyer")} subtitle="Setup" />)
+    expect(screen.getByRole("heading", { level: 1, name: "Media Buyer" })).toBeInTheDocument()
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
+  })
+
   it("shows the client when scoped", () => {
     render(<SectionHeader section={section("buyer")} subtitle="Aura · At risk" {...base} />)
     expect(screen.getByText("Aura · At risk")).toBeInTheDocument()
@@ -172,7 +185,7 @@ describe("SectionHeader", () => {
     expect(within(screen.getByRole("tablist")).getByRole("button", { name: "More" })).toBeInTheDocument()
   })
 
-  it("uses an icon tile for Agency Ops, not the mascot", () => {
+  it("uses an icon tile for Birdy, not the mascot", () => {
     const { container } = render(<SectionHeader section={section("ops")} {...base} />)
     expect(container.querySelector(".rounded-full.overflow-hidden")).toBeNull()
     expect(container.querySelector("header svg")).not.toBeNull()

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ReportsTab } from "@/components/agency/reports-tab";
 
-// One of Agency Ops' Slack reports.
+// One of Birdy's Slack reports.
 export default async function AgencyOpsReportPage({ params }) {
   const { report } = await params;
   return (

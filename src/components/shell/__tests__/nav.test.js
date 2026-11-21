@@ -50,7 +50,7 @@ describe("client paths", () => {
     expect(clientIdFromLocation(path, search)).toBe(id)
   })
 
-  it("reads the client from the path, or from Agency Ops' address, and from nowhere else", () => {
+  it("reads the client from the path, or from Birdy's address, and from nowhere else", () => {
     expect(clientIdFromLocation("/clients/abc", "")).toBe("abc")
     expect(clientIdFromLocation("/dashboard", "client=abc&range=last_30d")).toBe("abc")
     expect(clientIdFromLocation("/dashboard", "")).toBeNull()
@@ -69,7 +69,7 @@ describe("client paths", () => {
 })
 
 describe("isRebuilt", () => {
-  it("is true for the rebuilt pages only: the Clients list and Agency Ops, not a client's own page", () => {
+  it("is true for the rebuilt pages only: the Clients list and Birdy, not a client's own page", () => {
     expect(isRebuilt("/clients")).toBe(true)
     expect(isRebuilt("/dashboard")).toBe(true)
     expect(isRebuilt("/dashboard/chat")).toBe(true)

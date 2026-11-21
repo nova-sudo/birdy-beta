@@ -11,7 +11,7 @@ import { cn } from "./cn";
  * from its ask bar. The page narrows to make room; closing gives the room back.
  * It follows the newest message.
  *
- * @param {string} props.title who is answering, e.g. "Agency Ops"
+ * @param {string} props.title who is answering, e.g. "Birdy"
  * @param {() => void} props.onClose
  * @param {React.ReactNode} [props.actions] sits before the close button, e.g. "Open in Chat"
  * @param {number|string} [props.follow] changes whenever a message arrives, so the column scrolls to it

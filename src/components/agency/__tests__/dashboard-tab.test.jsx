@@ -46,30 +46,30 @@ beforeEach(() => {
   route.search = ""
 })
 
-describe("Agency Ops' Dashboard tab", () => {
-  it("is the Clients table under the Agency Ops header, with the date range and the ask bar", () => {
+describe("Birdy's Dashboard tab", () => {
+  it("is the Clients table under the Birdy header, with the date range and the ask bar", () => {
     render(<DashboardTab />)
     expect(list.props.viewKey).toBe("clients")
     // The same centred column as Bird's Eye.
     expect(list.props.column).toBe(true)
-    expect(screen.getByRole("heading", { level: 1, name: "Agency Ops" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Birdy" })).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true")
     expect(screen.getByText("the clients table")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Date range" })).toBeInTheDocument()
-    expect(screen.getByRole("textbox", { name: /Ask Agency Ops/ })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: /Ask Birdy/ })).toBeInTheDocument()
   })
 
   it("opens the conversation beside the table when a question is sent", async () => {
     render(<DashboardTab />)
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
-    await userEvent.type(screen.getByRole("textbox", { name: /Ask Agency Ops/ }), "Who is over their limit?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: /Ask Birdy/ }), "Who is over their limit?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_table", expect.objectContaining({ text: "Who is over their limit?", page: "dashboard" }), expect.any(Object))
-    expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Birdy conversation" })).toBeInTheDocument()
   })
 
   it("goes to the other tabs", async () => {
     render(<DashboardTab />)
-    await userEvent.click(within(screen.getByRole("tablist", { name: "Agency Ops views" })).getByRole("tab", { name: "Bird's Eye" }))
+    await userEvent.click(within(screen.getByRole("tablist", { name: "Birdy views" })).getByRole("tab", { name: "Bird's Eye" }))
     expect(push).toHaveBeenCalledWith("/dashboard")
   })
 })
@@ -108,9 +108,9 @@ describe("the Dashboard tab inside one client", () => {
   it("limits a question to this client, with a separate thread for each table", async () => {
     route.search = "client=a&view=calls"
     render(<DashboardTab />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about Aura's calls" }), "How many were answered?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Birdy about Aura's calls" }), "How many were answered?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_calls_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
-    expect(screen.getByRole("complementary", { name: "Agency Ops · Aura conversation" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Birdy · Aura conversation" })).toBeInTheDocument()
   })
 
   it("says so for a client that is not in the account", () => {

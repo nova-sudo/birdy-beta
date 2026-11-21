@@ -4,59 +4,15 @@ import * as React from "react"
 import { Pause, RefreshCw, TrendingDown, TriangleAlert } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { RULE_WORDS } from "@/lib/rule-copy"
 import { Input, SegmentedTabs, Switch } from "@/components/ds"
 
-/**
- * Each rule as a sentence. A part is either text or a param slot:
- * `{ key, label, money?, suffix? }`. `label` is the input's accessible name.
- */
+/** Each rule's words (lib/rule-copy) with its icon and chip colours. */
 export const RULE_COPY = {
-  pause_over_target: {
-    title: "Pause ads over target",
-    icon: Pause,
-    chip: "bg-danger-soft text-danger-ink",
-    parts: [
-      "After ",
-      { key: "patience_spend", label: "Spend before judging", money: true },
-      " or ",
-      { key: "patience_days", label: "Days before judging", suffix: "days" },
-      ", CPL over ",
-      { key: "cpl_multiple", label: "CPL multiple of target", suffix: "×", step: "0.1" },
-      " target, or 0 leads after ",
-      { key: "zero_lead_spend", label: "Spend with no leads", money: true },
-      ".",
-    ],
-  },
-  revive_winner: {
-    title: "Revive old winners",
-    icon: RefreshCw,
-    chip: "bg-success-soft text-success-ink",
-    parts: [
-      "After ",
-      { key: "min_paused_days", label: "Days paused", suffix: "days" },
-      " off, if it beat target, creative under ",
-      { key: "max_creative_age_days", label: "Max creative age in days", suffix: "days" },
-      " old.",
-    ],
-  },
-  flag_no_spend: {
-    title: "Flag no spend",
-    icon: TriangleAlert,
-    chip: "bg-warning-soft text-warning-ink",
-    parts: ["Live ad set with no spend for ", { key: "hours", label: "Hours with no spend", suffix: "hrs" }, "."],
-  },
-  flag_declining: {
-    title: "Flag declining performance",
-    icon: TrendingDown,
-    chip: "bg-warning-soft text-warning-ink",
-    parts: [
-      "CPL up ",
-      { key: "pct_rise", label: "CPL rise percent", suffix: "%" },
-      " week on week, with at least ",
-      { key: "min_leads", label: "Minimum leads", suffix: "leads" },
-      ".",
-    ],
-  },
+  pause_over_target: { ...RULE_WORDS.pause_over_target, icon: Pause, chip: "bg-danger-soft text-danger-ink" },
+  revive_winner: { ...RULE_WORDS.revive_winner, icon: RefreshCw, chip: "bg-success-soft text-success-ink" },
+  flag_no_spend: { ...RULE_WORDS.flag_no_spend, icon: TriangleAlert, chip: "bg-warning-soft text-warning-ink" },
+  flag_declining: { ...RULE_WORDS.flag_declining, icon: TrendingDown, chip: "bg-warning-soft text-warning-ink" },
 }
 
 const MODE_ITEMS = [

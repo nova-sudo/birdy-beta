@@ -64,7 +64,7 @@ beforeEach(() => {
   vi.mocked(apiRequest).mockImplementation(mockApi)
 })
 
-describe("Agency Ops › Reports", () => {
+describe("Birdy › Reports", () => {
   it("lists the account's Slack reports, each linking to its page, without writing anything", async () => {
     wrap(<SlackReportsList />)
     const list = await screen.findByRole("list", { name: "Your reports" })

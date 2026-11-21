@@ -17,7 +17,7 @@ const fetcher = async (url) => {
 };
 
 /**
- * Agency Ops' suggestions and what has been done, with the two actions.
+ * Birdy's suggestions and what has been done, with the two actions.
  *
  * Acting is immediate on screen and put back if the request fails. Both
  * actions go to the same endpoints the old Dashboard used.

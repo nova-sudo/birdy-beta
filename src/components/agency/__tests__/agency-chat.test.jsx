@@ -43,7 +43,7 @@ beforeEach(() => {
   })
 })
 
-describe("Agency Ops chat", () => {
+describe("Birdy chat", () => {
   it("opens on a new chat with a greeting, starters and the saved conversations in groups", async () => {
     render(<AgencyChat />)
     expect(screen.getByRole("tab", { name: "Chat" })).toHaveAttribute("aria-selected", "true")
@@ -58,13 +58,13 @@ describe("Agency Ops chat", () => {
 
   it("sends what is typed, about the whole agency", async () => {
     render(<AgencyChat />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "Why did closes drop?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Message Birdy" }), "Why did closes drop?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ text: "Why did closes drop?", page: null, clientGroupId: null }), expect.any(Object))
   })
 
   it("talks to Birdy", async () => {
     render(<AgencyChat />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "Who needs me?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Message Birdy" }), "Who needs me?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_agency", expect.objectContaining({ agent: "birdy" }), expect.any(Object))
   })
 
@@ -131,7 +131,7 @@ describe("Agency Ops chat", () => {
     expect(await within(list).findByText("Aura's CPL")).toBeInTheDocument()
     expect(within(list).queryByText("Which call centre is furthest behind?")).not.toBeInTheDocument()
     expect(within(list).queryByText("Best creatives this month")).not.toBeInTheDocument()
-    await userEvent.type(screen.getByRole("textbox", { name: "Message Agency Ops" }), "How are they doing?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Message Birdy" }), "How are they doing?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_chat_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
   })
 

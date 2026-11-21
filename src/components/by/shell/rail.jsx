@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, SlidersHorizontal } from "lucide-react";
+import { Ellipsis, Lock, SlidersHorizontal } from "lucide-react";
 import { cn } from "../cn";
 import { FOCUS_RING, LIFT, SELECTION } from "../motion";
 import { Tooltip } from "../tooltip";
@@ -11,11 +11,11 @@ import { SECTIONS, visibleSections } from "./sections";
 
 const TILE = cn("relative grid size-10 cursor-pointer place-items-center rounded-by-lg [&_svg]:size-[19px]", LIFT, FOCUS_RING);
 
-function SectionButton({ section, active, count, onSelect }) {
-  const waiting = count > 0 ? `${count} waiting` : null;
+function SectionButton({ section, active, count, locked, onSelect }) {
+  const waiting = locked ? "locked" : count > 0 ? `${count} waiting` : null;
   const Icon = section.icon;
   return (
-    <Tooltip side="right" label={waiting ? `${section.name} · ${waiting}` : section.name}>
+    <Tooltip side="right" label={waiting ? `${section.name} · ${locked ? "Locked until set up" : waiting}` : section.name}>
       <button
         type="button"
         aria-label={waiting ? `${section.name}, ${waiting}` : section.name}
@@ -32,7 +32,11 @@ function SectionButton({ section, active, count, onSelect }) {
         )}
       >
         {section.mascot ? <BirdyAvatar size={40} className="[&>svg]:origin-bottom [&>svg]:scale-[1.18]" /> : <Icon aria-hidden="true" />}
-        {count > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 size-2.5 rounded-full bg-by-accent ring-2 ring-by-rail" />}
+        {locked ? (
+          <span aria-hidden="true" data-lock="" className="absolute -right-1 -bottom-1 grid size-4.5 place-items-center rounded-full bg-by-surface text-by-muted shadow-by-card ring-1 ring-by-line [&>svg]:size-2.5">
+            <Lock strokeWidth={2.6} />
+          </span>
+        ) : count > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 size-2.5 rounded-full bg-by-accent ring-2 ring-by-rail" />}
       </button>
     </Tooltip>
   );
@@ -44,6 +48,7 @@ function SectionButton({ section, active, count, onSelect }) {
  * @param {string} props.activeId the open section's id, or "settings"
  * @param {(id: string) => void} [props.onSelect]
  * @param {Record<string, number>} [props.counts] open suggestions per section id; a dot shows when above zero
+ * @param {Record<string, boolean>} [props.locks] sections whose agent isn't set up yet; a lock shows instead of the dot
  * @param {React.ReactNode} [props.switcher] the ClientSwitcher
  * @param {{left: number, percent: number}} [props.credits]
  * @param {{name: string}} [props.user] shown as a plain avatar; ignored when `account` is given
@@ -52,7 +57,7 @@ function SectionButton({ section, active, count, onSelect }) {
  * @param {object[]} [props.sections] defaults to SECTIONS; disabled ones are skipped
  * @param {React.ReactNode} [props.setup] sits under the switcher while setup isn't finished: a SetupRing
  */
-export function Rail({ activeId, onSelect, counts = {}, switcher, credits, user, extra, account, sections = SECTIONS, setup, className, ...props }) {
+export function Rail({ activeId, onSelect, counts = {}, locks = {}, switcher, credits, user, extra, account, sections = SECTIONS, setup, className, ...props }) {
   return (
     <aside className={cn("flex w-17 shrink-0 flex-col items-center gap-3 border-r border-by-line bg-by-rail pt-4 pb-3.5", SELECTION, className)} {...props}>
       {switcher}
@@ -60,7 +65,7 @@ export function Rail({ activeId, onSelect, counts = {}, switcher, credits, user,
       <span aria-hidden="true" className="my-0.5 h-px w-8 bg-by-line" />
       <nav aria-label="Sections" className="flex flex-col items-center gap-3">
         {visibleSections(sections).map((section) => (
-          <SectionButton key={section.id} section={section} active={section.id === activeId} count={counts[section.id] ?? 0} onSelect={onSelect} />
+          <SectionButton key={section.id} section={section} active={section.id === activeId} count={counts[section.id] ?? 0} locked={Boolean(locks[section.id])} onSelect={onSelect} />
         ))}
       </nav>
       {extra}

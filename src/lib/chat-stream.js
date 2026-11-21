@@ -13,7 +13,8 @@
 import { apiRequest } from "@/lib/api"
 
 /** Statuses the caller handles itself (no AI key, out of credits): never retried on the other endpoint. */
-const PASS_THROUGH = new Set([402, 412])
+// 423: the agent is locked until it is set up; its body says which one it waits on.
+const PASS_THROUGH = new Set([402, 412, 423])
 
 /**
  * Splits a text/event-stream into events as chunks arrive. Chunks may cut an
@@ -104,7 +105,10 @@ export async function postChat(payload, { onRoute, signal } = {}) {
     return plainChat(body, signal)
   }
 
-  if (PASS_THROUGH.has(res.status)) return { ok: false, status: res.status, data: null, streamed: true }
+  if (PASS_THROUGH.has(res.status)) {
+    const data = res.status === 423 ? await res.json?.().catch(() => null) ?? null : null
+    return { ok: false, status: res.status, data, streamed: true }
+  }
   if (!res.ok) return plainChat(body, signal)
 
   // A server that ignores the stream route and answers with the JSON itself.

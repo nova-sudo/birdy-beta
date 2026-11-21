@@ -1,7 +1,7 @@
 // What the agent pages' Reports say about each report, from the server's own
 // records only.
 //
-// Agency Ops: the account's Slack reports (GET /api/slack-reports): the daily or
+// Birdy: the account's Slack reports (GET /api/slack-reports): the daily or
 // weekly brief and any report added since. Each has a trigger, a channel, an
 // on/off switch and its last run; the server keeps no list of past runs.
 //
@@ -17,7 +17,7 @@ import { clockWords, nextRun, safeZone, weekdaysWords, whenWords, zoneCity } fro
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// ─── Agency Ops: Slack reports ───────────────────────────────────────────────
+// ─── Birdy: Slack reports ───────────────────────────────────────────────
 
 /** The status pill for a Slack report: off, its last run's outcome, or waiting for its first. */
 export function slackStatus(report, now = new Date()) {

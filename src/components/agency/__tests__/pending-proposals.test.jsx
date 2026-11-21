@@ -80,7 +80,7 @@ describe("the Suggestions tab's count", () => {
     const { result } = renderHook(() => useSectionTabs(BUYER_SECTION))
     expect(result.current.find((t) => t.value === "suggestions").count).toBe(5)
   })
-  it("leaves Agency Ops counting suggestions only", () => {
+  it("leaves Birdy counting suggestions only", () => {
     const { result } = renderHook(() => useSectionTabs(OPS_SECTION))
     expect(result.current.find((t) => t.value === "suggestions").count).toBe(3)
   })

@@ -1,6 +1,6 @@
 "use client";
 
-// A section's views and where each one lives. Agency Ops, Media Buyer and
+// A section's views and where each one lives. Birdy, Media Buyer and
 // Sales Coach have the same four tabs; the addresses come from their config.
 
 import { useMemo } from "react";
@@ -18,7 +18,7 @@ export const OPS_TABS = [
 
 /**
  * The pages under the "More" menu at the end of the tab pill, in the reference's order. A section
- * lists only the ones it has an address for (sections.js `paths`): Reports for Agency Ops (the
+ * lists only the ones it has an address for (sections.js `paths`): Reports for Birdy (the
  * account's Slack reports) and Media Buyer (its agent's reports), Projections for Media Buyer only
  * (budget pacing), so the menu never leads to a page with nothing real on it.
  */
@@ -34,11 +34,11 @@ export const morePagesOf = (section = OPS_SECTION) => MORE_PAGES.filter((p) => s
 /**
  * A section's tabs, with the number of its open suggestions on the Suggestions tab. Media Buyer
  * and Sales Coach also count the proposals waiting for the owner's approval in their area.
- * @param {import("./sections").SectionConfig} [section] Agency Ops when left out
+ * @param {import("./sections").SectionConfig} [section] Birdy when left out
  */
 export function useSectionTabs(section = OPS_SECTION) {
   const ops = section === OPS_SECTION;
-  // Agency Ops counts every suggestion, as it always has; the others count their own.
+  // Birdy counts every suggestion, as it always has; the others count their own.
   const suggestions = useSuggestionCount(ops ? undefined : section.ownsSuggestion);
   const { proposals } = usePendingProposals(ops ? null : section.chat.agent);
   const waiting = proposals.length;
@@ -46,7 +46,7 @@ export function useSectionTabs(section = OPS_SECTION) {
   return useMemo(() => OPS_TABS.map((t) => (t.value === "suggestions" ? { ...t, count } : t)), [count]);
 }
 
-/** Agency Ops' tabs. */
+/** Birdy's tabs. */
 export const useOpsTabs = () => useSectionTabs(OPS_SECTION);
 
 /**
@@ -67,5 +67,5 @@ export function sectionTabHref(section, tab, search, extra = {}) {
   return `${section.paths[tab] ?? section.paths.birdseye}${query ? `?${query}` : ""}`;
 }
 
-/** The address of one of Agency Ops' tabs. */
+/** The address of one of Birdy's tabs. */
 export const opsTabHref = (tab, search) => sectionTabHref(OPS_SECTION, tab, search);

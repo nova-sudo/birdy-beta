@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useAiCredentials } from "@/hooks/useAiCredentials";
 import { useCredits } from "@/hooks/useCredits";
 import { markUISubmitted, sendChatMessage, updateProposal as storeProposal, useChat } from "@/lib/chat-store";
+import { lockedRefusal } from "@/lib/team-setup";
 
 /**
  * One conversation with Birdy, on the app's existing chat backend.
@@ -24,6 +25,9 @@ import { markUISubmitted, sendChatMessage, updateProposal as storeProposal, useC
  * Messages go out through the streaming endpoint, so while other agents help
  * with a reply `route` holds their live route (null otherwise). The finished
  * reply keeps its route on the message for the thread's route map.
+ *
+ * An agent that isn't set up yet refuses with 423; `locked` then holds
+ * {agent, waits_on} (null otherwise) and the message is taken back.
  */
 export function useAgentChat({ sessionKey, page = null, agent = null, client = null, onSessionId, onSettled }) {
   const chat = useChat(sessionKey);
@@ -31,6 +35,7 @@ export function useAgentChat({ sessionKey, page = null, agent = null, client = n
   // Until the check comes back, assume a key is there: the server still refuses a message sent without one.
   const configured = hasKey || checkingKey;
   const { blocked: outOfCredits, refresh: refreshCredits } = useCredits();
+  const [locked, setLocked] = useState(null);
 
   const send = useCallback(async (text) => {
     if (!text?.trim() || chat.loading) return false;
@@ -54,6 +59,7 @@ export function useAgentChat({ sessionKey, page = null, agent = null, client = n
           refreshCreds();
           toast.error("AI not configured", { description: "Add your AI key in Settings to chat." });
         },
+        on423: (body) => setLocked(lockedRefusal(body) ?? { agent: agent || null, waits_on: null }),
         on402: () => {
           refreshCredits?.();
           toast.error("You're out of Birdy Credits", { description: "Top up to keep using Birdy AI." });
@@ -78,6 +84,6 @@ export function useAgentChat({ sessionKey, page = null, agent = null, client = n
 
   return {
     messages: chat.messages, loading: chat.loading, sessionId: chat.sessionId, submittedUIs: chat.submittedUIs, route: chat.route ?? null,
-    send, submitUI, updateProposal, configured, outOfCredits,
+    send, submitUI, updateProposal, configured, outOfCredits, locked,
   };
 }

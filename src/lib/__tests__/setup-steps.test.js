@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
-  STEPS, allDone, basicsOf, buildTargetsPayload, callingTool, commonCpl, cplWrites, deriveSteps, hasAnyTarget, nextStep, pctDone, sectionDone,
-  sectionParam, stepsLeft, unlocked, waitsOn,
+  STEPS, allDone, basicsOf, buildTargetsPayload, callingTool, deriveSteps, hasAnyTarget, nextStep, pctDone, sectionParam, stepsLeft,
 } from "../setup-steps"
 
 const onboarding = (extra = {}, data = {}) => ({ completed: false, name: "Sam", agency_name: "Acme", default_currency: "GBP", data, ...extra })
@@ -64,37 +63,22 @@ describe("deriveSteps", () => {
     expect(deriveSteps({ ...empty, onboarding: onboarding({}, { wants_sync: false }) }).import).toBe("done")
     expect(deriveSteps({ ...empty, onboarding: onboarding({ completed: true }) }).import).toBe("done")
   })
-
-  it("needs a CPL limit on every active client, ignoring inactive ones", () => {
-    const clients = [client("a", { targets: { cpl: 5 } }), client("b"), client("c", { client_status: "Inactive" })]
-    expect(deriveSteps({ ...empty, clients }).cpl).toBe("setup")
-    expect(deriveSteps({ ...empty, clients: clients.filter((c) => c.id !== "b") }).cpl).toBe("done")
-  })
 })
 
-describe("sections", () => {
-  it("unlocks Media Buyer after Agency Ops, and Sales Coach after Media Buyer", () => {
-    const ops = { ...deriveSteps(FULL), cpl: "todo" }
-    expect(sectionDone(ops, "ops")).toBe(true)
-    expect(unlocked(ops, "buyer")).toBe(true)
-    expect(unlocked(ops, "coach")).toBe(false)
-    expect(unlocked(deriveSteps(FULL), "coach")).toBe(true)
-    expect(unlocked(deriveSteps(empty), "buyer")).toBe(false)
-    expect(waitsOn("coach")).toBe("buyer")
-  })
-
+describe("progress", () => {
   it("counts progress", () => {
     const steps = { ...deriveSteps(empty), basics: "done", meta: "done", ghl: "issue" }
     expect(pctDone(steps)).toBe(Math.round((2 / STEPS.length) * 100))
     expect(stepsLeft(steps)).toBe(STEPS.length - 2)
-    expect(nextStep(steps, "ops")).toBe("ghl")
-    expect(nextStep(deriveSteps(FULL), "ops")).toBeNull()
+    expect(nextStep(steps)).toBe("ghl")
+    expect(nextStep(deriveSteps(FULL))).toBeNull()
   })
 
   it("reads ?s= in either naming", () => {
     expect(["birdy", "ops", undefined, "x"].map(sectionParam)).toEqual(["ops", "ops", "ops", "ops"])
     expect(["mb", "buyer"].map(sectionParam)).toEqual(["buyer", "buyer"])
-    expect(["sales", "coach"].map(sectionParam)).toEqual(["coach", "coach"])
+    expect(["sales", "coach", "sales_coach"].map(sectionParam)).toEqual(["coach", "coach", "coach"])
+    expect(["subs", "sub_agents", "media_buyer"].map(sectionParam)).toEqual(["subs", "subs", "buyer"])
   })
 })
 
@@ -119,24 +103,5 @@ describe("answers", () => {
     expect(hasAnyTarget({ cpl: 0 })).toBe(true)
     expect(hasAnyTarget({ something_else: 3, cpa: "" })).toBe(false)
     expect(hasAnyTarget(null)).toBe(false)
-  })
-})
-
-describe("CPL limits", () => {
-  const clients = [client("a", { targets: { cpl: 6 } }), client("b", { targets: { cpl: 6 } }), client("c", { targets: { cpl: 9 } }), client("d"), client("e", { client_status: "Inactive" })]
-
-  it("suggests the limit most clients share", () => {
-    expect(commonCpl(clients)).toBe(6)
-    expect(commonCpl([client("x")])).toBeNull()
-  })
-
-  it("gives the agency limit only to active clients without one", () => {
-    expect(cplWrites(clients, "7")).toEqual([{ id: "d", cpl: 7 }])
-  })
-
-  it("applies edits, leaves unchanged ones and skips nonsense", () => {
-    expect(cplWrites(clients, "7", { a: "6", c: "8.5", d: "abc" })).toEqual([{ id: "c", cpl: 8.5 }, { id: "d", cpl: 7 }])
-    expect(cplWrites(clients, "", { d: "" })).toEqual([])
-    expect(cplWrites(clients, "-2")).toEqual([])
   })
 })

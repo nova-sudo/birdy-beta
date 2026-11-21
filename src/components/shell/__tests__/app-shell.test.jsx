@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
+import { SWRConfig } from "swr"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
 
@@ -11,6 +12,8 @@ const credits = { status: { ok: true }, allowance: 1000, balance: 440, remaining
 const groups = { clientGroups: [], loading: false, error: null }
 const confirm = vi.fn(() => Promise.resolve(false))
 const clearSession = vi.fn()
+// What GET /api/team/setup answers; null makes it fail, so every agent reads as unlocked.
+const team = { body: null }
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams(route.search ?? "") }))
 // The dialogs are loaded lazily and are covered by their own tests.
@@ -20,7 +23,11 @@ vi.mock("@/hooks/useRole", () => ({ useRole: () => role }))
 vi.mock("@/lib/agents-api", () => ({ useAgentWorkCount: () => work.count }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ ...groups, refresh: vi.fn(), invalidate: vi.fn() }) }))
 vi.mock("@/components/ds", () => ({ confirm: (...args) => confirm(...args) }))
-vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(() => Promise.resolve({ ok: true })) }))
+vi.mock("@/lib/api", () => ({
+  apiRequest: vi.fn((url) => Promise.resolve(url === "/api/team/setup" && team.body
+    ? { ok: true, status: 200, json: async () => team.body }
+    : url === "/api/team/setup" ? { ok: false, status: 404, json: async () => ({ detail: "Not Found" }) } : { ok: true })),
+}))
 vi.mock("@/lib/session", () => ({ clearSession: () => clearSession() }))
 vi.mock("@/components/birdy/BirdyAvatar", () => ({ default: ({ size }) => <span data-testid="birdy" style={{ width: size }} /> }))
 
@@ -40,6 +47,7 @@ beforeEach(() => {
   role.isAdmin = false
   work.count = 8
   Object.assign(groups, { clientGroups: CLIENTS, loading: false, error: null })
+  team.body = null
   localStorage.setItem("user", JSON.stringify({ name: "Hadley", email: "hadley@agency.test", role: "user" }))
 })
 
@@ -51,7 +59,7 @@ describe("AppShell: the rail", () => {
   })
 
   it.each([
-    ["Agency Ops", "/dashboard"],
+    ["Birdy", "/dashboard"],
     ["Sales Coach", "/sales-coach"],
     ["Clients", "/clients"],
     ["Settings", "/settings"],
@@ -117,7 +125,7 @@ describe("AppShell: the client switcher", () => {
     expect(push).toHaveBeenCalledWith("/clients")
   })
 
-  it("follows the client Agency Ops is narrowed to, and returns to the whole agency there", async () => {
+  it("follows the client Birdy is narrowed to, and returns to the whole agency there", async () => {
     Object.assign(route, { pathname: "/dashboard", search: "client=a" })
     shell()
     await userEvent.click(screen.getByRole("button", { name: "Switch client, showing Aura" }))
@@ -160,7 +168,7 @@ describe("AppShell: the account menu", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Account menu, Hadley" }))
     await userEvent.click(await screen.findByRole("menuitem", { name: "Log out" }))
     await waitFor(() => expect(confirm).toHaveBeenCalledOnce())
-    expect(apiRequest).not.toHaveBeenCalled()
+    expect(apiRequest).not.toHaveBeenCalledWith("/api/logout", expect.anything())
     expect(localStorage.getItem("user")).not.toBeNull()
   })
 
@@ -172,5 +180,24 @@ describe("AppShell: the account menu", () => {
     await waitFor(() => expect(clearSession).toHaveBeenCalledOnce())
     expect(apiRequest).toHaveBeenCalledWith("/api/logout", { method: "POST" })
     expect(localStorage.getItem("user")).toBeNull()
+  })
+})
+
+describe("AppShell: agents that aren't set up", () => {
+  const agent = (status, extra = {}) => ({ status, waits_on: null, order: ["clients", "schedule"], steps: {}, current: null, known: [], values: {}, completed_at: null, ...extra })
+  const fresh = () => render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><AppShell><p>Page content</p></AppShell></SWRConfig>)
+
+  it("puts a lock on the rail for each locked agent", async () => {
+    team.body = { agents: { birdy: { status: "done" }, media_buyer: agent("open", { steps: { clients: true } }), sales_coach: agent("locked", { waits_on: "media_buyer" }), sub_agents: { status: "locked" } } }
+    fresh()
+    expect(await screen.findByRole("button", { name: "Sales Coach, locked" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Media Buyer, 8 waiting" })).toBeInTheDocument()
+  })
+
+  it("puts no locks on the rail when the team state can't be read", async () => {
+    fresh()
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/api/team/setup"))
+    expect(screen.getByRole("button", { name: "Sales Coach" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /locked/ })).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,6 @@
 // What Media Buyer's and Sales Coach's Bird's Eye show, worked out from the
 // client groups the app already loads. No React here: plain figures in,
-// what to draw out. Agency Ops' own Bird's Eye is in ./birds-eye.js.
+// what to draw out. Birdy's own Bird's Eye is in ./birds-eye.js.
 //
 // Media Buyer reads only the ads side (Meta spend, leads, cost per lead and
 // each client's limit); Sales Coach reads only the call side (the CRM funnel's
@@ -60,7 +60,7 @@ export function buyerTiles({ current, previous, preset, rows }) {
   ];
 }
 
-/** Which series Media Buyer's chart switches between. Inside a client it adds Closed, as Agency Ops does. */
+/** Which series Media Buyer's chart switches between. Inside a client it adds Closed, as Birdy does. */
 export const buyerChartKeys = (scoped) => (scoped ? ["leads", "spend", "cpl", "closes"] : ["leads", "spend", "cpl"]);
 
 /** The bands of the "Clients by cost per lead" card, in the order they are drawn. */

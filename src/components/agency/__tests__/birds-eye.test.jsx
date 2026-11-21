@@ -59,7 +59,7 @@ describe("Bird's Eye for the agency", () => {
   it("opens on the last 7 days for the whole agency, with a greeting and the biggest movement", () => {
     render(<BirdsEye />)
     expect(hook.args).toMatchObject({ preset: "last_7d", clientId: null, chartMetric: "leads" })
-    expect(screen.getByRole("heading", { level: 1, name: "Agency Ops" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Birdy" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/^Good (morning|afternoon|evening), Hadley\.$/)
     expect(screen.getByText("Last 7 days · 33 clients")).toBeInTheDocument()
     expect(screen.getByText("Closes are down 53% on the previous 7 days")).toBeInTheDocument()
@@ -76,7 +76,7 @@ describe("Bird's Eye for the agency", () => {
 
   it("opens the other tabs, and shows how many suggestions are open", async () => {
     render(<BirdsEye />)
-    const views = screen.getByRole("tablist", { name: "Agency Ops views" })
+    const views = screen.getByRole("tablist", { name: "Birdy views" })
     expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeEnabled()
     expect(within(views).getByRole("tab", { name: /^Suggestions/ })).toHaveTextContent("Suggestions5")
@@ -155,17 +155,17 @@ describe("Bird's Eye for the agency", () => {
 describe("Bird's Eye: asking a question", () => {
   it("opens the conversation beside the page only once a question is sent, and sends it about this page", async () => {
     render(<BirdsEye />)
-    expect(screen.queryByRole("complementary", { name: "Agency Ops conversation" })).not.toBeInTheDocument()
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about these numbers" }), "Why did closes drop?{Enter}")
+    expect(screen.queryByRole("complementary", { name: "Birdy conversation" })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Birdy about these numbers" }), "Why did closes drop?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_agency", expect.objectContaining({ text: "Why did closes drop?", page: "dashboard", clientGroupId: null }), expect.any(Object))
-    expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Birdy conversation" })).toBeInTheDocument()
   })
 
   it("shows the exchange in the column, offers the full Chat, and closes without losing the page", async () => {
     chatStore.state = { messages: [{ role: "user", content: "Why did closes drop?" }, { role: "assistant", content: "Fewer leads got a call." }], loading: false, sessionId: "s9", submittedUIs: [] }
     render(<BirdsEye />)
-    await userEvent.type(screen.getByRole("textbox", { name: /Ask Agency Ops/ }), "And leads?{Enter}")
-    const column = screen.getByRole("complementary", { name: "Agency Ops conversation" })
+    await userEvent.type(screen.getByRole("textbox", { name: /Ask Birdy/ }), "And leads?{Enter}")
+    const column = screen.getByRole("complementary", { name: "Birdy conversation" })
     expect(within(column).getByText("Why did closes drop?")).toBeInTheDocument()
     expect(within(column).getByText("Fewer leads got a call.")).toBeInTheDocument()
     await userEvent.click(within(column).getByRole("button", { name: "Open in Chat" }))
@@ -179,7 +179,7 @@ describe("Bird's Eye: asking a question", () => {
     route.search = "client=a"
     hook.result = result({ client: AURA, current: totals({ spend: 50, leads: 4, cpl: 12.5, closes: 1 }), previous: null })
     render(<BirdsEye />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about Aura" }), "How are they doing?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Birdy about Aura" }), "How are they doing?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_a", expect.objectContaining({ page: "client_detail", clientGroupId: "a", clientName: "Aura" }), expect.any(Object))
   })
 })

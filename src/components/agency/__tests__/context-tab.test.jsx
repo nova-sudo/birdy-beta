@@ -127,7 +127,7 @@ describe("a section's Context page", () => {
     expect(screen.getByRole("region", { name: "Sub-agents" })).toBeInTheDocument()
   })
 
-  it("has no sub-agents or lessons in Agency Ops", () => {
+  it("has no sub-agents or lessons in Birdy", () => {
     render(<ContextTab section="ops" />)
     expect(screen.queryByRole("region", { name: "Sub-agents" })).toBeNull()
     expect(screen.queryByRole("region", { name: "Lessons" })).toBeNull()

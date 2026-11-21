@@ -11,7 +11,7 @@ const BRIEF = {
   last_run: { at: "2026-11-20T07:30:00", status: "sent", key: "2026-11-20" },
 }
 
-describe("Slack reports, as Agency Ops' Reports shows them", () => {
+describe("Slack reports, as Birdy's Reports shows them", () => {
   it("says when a scheduled report next goes out, in the account's zone", () => {
     const v = slackReportView(BRIEF, { accountTz: "Europe/London", birdyChannel: "marketing", now: NOW })
     expect(v).toMatchObject({

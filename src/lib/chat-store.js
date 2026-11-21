@@ -161,7 +161,8 @@ export function markUISubmitted(sessionKey, uiKey) {
  * component unmounts; `handlers` (owned by whichever component initiated the
  * send) cover the fast failure paths that need component context.
  *
- * handlers: { on402, on412, onToolUsed, onSessionId, persistSession, onDashboardOps }
+ * handlers: { on402, on412, on423, onToolUsed, onSessionId, persistSession, onDashboardOps }
+ * on423 gets the refusal's body ({detail: {code: "agent_locked", agent, waits_on}}) when the agent isn't set up yet.
  *
  * The "My dashboards" page also passes `dashboardId` and `getSummary` (a
  * function, called at send time so the backend sees the live doc, unsaved
@@ -248,6 +249,16 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
     }
     if (res.status === 402) {
       handlers.on402?.()
+      chat().messages = chat().messages.slice(0, -1)
+      return
+    }
+    if (res.status === 423 && handlers.on423) {
+      let body = res.data ?? null
+      if (!body && res.raw) body = await res.raw.json?.().catch(() => null) ?? null
+      if (!body && typeof res.text === "string") {
+        try { body = JSON.parse(res.text) } catch { body = null }
+      }
+      handlers.on423?.(body)
       chat().messages = chat().messages.slice(0, -1)
       return
     }

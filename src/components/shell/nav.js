@@ -75,7 +75,7 @@ export function clientIdFromLocation(pathname, search = "") {
   return new URLSearchParams(search).get("client") || null;
 }
 
-/** The page for one client: Agency Ops' Bird's Eye, narrowed to that client. */
+/** The page for one client: Birdy's Bird's Eye, narrowed to that client. */
 export const clientHref = (id) => `${DESTINATIONS.ops}?client=${encodeURIComponent(id)}`;
 
 /**
@@ -86,7 +86,7 @@ export const clientHref = (id) => `${DESTINATIONS.ops}?client=${encodeURICompone
  */
 export function clientHrefFrom(pathname, id) {
   const base = sectionBase(pathname);
-  // Context is the same page with or without a client, Agency Ops' included.
+  // Context is the same page with or without a client, Birdy's included.
   const stays = base && isRebuilt(pathname) && (base !== DESTINATIONS.ops || pathname === `${base}/context`);
   if (!stays) return clientHref(id);
   return `${pathname}?client=${encodeURIComponent(id)}`;

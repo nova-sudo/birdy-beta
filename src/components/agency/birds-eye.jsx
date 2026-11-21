@@ -37,7 +37,7 @@ const NOTE_TONE = { bad: "text-by-danger", good: "text-by-success" };
 const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
 
 /**
- * Agency Ops' first view: the headline figures, the per-day chart, who is doing
+ * Birdy's first view: the headline figures, the per-day chart, who is doing
  * best and where leads are being lost. With `?client=<id>` in the address it is
  * the same page fed one client's numbers.
  */
@@ -66,7 +66,7 @@ export function BirdsEye() {
   const chat = useAgentChat({
     sessionKey: `by_ops_ask_${clientId ?? "agency"}`,
     page: scoped ? "client_detail" : "dashboard",
-    // Agency Ops talks to Birdy, the orchestrator.
+    // The Birdy section talks to Birdy, the orchestrator.
     agent: "birdy",
     client: client && isActive(client) ? { id: client.id, name: client.name } : null,
   });

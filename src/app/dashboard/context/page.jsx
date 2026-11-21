@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ContextTab } from "@/components/agency/context-tab";
 
-// Agency Ops's Context page, under "More": what it knows, which Birdy uses in every answer.
+// Birdy's Context page, under "More": what it knows, which Birdy uses in every answer.
 export default function AgencyOpsContextPage() {
   return (
     <Suspense fallback={null}>
