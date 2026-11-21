@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Calendar, Columns3, Plus, Search, Trash2, Zap } from "lucide-react";
-import { AskBar, Button, Checkbox, DropdownTrigger, Radio, RadioGroup, SearchField, Switch, TextField } from "@/components/by";
+import { AskBar, Button, Checkbox, DropdownTrigger, Radio, RadioGroup, SearchField, SelectField, Switch, TextField } from "@/components/by";
 import { Row, Section, Sub } from "../kit-parts";
 
 const KINDS = ["primary", "secondary", "soft", "ghost", "danger"];
 
 export function ControlsSection() {
   const [asked, setAsked] = useState("");
+  const [currency, setCurrency] = useState("GBP");
   return (
     <Section title="Actions and inputs">
       <Sub title="Button kinds">
@@ -54,6 +55,7 @@ export function ControlsSection() {
           </DropdownTrigger>
           <TextField className="col-span-2" label="Slack channel" defaultValue="media buyers" error="Channel names can’t contain spaces. Try media-buyers." />
           <TextField label="Notes" placeholder="Disabled" disabled />
+          <SelectField label="Currency" value={currency} onValueChange={setCurrency} options={[{ value: "GBP", label: "GBP (£)" }, { value: "USD", label: "USD ($)" }, { value: "EUR", label: "EUR (€)" }]} help="A select: the field look, a menu of choices." />
         </div>
       </Sub>
 
