@@ -34,9 +34,9 @@ export function tableState({ data, shown, noun, empty, icon }) {
   return null;
 }
 
-/** Which of a table's optional columns are shown, with the menu that changes them. */
+/** Which of a table's optional columns are shown, with the menu that changes them. A column marked `hidden` starts off. */
 export function useColumns(all) {
-  const [ids, setIds] = useState(() => all.map((c) => c.id));
+  const [ids, setIds] = useState(() => all.filter((c) => !c.hidden).map((c) => c.id));
   const menu = <ColumnsMenu columns={all} value={ids} onChange={setIds} />;
   return { shows: (id) => ids.includes(id), menu };
 }

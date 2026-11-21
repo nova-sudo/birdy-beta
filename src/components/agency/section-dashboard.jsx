@@ -231,6 +231,7 @@ function BuyerDashboard({ section }) {
         nameOf={nameOf}
         currencySymbol={symbol}
         showClient
+        columnsMenu
         toolbarEnd={<ClientFilter clients={groups.map((g) => ({ id: String(g.id), name: g.name }))} value={nav.drill.group ?? null} onChange={nav.pickClient} />}
         onOpenClient={openClient}
         custom={{ clients: clientsLevel }}

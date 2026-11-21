@@ -162,3 +162,23 @@ describe("Agency Ops inside a client", () => {
     expect(push).toHaveBeenLastCalledWith("/dashboard/table?client=a&view=ads&level=leads&campaign=c1&adset=s1&ad=1")
   })
 })
+
+describe("what the Leads level took over from the old Leads hub", () => {
+  it("searches email, phone and tags, and offers them as columns", async () => {
+    swr.data = { "/api/facebook-leads/filtered": { leads: [
+      { ...LEADS[0], email: "leanne@example.com", phone_number: "+44 7700 900111", ghl_tags: ["hot lead"] },
+      { ...LEADS[1], email: "priya@example.com", phone_number: "+44 7700 900222" },
+    ] } }
+    show("level=leads")
+    expect(screen.queryByRole("columnheader", { name: /Email/ })).toBeNull()
+    await userEvent.type(screen.getByRole("searchbox", { name: /Search leads/ }), "priya@")
+    expect(bodyRows().map((r) => r.textContent)).toEqual([expect.stringContaining("Priya Shah")])
+    await userEvent.clear(screen.getByRole("searchbox", { name: /Search leads/ }))
+    await userEvent.type(screen.getByRole("searchbox", { name: /Search leads/ }), "hot lead")
+    expect(bodyRows().map((r) => r.textContent)).toEqual([expect.stringContaining("Leanne Turner")])
+    await userEvent.click(screen.getByRole("button", { name: /Columns/ }))
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Email" }))
+    expect(screen.getByRole("columnheader", { name: /Email/ })).toBeInTheDocument()
+    expect(screen.getByRole("row", { name: /Leanne Turner/ })).toHaveTextContent("leanne@example.com")
+  })
+})

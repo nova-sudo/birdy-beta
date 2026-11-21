@@ -1,4 +1,4 @@
-import { LayoutGrid, List, Sparkles } from "lucide-react";
+import { LayoutGrid, Sparkles } from "lucide-react";
 
 // Where the rail's items go while the redesign is in progress. Each section
 // opens the nearest page that exists today; as a section's own screens are
@@ -17,7 +17,6 @@ export const DESTINATIONS = {
 export const OTHER_PAGES = [
   { label: "BirdyHub", href: "/hub", icon: LayoutGrid },
   { label: "Ask Birdy", href: "/ask-birdy", icon: Sparkles },
-  { label: "Leads", href: "/contacts", icon: List },
 ];
 
 const under = (pathname, base) => pathname === base || pathname.startsWith(`${base}/`);

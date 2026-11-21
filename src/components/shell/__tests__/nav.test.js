@@ -21,7 +21,8 @@ describe("activeRailId", () => {
     ["/hub", "other"],
     ["/hub/dashboards/7", "other"],
     ["/ask-birdy", "other"],
-    ["/contacts", "other"],
+    // The Leads hub is retired; its address only redirects, and a lead page belongs to no tile.
+    ["/contacts/c1", null],
     ["/alerts", "settings"],
     ["/changelog", null],
     ["/clientsx", null],
@@ -36,7 +37,7 @@ describe("destinations", () => {
   })
 
   it("lists the pages that have no tile of their own", () => {
-    expect(OTHER_PAGES.map((p) => [p.label, p.href])).toEqual([["BirdyHub", "/hub"], ["Ask Birdy", "/ask-birdy"], ["Leads", "/contacts"]])
+    expect(OTHER_PAGES.map((p) => [p.label, p.href])).toEqual([["BirdyHub", "/hub"], ["Ask Birdy", "/ask-birdy"]])
   })
 })
 

@@ -77,7 +77,11 @@ export function LeadFilters({ options, chosen, onChange }) {
 
 const LEAD_COLUMNS = [
   { id: "stage", label: "Stage" }, { id: "from", label: "Came from" }, { id: "added", label: "Added" }, { id: "calls", label: "Calls" }, { id: "value", label: "Value" },
+  // The contact details the old Leads hub listed, off until asked for.
+  { id: "email", label: "Email", hidden: true }, { id: "phone", label: "Phone", hidden: true }, { id: "tags", label: "Tags", hidden: true },
 ];
+// Search reaches the contact details and tags too, whether or not their columns are shown.
+const LEAD_SEARCH = ["name", "campaign", "ad", "source", "client", "email", "phone", "tagText"];
 
 /**
  * A client's leads: tabs by how far each got, search, and where each came from.
@@ -108,7 +112,7 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
   const filtered = useMemo(() => filterLeads(data.rows, filters), [data.rows, filters]);
   const counts = useMemo(() => leadCounts(filtered), [filtered]);
   const rows = useMemo(
-    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source", "client"]), sort),
+    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab).map((r) => ({ ...r, tagText: (r.tags ?? []).join(" ") })), query, LEAD_SEARCH), sort),
     [filtered, stageTabs, tab, query, sort],
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
@@ -151,6 +155,9 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
             {columns.shows("added") && <Th {...header("added")}>Added</Th>}
             {columns.shows("calls") && <Th numeric {...header("calls")}>Calls</Th>}
             {columns.shows("value") && <Th numeric {...header("value")}>Value</Th>}
+            {columns.shows("email") && <Th {...header("email", "asc")}>Email</Th>}
+            {columns.shows("phone") && <Th>Phone</Th>}
+            {columns.shows("tags") && <Th>Tags</Th>}
             <Th aria-label="Open" className="w-9" />
           </tr>
         </TableHead>
@@ -191,6 +198,18 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
                 {columns.shows("added") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.added)}</Td>}
                 {columns.shows("calls") && <Td numeric className={row.calls ? "" : "text-by-muted"}>{row.calls || "None"}</Td>}
                 {columns.shows("value") && <Td numeric className={row.value ? "" : "text-by-muted"}>{row.value ? fmt(row.value) : "—"}</Td>}
+                {columns.shows("email") && <Td className={`max-w-56 truncate ${row.email ? "" : "text-by-muted"}`} title={row.email}>{row.email || "—"}</Td>}
+                {columns.shows("phone") && <Td className={`whitespace-nowrap tabular-nums ${row.phone ? "" : "text-by-muted"}`}>{row.phone || "—"}</Td>}
+                {columns.shows("tags") && (
+                  <Td className="max-w-64">
+                    {row.tags?.length ? (
+                      <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={row.tags.join(", ")}>
+                        {row.tags.slice(0, 2).map((t) => <Pill key={t} tone="neutral" dot={false} className="max-w-32 truncate">{t}</Pill>)}
+                        {row.tags.length > 2 && <span className="shrink-0 text-by-caption text-by-muted">+{row.tags.length - 2}</span>}
+                      </span>
+                    ) : <span className="text-by-muted">—</span>}
+                  </Td>
+                )}
                 {opens ? <RowArrow /> : <Td aria-hidden="true" className="w-9" />}
               </Tr>
             );

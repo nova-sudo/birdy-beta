@@ -27,6 +27,8 @@ export function leadRow(contact) {
     // The CRM contact the row opens.
     contactId: contact.contactId,
     name: contact.contactName || "Unknown",
+    email: contact.email || "",
+    phone: contact.phone || "",
     stage,
     // What the CRM says about it, beside the stage: the pipeline stage's name where the CRM gives one.
     stageNote: opps.find((o) => o.pipelineStageName || o.stageName)?.pipelineStageName ?? opps.find((o) => o.stageName)?.stageName ?? "",
@@ -72,6 +74,8 @@ export function adLeadRow(lead) {
     // The CRM contact this lead opens: the matched contact where the API gives one, else a CRM-form lead's own id.
     contactId: lead.ghl_contact_id ? String(lead.ghl_contact_id) : lead.lead_source === "ghl_attribution" && lead.lead_id ? String(lead.lead_id) : null,
     name: String(lead.full_name ?? "").trim() || "Unknown",
+    email: lead.email || "",
+    phone: lead.phone_number || "",
     stage,
     stageNote: "",
     campaign: lead.campaign_name || "",
