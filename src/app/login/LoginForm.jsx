@@ -2,16 +2,13 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react"
+import { CircleAlert, Mail } from "lucide-react"
+import { Button, Notice, PasswordField, TextField } from "@/components/by"
+import { AuthHeading, SwitchLink } from "@/components/auth/auth-layout"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
 import { writeSession, ADMIN_HOME } from "@/lib/session"
 import { apiRequest, publicRequest } from "@/lib/api"
-import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -19,7 +16,6 @@ export default function LoginForm() {
     password: "",
   })
   const [error, setError] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -132,100 +128,42 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full">
-      <div className="w-full">
-        {/* No card: the form sits straight on the page, the Silk panel beside
-            it carries the colour. */}
-        <div>
-          <div className="mb-8">
-            <BirdyAvatar size={52} />
-            <h1 className="mt-5 font-pd-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">Welcome back</h1>
-            <p className="mt-1.5 text-[14.5px] text-pd-subtle">
-              Sign in to your account to continue
-            </p>
-          </div>
+    <>
+      <AuthHeading title="Welcome back">Sign in to your agency.</AuthHeading>
 
-          <div className="space-y-6">
-            {error && (
-              <Alert variant="destructive" className="rounded-2xl border-pd-danger-border bg-pd-danger-bg">
-                <AlertDescription className="text-sm text-pd-danger">{error}</AlertDescription>
-              </Alert>
-            )}
+      {error && (
+        <Notice tone="danger" icon={<CircleAlert aria-hidden="true" />} className="mb-4">
+          {error}
+        </Notice>
+      )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-[13px] font-semibold text-pd-ink">
-                  Email address
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                  <Input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="pl-10 h-12"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <TextField
+          label="Email"
+          type="email"
+          id="email"
+          autoComplete="email"
+          value={formData.email}
+          onChange={handleChange}
+          leading={<Mail aria-hidden="true" />}
+          placeholder="you@agency.com"
+          required
+        />
+        <PasswordField
+          label="Password"
+          id="password"
+          autoComplete="current-password"
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Enter your password"
+          required
+        />
+        <Button type="submit" kind="primary" size="lg" loading={isLoading} className="mt-1 w-full">
+          {isLoading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-[13px] font-semibold text-pd-ink">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    id="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="pl-10 pr-11 h-12"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-pd-faint hover:text-pd-ink transition-colors border-0 p-0 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 text-[14.5px]"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Signing in...</span>
-                  </div>
-                ) : (
-                  "Sign in"
-                )}
-              </Button>
-            </form>
-
-            <div className="text-center text-sm text-pd-subtle">
-              {"Don't have an account? "}
-              <a
-                href="/register"
-                className="text-pd-primary hover:text-purple-700 font-semibold transition-colors"
-              >
-                Create one here
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <SwitchLink prompt="New to Birdy?" href="/register">Create an account</SwitchLink>
+    </>
   )
 }

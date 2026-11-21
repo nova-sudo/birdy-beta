@@ -12,10 +12,7 @@ vi.mock("@/lib/api", () => ({
   publicRequest: (...args) => publicRequest(...args),
 }))
 
-// Silk is a WebGL wallpaper and Birdy an animated SVG mascot — neither has
-// anything to do with what the form submits, and Silk needs a GL context jsdom
-// does not have.
-vi.mock("@/components/Silk", () => ({ default: () => null }))
+// Birdy is an animated SVG mascot with nothing to do with what the form submits.
 vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
 
 import RegisterPage from "@/app/register/page"
@@ -28,8 +25,8 @@ function ok(user) {
 }
 
 async function signUp(user = userEvent.setup()) {
-  await user.type(screen.getByLabelText(/email address/i), "new@agency.com")
-  await user.type(screen.getByLabelText(/password/i), "hunter2hunter2")
+  await user.type(screen.getByLabelText("Email"), "new@agency.com")
+  await user.type(screen.getByLabelText("Password"), "hunter2hunter2")
   await user.click(screen.getByRole("button", { name: /create account/i }))
 }
 
@@ -45,8 +42,8 @@ describe("register page", () => {
     // exist after two fields, not four.
     render(<RegisterPage />)
 
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    expect(screen.getByLabelText("Email")).toBeInTheDocument()
+    expect(screen.getByLabelText("Password")).toBeInTheDocument()
     expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument()
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     expect(screen.queryByText(/select your currency/i)).not.toBeInTheDocument()
@@ -102,5 +99,45 @@ describe("register page", () => {
     expect(await screen.findByText("Email already registered")).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
     expect(localStorage.getItem("user_authenticated")).toBeNull()
+  })
+
+  it("does not submit with an empty or invalid email", async () => {
+    const user = userEvent.setup()
+    render(<RegisterPage />)
+
+    await user.click(screen.getByRole("button", { name: /create account/i }))
+    await user.type(screen.getByLabelText("Email"), "nope")
+    await user.type(screen.getByLabelText("Password"), "hunter2hunter2")
+    await user.click(screen.getByRole("button", { name: /create account/i }))
+
+    expect(screen.getByLabelText("Email")).toBeInvalid()
+    expect(publicRequest).not.toHaveBeenCalled()
+  })
+
+  it("keeps the password rule under the field and can show the password", async () => {
+    const user = userEvent.setup()
+    render(<RegisterPage />)
+    const field = screen.getByLabelText("Password")
+
+    expect(field).toHaveAccessibleDescription("Must be at least 8 characters long")
+    await user.click(screen.getByRole("button", { name: "Show password" }))
+    expect(field).toHaveAttribute("type", "text")
+  })
+
+  it("falls back to a generic message when the request throws", async () => {
+    publicRequest.mockRejectedValue(new Error("network"))
+    render(<RegisterPage />)
+
+    await signUp()
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Registration failed. Please try again.")
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it("links to sign-in and the terms", () => {
+    render(<RegisterPage />)
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
+    expect(screen.getByRole("link", { name: "Terms of Service" })).toHaveAttribute("href", "/billing/terms-of-service")
+    expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/billing/privacy-policy")
   })
 })
