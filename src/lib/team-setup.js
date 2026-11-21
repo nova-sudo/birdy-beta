@@ -215,8 +215,8 @@ export function refusalText(err) {
     const expected = err.detail?.expected
     return expected ? `Answer ${STEP_LABELS[expected] ?? expected} first: the questions go in order.` : "Answer the questions in order: this one comes later."
   }
-  if (err?.code === "practice_not_finished") return "Let the practice run finish first."
   if (err?.code === "agent_locked") return "This agent isn’t open yet."
+  if (typeof err?.detail?.message === "string" && err.detail.message) return err.detail.message
   if (err?.message && !err.message.startsWith("HTTP")) return err.message
   return "Couldn’t save that. Check your connection and try again."
 }

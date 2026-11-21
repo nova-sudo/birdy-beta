@@ -5,7 +5,7 @@ import getSymbolFromCurrency from "currency-symbol-map";
 import { Checkbox, NativeSelectField, Radio, RadioGroup, Segmented, Switch, TextField, cn } from "@/components/by";
 import {
   ALL, PERMISSIONS, SPEED_CHOICES, clientsBody, clientsInitial, cplBody, cplInitial, permissionsBody, permissionsInitial,
-  scheduleBody, scheduleInitial, speedBody, zonesWith,
+  scheduleBody, scheduleInitial, TIME_RE, speedBody, zonesWith,
 } from "@/lib/team-setup-forms";
 import { FormShell, useSave } from "./form-shell";
 
@@ -110,13 +110,30 @@ export function CplForm({ initial, data, ctx, onSubmit, saveLabel }) {
   );
 }
 
+/** Something the agent offers: shown beside the form, applied only when the owner presses it. */
+function Suggestion({ onUse, children }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-by-body-sm text-by-muted">
+      <span>Suggestion: {children}</span>
+      <button type="button" onClick={onUse} className="cursor-pointer font-semibold text-by-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">Use it</button>
+    </p>
+  );
+}
+
 /** What it may change in Meta without asking. Budgets are never on the list. */
-export function PermissionsForm({ initial, onSubmit, saveLabel }) {
+export function PermissionsForm({ initial, data, onSubmit, saveLabel }) {
+  // A suggestion is offered, never pre-set: everything starts off until the owner chooses.
   const [state, setState] = useState(() => permissionsInitial(initial));
   const { busy, error, run } = useSave(onSubmit);
+  const suggested = !initial && data?.suggestion && PERMISSIONS.some((p) => data.suggestion[p.key]) ? permissionsInitial(data.suggestion) : null;
   return (
     <FormShell label="Permissions" error={error} busy={busy} onSave={() => run(permissionsBody(state))} saveLabel={saveLabel}>
       <p className="text-by-body-sm text-by-text-2">Switched off, I ask you first. I never change budgets.</p>
+      {suggested && (
+        <Suggestion onUse={() => setState(suggested)}>
+          {PERMISSIONS.filter((p) => suggested[p.key]).map((p) => p.label.toLowerCase()).join(", ")}
+        </Suggestion>
+      )}
       <ul className="flex flex-col gap-2.5">
         {PERMISSIONS.map((p) => (
           <li key={p.key}>
@@ -130,8 +147,10 @@ export function PermissionsForm({ initial, onSubmit, saveLabel }) {
 
 /** When it runs: a time, a time zone, every day or weekdays. */
 export function ScheduleForm({ initial, data, onSubmit, saveLabel }) {
-  // Nothing saved yet: the reply's suggestion (the owner's time zone), else 07:00 in the browser's.
-  const [state, setState] = useState(() => scheduleInitial(initial ?? data?.default));
+  // Nothing saved yet: the time is left empty (a suggestion is offered, never pre-set); the time
+  // zone is the owner's own, which is a fact about the account.
+  const [state, setState] = useState(() => (initial ? scheduleInitial(initial) : { ...scheduleInitial({ tz: data?.default?.tz }), time: "" }));
+  const suggested = !initial && TIME_RE.test(data?.default?.time ?? "") ? scheduleInitial(data.default) : null;
   const { busy, error, setError, run } = useSave(onSubmit);
   const zones = useMemo(() => zonesWith(state.tz).map((z) => ({ value: z, label: z.replace(/_/g, " ") })), [state.tz]);
   const save = () => {
@@ -141,6 +160,11 @@ export function ScheduleForm({ initial, data, onSubmit, saveLabel }) {
   };
   return (
     <FormShell label="Schedule" error={error} busy={busy} onSave={save} saveLabel={saveLabel}>
+      {suggested && (
+        <Suggestion onUse={() => setState(suggested)}>
+          {suggested.time}, {suggested.days === "weekdays" ? "weekdays only" : "every day"}
+        </Suggestion>
+      )}
       <div className="flex flex-wrap items-end gap-3">
         <TextField label="Time" type="time" value={state.time} onChange={(e) => setState({ ...state, time: e.target.value })} className="w-36" />
         <NativeSelectField label="Time zone" options={zones} value={state.tz} onChange={(e) => setState({ ...state, tz: e.target.value })} className="min-w-0 flex-1 basis-48" />

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 import "@/components/by/__tests__/jsdom"
@@ -42,7 +42,7 @@ vi.mock("@/lib/api", () => ({
   },
 }))
 
-const MB_ORDER = ["clients", "cpl", "playbook", "permissions", "schedule", "slack", "practice"]
+const MB_ORDER = ["clients", "cpl", "playbook", "permissions", "schedule", "slack"]
 const known = (over = {}) => [
   { step: "clients", label: "Clients", value: "All active clients" },
   { step: "cpl", label: "CPL limits", value: "£6 for every client" },
@@ -50,7 +50,6 @@ const known = (over = {}) => [
   { step: "permissions", label: "Permissions", value: "Asks before pausing" },
   { step: "schedule", label: "Schedule", value: over.schedule ?? null },
   { step: "slack", label: "Slack", value: null },
-  { step: "practice", label: "Practice run", value: null },
 ]
 const team = ({ mb = {}, sc = {}, subs = {} } = {}) => ({
   order: ["birdy", "media_buyer", "sales_coach", "sub_agents"],
@@ -85,7 +84,7 @@ describe("The agent interview", () => {
     replies["GET /api/team/setup"] = [200, team()]
     page()
     expect(await screen.findByRole("heading", { name: "Media Buyer", level: 1 })).toBeInTheDocument()
-    expect(screen.getByText(/We’ve done 4 of 7 questions/)).toBeInTheDocument()
+    expect(screen.getByText(/We’ve done 4 of 6 questions/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /Carry on/ }))
     expect(send).toHaveBeenCalledWith("Let’s carry on.")
     expect(within(screen.getByRole("navigation", { name: "Your team" })).getByRole("button", { name: /Sales Coach/ })).toBeDisabled()
@@ -97,6 +96,9 @@ describe("The agent interview", () => {
     chat.messages = ask("schedule")
     page()
     const form = await screen.findByRole("form", { name: "Schedule" })
+    // No time is pre-set: a suggestion is only offered.
+    expect(within(form).getByLabelText("Time")).toHaveValue("")
+    fireEvent.change(within(form).getByLabelText("Time"), { target: { value: "07:00" } })
     await userEvent.click(within(form).getByRole("button", { name: "Weekdays only" }))
     await userEvent.click(within(form).getByRole("button", { name: "Save" }))
     await waitFor(() => expect(send).toHaveBeenCalledWith("Schedule: Every day at 07:00"))
@@ -115,9 +117,37 @@ describe("The agent interview", () => {
     chat.messages = ask("schedule")
     page()
     const form = await screen.findByRole("form", { name: "Schedule" })
+    fireEvent.change(within(form).getByLabelText("Time"), { target: { value: "07:00" } })
     await userEvent.click(within(form).getByRole("button", { name: "Save" }))
     expect(await within(form).findByRole("alert")).toHaveTextContent("Answer Permissions first")
     expect(send).not.toHaveBeenCalled()
+  })
+
+  it("offers a suggestion without choosing it", async () => {
+    replies["GET /api/team/setup"] = [200, team()]
+    chat.messages = [
+      { role: "user", content: "Hi" },
+      { role: "assistant", content: "When?", agent_changes: [{ ui_block: { type: "schedule", value: null, default: { time: "07:00", tz: "Europe/London", days: "daily" } } }] },
+    ]
+    page()
+    const form = await screen.findByRole("form", { name: "Schedule" })
+    expect(within(form).getByLabelText("Time")).toHaveValue("")
+    expect(form).toHaveTextContent("Suggestion: 07:00, every day")
+    await userEvent.click(within(form).getByRole("button", { name: "Use it" }))
+    expect(within(form).getByLabelText("Time")).toHaveValue("07:00")
+    expect(calls.some((c) => c.method === "PUT")).toBe(false)
+  })
+
+  it("shows the practice run only when the agent was asked for one, and says why it can't start", async () => {
+    replies["GET /api/team/setup"] = [200, team()]
+    replies["GET /api/team/setup/media_buyer/practice"] = [200, { status: "none", summary: null }]
+    replies["POST /api/team/setup/media_buyer/practice"] = [409, { detail: { code: "ad_history_loading", message: "Birdy is still loading the ad history for 1 client (Aura)." } }]
+    chat.messages = ask("practice", "Here is a practice run.")
+    page()
+    const form = await screen.findByRole("form", { name: "Practice run" })
+    await userEvent.click(await within(form).findByRole("button", { name: "Start the practice run" }))
+    expect(await within(form).findByRole("alert")).toHaveTextContent("still loading the ad history for 1 client (Aura)")
+    expect(within(form).queryByRole("button", { name: "Looks right" })).not.toBeInTheDocument()
   })
 
   it("shows no form for a reply that asks for nothing", async () => {
@@ -155,6 +185,7 @@ describe("The agent interview", () => {
     chat.messages = ask("schedule")
     page()
     const form = await screen.findByRole("form", { name: "Schedule" })
+    fireEvent.change(within(form).getByLabelText("Time"), { target: { value: "07:00" } })
     await userEvent.click(within(form).getByRole("button", { name: "Save" }))
     expect(await within(form).findByRole("alert")).toHaveTextContent("Answer Permissions first")
   })

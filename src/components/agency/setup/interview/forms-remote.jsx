@@ -140,15 +140,15 @@ export function SlackForm({ initial, data, onSubmit }) {
 
 /**
  * The practice run: a real run on the agent's clients that changes nothing in
- * Meta and sends nothing to Slack. Start it, wait for it, read the summary, confirm.
+ * Meta and sends nothing to Slack. Not a setup step: it shows only when the owner
+ * asked for one, and nothing is saved from it. Start it, wait for it, read the summary.
  */
-export function PracticeForm({ data, onSubmit, saveLabel = "Looks right" }) {
+export function PracticeForm({ data }) {
   // The reply carries the practice run's status as it was; it is read again on arrival.
   const [state, setState] = useState(() => ({ status: ["none", "running", "done", "failed"].includes(data?.status) ? data.status : "loading", summary: data?.summary ?? null }));
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState(null);
   const timer = useRef(null);
-  const { busy, error, run } = useSave(onSubmit);
 
   const poll = async () => {
     clearTimeout(timer.current);
@@ -187,14 +187,10 @@ export function PracticeForm({ data, onSubmit, saveLabel = "Looks right" }) {
   return (
     <FormShell
       label="Practice run"
-      error={error ?? problem}
-      busy={busy}
+      error={problem}
       actions={
         status === "done" ? (
-          <>
-            <Button kind="primary" loading={busy} onClick={() => run({ confirmed: true })}>{saveLabel}</Button>
-            <Button disabled={busy} loading={starting} onClick={start}>Run it again</Button>
-          </>
+          <Button loading={starting} onClick={start}>Run it again</Button>
         ) : status === "running" || status === "loading" ? (
           <Button kind="primary" loading disabled>{status === "running" ? "Running…" : "Checking…"}</Button>
         ) : (
