@@ -15,7 +15,8 @@ const aboutCalls = (s) => CALLS.test(`${s?.platform ?? ""} ${s?.ruleKind ?? ""}`
  * @typedef {object} SectionConfig
  * @property {"ops"|"buyer"|"coach"} key the rail's id for it
  * @property {object} kit its entry in the kit's SECTIONS: name, icon, tile colours
- * @property {Record<"chat"|"birdseye"|"dashboard"|"suggestions"|"context", string>} paths where each tab lives, and each page under More
+ * @property {Record<string, string>} paths where each tab lives, and each page under More (chat, birdseye, dashboard,
+ *   suggestions, context; reports and projections only where there is something real to show, see tabs.js MORE_PAGES)
  * @property {{page: string|null, agent: string|null, session: string, starters: string}} chat
  *   `page` is the chat backend's page key (its tool list, see _PAGE_TOOLS in birdy-backend's ai/orchestrator.py),
  *   `agent` the agent that answers, `session` the prefix of every conversation kept in the browser,
@@ -33,7 +34,7 @@ export const SECTION_CONFIG = {
   ops: {
     key: "ops",
     kit: kit("ops"),
-    paths: { chat: "/dashboard/chat", birdseye: "/dashboard", dashboard: "/dashboard/table", suggestions: "/dashboard/suggestions", context: "/dashboard/context" },
+    paths: { chat: "/dashboard/chat", birdseye: "/dashboard", dashboard: "/dashboard/table", suggestions: "/dashboard/suggestions", context: "/dashboard/context", reports: "/dashboard/reports" },
     // Agency Ops' chat goes out with no page of its own (Birdy with every tool), addressed to Birdy.
     chat: { page: null, agent: "birdy", session: "ops", starters: "dashboard" },
     hello: "Ask about your clients, campaigns, leads or calls.",
@@ -47,7 +48,7 @@ export const SECTION_CONFIG = {
   buyer: {
     key: "buyer",
     kit: kit("buyer"),
-    paths: { chat: "/media-buyer/chat", birdseye: "/media-buyer", dashboard: "/media-buyer/table", suggestions: "/media-buyer/suggestions", context: "/media-buyer/context" },
+    paths: { chat: "/media-buyer/chat", birdseye: "/media-buyer", dashboard: "/media-buyer/table", suggestions: "/media-buyer/suggestions", context: "/media-buyer/context", reports: "/media-buyer/reports", projections: "/media-buyer/projections" },
     // "campaigns" is the old Marketing Hub's page: the ads tools, and the creative test tools.
     chat: { page: "campaigns", agent: "media_buyer", session: "buyer", starters: "campaigns" },
     hello: "Ask about ads, spend and cost per lead across your clients.",

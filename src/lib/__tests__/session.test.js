@@ -95,8 +95,9 @@ describe("proxy (the request interceptor Next 16 renamed from middleware)", () =
 
   it("holds an unfinished signup in the wizard", () => {
     const midSignup = cookieFor({ exp: Date.now() + HOUR, ob: true })
-    expect(destinationOf(proxy(requestWith("/clients", midSignup)))).toBe("/onboarding")
-    // ...but not in a loop once they're there.
+    expect(destinationOf(proxy(requestWith("/clients", midSignup)))).toBe("/welcome")
+    // ...but not in a loop once they're there, at the new address or the old one (which redirects itself).
+    expect(destinationOf(proxy(requestWith("/welcome", midSignup)))).toBeNull()
     expect(destinationOf(proxy(requestWith("/onboarding", midSignup)))).toBeNull()
   })
 

@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
 import {
   Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
 import { TableCard, money, tableState, useColumns } from "./table-card";
+import { LeadModal } from "./lead/lead-modal";
 import {
   AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
 } from "@/lib/client-tables";
@@ -94,8 +94,9 @@ const LEAD_COLUMNS = [
  * @param {{title: string, body: string}} [props.empty] what to say when there are no leads
  */
 export function LeadsTable({ data, currencySymbol = "£", showClient = false, stageTabs = true, calls = true, columnsMenu = true, toolbarStart, toolbarEnd, toolbarBelow, empty }) {
-  const router = useRouter();
   const [tab, setTab] = useState("all");
+  // The lead open in the modal over the table: {contactId, name}, or null.
+  const [opened, setOpened] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ id: "added", dir: "desc" });
   const [filters, setFilters] = useState({});
@@ -112,10 +113,11 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
   const contactOf = (row) => (row.contactId === undefined ? row.id : row.contactId);
-  const open = (row) => contactOf(row) && router.push(`/contacts/${encodeURIComponent(contactOf(row))}`);
+  const open = (row) => contactOf(row) && setOpened({ contactId: String(contactOf(row)), name: row.name });
   const capped = data.capped || (data.total != null && data.total > data.rows.length ? `Showing the newest ${data.rows.length.toLocaleString("en-GB")} of ${data.total.toLocaleString("en-GB")} leads.` : "");
 
   return (
+    <>
     <TableCard
       toolbar={
         <>
@@ -158,7 +160,14 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
             const opens = Boolean(contactOf(row));
             return (
               <Tr key={row.id} interactive={opens} onClick={opens ? () => open(row) : undefined}>
-                <Td className="max-w-64 truncate font-semibold" title={row.name}>{row.name}</Td>
+                <Td className="max-w-64 truncate font-semibold" title={row.name}>
+                  {opens ? (
+                    // The keyboard's way in; a click anywhere on the row opens it too. Focus comes back here when the lead closes.
+                    <button type="button" onClick={(e) => { e.stopPropagation(); open(row); }} className="max-w-full cursor-pointer truncate rounded-by-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">
+                      {row.name}
+                    </button>
+                  ) : row.name}
+                </Td>
                 {showClient && <Td className={`max-w-48 truncate ${row.client ? "text-by-text-2" : "text-by-muted"}`} title={row.client}>{row.client || "—"}</Td>}
                 {columns.shows("stage") && (
                   <Td>
@@ -190,6 +199,9 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
       </Table>
       {capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{capped}</p>}
     </TableCard>
+    {/* Outside the card: a table that reloads under it never closes the lead. */}
+    <LeadModal contactId={opened?.contactId ?? null} name={opened?.name} onClose={() => setOpened(null)} />
+    </>
   );
 }
 

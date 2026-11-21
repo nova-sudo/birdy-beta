@@ -74,6 +74,7 @@ export const PROTECTED_ROUTE_PREFIXES = ["/hub/agents/custom/"]
 
 export const PROTECTED_ROUTES = [
   "/onboarding",
+  "/welcome",
   "/clients",
   "/call-center",
   "/settings",
@@ -87,6 +88,13 @@ export const PROTECTED_ROUTES = [
   "/hub/agents/media-buying/setup",
   "/hub/agents/custom/new",
 ]
+
+/**
+ * Setup (first-run onboarding) lives at /welcome. /onboarding is its old
+ * address and redirects there; both are allowed while setup is unfinished.
+ */
+export const SETUP_PATH = "/welcome"
+export const isSetupPath = (pathname) => pathname === SETUP_PATH || pathname === "/onboarding"
 
 /** Whether a pathname needs a signed-in user: an exact protected route or one under a protected prefix. */
 export const isProtectedPath = (pathname) =>

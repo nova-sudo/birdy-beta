@@ -17,7 +17,9 @@ export const PILL_EXTRA = cn(
 /**
  * The grey pill of tabs with a white chip that slides to the open one.
  *
- * @param {{value: string, label: string, count?: number, disabled?: boolean}[]} props.items `disabled` greys a tab that is not built yet
+ * @param {{value: string, label: string, count?: number, disabled?: boolean, hint?: string, badge?: React.ReactNode}[]} props.items
+ *   `disabled` greys a tab that is not built yet; `hint` replaces its "Coming soon" tooltip (e.g. why it is locked).
+ *   `badge` sits after the label, e.g. a lock icon or a "New" pill
  * @param {string} props.value the open tab
  * @param {(value: string) => void} props.onValueChange
  * @param {string} props["aria-label"] what the tabs switch between
@@ -68,10 +70,11 @@ export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, 
             key={item.value}
             value={item.value}
             disabled={item.disabled}
-            title={item.disabled ? "Coming soon" : undefined}
+            title={item.disabled ? item.hint ?? "Coming soon" : undefined}
             className={cn(PILL_EXTRA, "data-[state=active]:text-by-text disabled:cursor-not-allowed disabled:text-by-muted disabled:opacity-60 disabled:hover:text-by-muted")}
           >
             {item.label}
+            {item.badge}
             {item.count > 0 && <CountBadge>{item.count}</CountBadge>}
           </TabsPrimitive.Trigger>
         ))}

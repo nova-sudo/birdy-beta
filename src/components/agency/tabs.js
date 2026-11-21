@@ -17,10 +17,19 @@ export const OPS_TABS = [
 ];
 
 /**
- * The pages under the "More" menu at the end of the tab pill. The reference also lists Reports and
- * Projections there; they join this list once they are built, so the menu never leads nowhere.
+ * The pages under the "More" menu at the end of the tab pill, in the reference's order. A section
+ * lists only the ones it has an address for (sections.js `paths`): Reports for Agency Ops (the
+ * account's Slack reports) and Media Buyer (its agent's reports), Projections for Media Buyer only
+ * (budget pacing), so the menu never leads to a page with nothing real on it.
  */
-export const MORE_PAGES = [{ value: "context", label: "Context" }];
+export const MORE_PAGES = [
+  { value: "reports", label: "Reports" },
+  { value: "projections", label: "Projections" },
+  { value: "context", label: "Context" },
+];
+
+/** The "More" pages one section has. */
+export const morePagesOf = (section = OPS_SECTION) => MORE_PAGES.filter((p) => section.paths[p.value]);
 
 /**
  * A section's tabs, with the number of its open suggestions on the Suggestions tab. Media Buyer

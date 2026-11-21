@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "../../__tests__/jsdom"
-import { ClientSwitcher, CreditsRing, Rail, SECTIONS, SectionHeader, visibleSections } from "../.."
+import { ClientSwitcher, CreditsRing, Rail, SECTIONS, SectionHeader, SetupRing, visibleSections } from "../.."
 
 const CLIENTS = [
   { id: "fallon", name: "Fallon Physique", status: "warning" },
@@ -183,5 +183,27 @@ describe("SectionHeader", () => {
     render(<SectionHeader section={section("coach")} tabs={TABS} tab="chat" onTabChange={onTabChange} />)
     await userEvent.click(screen.getByRole("tab", { name: /Suggestions/ }))
     expect(onTabChange).toHaveBeenCalledWith("suggestions")
+  })
+})
+
+describe("SetupRing", () => {
+  it("says how much of setup is done and opens the checklist", async () => {
+    const onOpen = vi.fn()
+    render(<SetupRing percent={43.4} onOpen={onOpen} />)
+    const ring = screen.getByRole("button", { name: "Setup checklist, 43% done" })
+    expect(ring).toHaveTextContent("43")
+    await userEvent.click(ring)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it("clamps the share and marks the setup page as current", () => {
+    render(<SetupRing percent={140} onOpen={() => {}} active />)
+    expect(screen.getByRole("button", { name: "Setup checklist, 100% done" })).toHaveAttribute("aria-current", "page")
+  })
+
+  it("sits under the switcher on the rail", () => {
+    render(<Rail activeId="ops" switcher={<span data-testid="switcher" />} setup={<SetupRing percent={20} onOpen={() => {}} />} />)
+    const ring = screen.getByRole("button", { name: "Setup checklist, 20% done" })
+    expect(screen.getByTestId("switcher").nextElementSibling).toBe(ring)
   })
 })

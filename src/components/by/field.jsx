@@ -102,3 +102,36 @@ export function DropdownTrigger({ children, leading, className, ...props }) {
     </button>
   );
 }
+
+/**
+ * A labelled choice from a short list, drawn as the kit's field around the
+ * browser's own select, so it works with the keyboard, screen readers and a
+ * phone's picker. For a long or searchable list use a Menu instead.
+ *
+ * @param {{value: string, label: string}[]} props.options
+ * @param {string} [props.label] shown above the field; without it pass `aria-label`
+ * @param {string} [props.help] a quiet hint under the field
+ */
+export function NativeSelectField({ label, error, help, options = [], id, className, ...props }) {
+  const auto = useId();
+  const fieldId = id ?? auto;
+  const messageId = error || help ? `${fieldId}-message` : undefined;
+  return (
+    <div className={className}>
+      {label && <label htmlFor={fieldId} className="mb-1.5 block text-by-body-sm font-medium text-by-text">{label}</label>}
+      <div className={cn(SURFACE, "relative pr-2", error && INVALID)}>
+        <select
+          id={fieldId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={messageId}
+          className={cn(INPUT, "h-full cursor-pointer appearance-none bg-transparent pr-6 [&>option]:bg-by-surface [&>option]:text-by-text")}
+          {...props}
+        >
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5" />
+      </div>
+      <Message id={messageId} error={error} help={help} />
+    </div>
+  );
+}

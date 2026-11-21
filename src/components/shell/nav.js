@@ -1,4 +1,4 @@
-import { Bell, Calculator, LayoutGrid, List, Sparkles } from "lucide-react";
+import { LayoutGrid, List, Sparkles } from "lucide-react";
 
 // Where the rail's items go while the redesign is in progress. Each section
 // opens the nearest page that exists today; as a section's own screens are
@@ -18,8 +18,6 @@ export const OTHER_PAGES = [
   { label: "BirdyHub", href: "/hub", icon: LayoutGrid },
   { label: "Ask Birdy", href: "/ask-birdy", icon: Sparkles },
   { label: "Leads", href: "/contacts", icon: List },
-  { label: "Metrics", href: "/metrics", icon: Calculator },
-  { label: "Alerts", href: "/alerts", icon: Bell },
 ];
 
 const under = (pathname, base) => pathname === base || pathname.startsWith(`${base}/`);
@@ -34,7 +32,7 @@ export function activeRailId(pathname) {
   if (under(pathname, "/media-buyer") || under(pathname, "/campaigns") || under(pathname, "/hub/agents/media-buying")) return "buyer";
   if (under(pathname, "/sales-coach") || under(pathname, "/Sales-Hub")) return "coach";
   if (under(pathname, "/clients")) return "clients";
-  if (under(pathname, "/settings") || under(pathname, "/billing") || under(pathname, "/credits")) return "settings";
+  if (under(pathname, "/settings") || under(pathname, "/metrics") || under(pathname, "/billing") || under(pathname, "/credits") || under(pathname, "/alerts")) return "settings";
   if (OTHER_PAGES.some((page) => under(pathname, page.href))) return "other";
   return null;
 }
@@ -44,11 +42,14 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients" || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`));
+export const isRebuilt = (pathname) => pathname === "/clients" || pathname === "/welcome" || pathname === "/settings" || /^\/contacts\/[^/]+$/.test(pathname)
+  || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`))
+  // One report's page under Reports.
+  || SECTION_BASES.some((base) => pathname.startsWith(`${base}/reports/`));
 
 /** The three agent sections' addresses. Each has the same four tabs under it, and Context under "More". */
 const SECTION_BASES = ["/dashboard", "/media-buyer", "/sales-coach"];
-const SECTION_TABS = ["", "/chat", "/table", "/suggestions", "/context"];
+const SECTION_TABS = ["", "/chat", "/table", "/suggestions", "/context", "/reports", "/projections"];
 
 /** The agent section a path is in ("/dashboard", "/media-buyer" or "/sales-coach"), or null. */
 export const sectionBase = (pathname) => SECTION_BASES.find((base) => under(pathname, base)) ?? null;

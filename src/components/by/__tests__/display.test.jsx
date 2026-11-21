@@ -49,6 +49,19 @@ describe("TabPill", () => {
     render(<TabPill items={TABS} value="chat" onValueChange={() => {}} aria-label="Views" trailing={<button>More</button>} />)
     expect(within(screen.getByRole("tablist")).getByRole("button", { name: "More" })).toBeInTheDocument()
   })
+
+  it("says why a tab is disabled and shows a badge after a label", () => {
+    const items = [
+      { value: "ops", label: "Agency Ops" },
+      { value: "buyer", label: "Media Buyer", badge: <span>New</span> },
+      { value: "coach", label: "Sales Coach", disabled: true, hint: "Unlocks after Media Buyer" },
+      { value: "later", label: "Later", disabled: true },
+    ]
+    render(<TabPill items={items} value="ops" onValueChange={() => {}} aria-label="Setup" />)
+    expect(screen.getByRole("tab", { name: /Media Buyer/ })).toHaveTextContent("Media BuyerNew")
+    expect(screen.getByRole("tab", { name: "Sales Coach" })).toHaveAttribute("title", "Unlocks after Media Buyer")
+    expect(screen.getByRole("tab", { name: "Later" })).toHaveAttribute("title", "Coming soon")
+  })
 })
 
 describe("Menu and Tooltip", () => {

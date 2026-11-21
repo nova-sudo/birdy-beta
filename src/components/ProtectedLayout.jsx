@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { PUBLIC_ROUTES, PUBLIC_ROUTE_PREFIXES, isProtectedPath } from '@/lib/constants';
+import { PUBLIC_ROUTES, PUBLIC_ROUTE_PREFIXES, SETUP_PATH, isProtectedPath, isSetupPath } from '@/lib/constants';
 import { writeSession, clearSession, ADMIN_HOME } from '@/lib/session';
 
 /**
@@ -91,15 +91,15 @@ export default function ProtectedLayout({ children }) {
       // Redirect to /login for protected/admin routes if not authenticated
       // (isAdminRoute covers every /admin sub-route, not just the exact path).
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-    } else if (isAuthenticated && onboardingIncomplete && pathname !== '/onboarding' && !isPublicRoute) {
-      // First-run onboarding not finished — keep them in the wizard.
-      router.push('/onboarding');
+    } else if (isAuthenticated && onboardingIncomplete && !isSetupPath(pathname) && !isPublicRoute) {
+      // First-run setup not finished — keep them in it.
+      router.push(SETUP_PATH);
     } else if (isAdminRoute && isAuthenticated && !isAdmin) {
       // Authenticated but not an admin — bounce out of the admin console.
       router.push('/dashboard');
     } else if (isAuthenticated && isPublicRoute) {
       // Redirect authenticated users from /, /login or /register to /clients
-      router.push(onboardingIncomplete ? '/onboarding' : '/clients');
+      router.push(onboardingIncomplete ? SETUP_PATH : '/clients');
     }
   }, [router, pathname]);
 

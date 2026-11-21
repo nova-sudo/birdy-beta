@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 import { Menu, MenuContent, MenuItem, MenuTrigger, PILL_EXTRA, cn } from "@/components/by";
-import { MORE_PAGES, sectionTabHref } from "@/components/agency/tabs";
+import { morePagesOf, sectionTabHref } from "@/components/agency/tabs";
 
 /**
  * "More" at the end of a section's tab pill: the section's pages that are not one of the four tabs.
@@ -16,7 +16,8 @@ import { MORE_PAGES, sectionTabHref } from "@/components/agency/tabs";
  */
 export function SectionMore({ section, tab }) {
   const search = useSearchParams();
-  const current = MORE_PAGES.find((p) => p.value === tab) ?? null;
+  const pages = morePagesOf(section);
+  const current = pages.find((p) => p.value === tab) ?? null;
   return (
     <Menu>
       <MenuTrigger
@@ -28,7 +29,7 @@ export function SectionMore({ section, tab }) {
         <ChevronDown aria-hidden="true" />
       </MenuTrigger>
       <MenuContent align="end" aria-label="More pages" className="min-w-[230px]">
-        {MORE_PAGES.map((page) => {
+        {pages.map((page) => {
           const on = page.value === tab;
           return (
             <MenuItem key={page.value} asChild selected={on}>

@@ -78,7 +78,7 @@ describe("register page", () => {
 
     await signUp()
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding"))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/welcome"))
     expect(JSON.parse(localStorage.getItem("user"))).toEqual(user)
     expect(localStorage.getItem("onboarding_incomplete")).toBe("1")
 

@@ -4,7 +4,8 @@ export { cn } from "./cn"
 
 // Actions and inputs
 export { Button, buttonVariants } from "./button"
-export { TextField, TextArea, SearchField, DropdownTrigger } from "./field"
+export { TextField, TextArea, SearchField, DropdownTrigger, NativeSelectField } from "./field"
+export { SelectField } from "./select-field"
 export { AskBar } from "./ask-bar"
 export { AskPanel } from "./ask-panel"
 export { ChatSender, ChatTyping, UserMessage } from "./chat"
@@ -15,12 +16,14 @@ export { Switch, Checkbox, RadioGroup, Radio } from "./choice"
 export { TabPill, TabPanel, PILL_EXTRA } from "./tab-pill"
 export { Menu, MenuTrigger, MenuContent, MenuItem, MenuLabel, MenuSeparator } from "./popover-menu"
 export { Tooltip } from "./tooltip"
+export { Segmented } from "./segmented"
 
 // Data display
 export { Pill, CplChip, CountBadge } from "./pill"
 export { KpiTile, Delta } from "./kpi-tile"
 export { Table, TableHead, TableBody, TableScroll, Tr, Th, Td, RowArrow } from "./table"
 export { Card, EmptyState } from "./card"
+export { Disclosure } from "./disclosure"
 export { LineChart } from "./line-chart"
 export { Funnel } from "./funnel"
 export { RankList } from "./rank-list"
@@ -35,6 +38,7 @@ export { Rail, RailMenuTile, RailAccount } from "./shell/rail"
 export { ClientSwitcher } from "./shell/client-switcher"
 export { SectionHeader } from "./shell/section-header"
 export { CreditsRing } from "./shell/credits-ring"
+export { SetupRing } from "./shell/setup-ring"
 
 // Overlays, flows and feedback
 export { Dialog, DialogContent, DialogBody, DialogFooter } from "./dialog"
