@@ -1,7 +1,6 @@
 "use client";
 
-// Settings: Connections, Plan & credits, Account, Media Buyer, Alerts and
-// Metrics, one tab each in the section pill. ?section= opens one; plain
+// Settings: Connections, Plan & credits, Account, Alerts and Metrics, one tab each in the section pill. ?section= opens one; plain
 // /settings is Connections, and the old ?tab= values and /metrics, /alerts,
 // /billing and /credits
 // land on the section that holds what they showed (lib/settings-sections).
@@ -19,7 +18,6 @@ import { useIntegrations } from "./use-integrations";
 import { ConnectionsSection } from "./connections-section";
 import { PlanSection } from "./plan-section";
 import { AccountSection } from "./account-section";
-import { MediaBuyerSection } from "./media-buyer-section";
 import { MetricsSection } from "./metrics/metrics-section";
 import { AlertsSection } from "./alerts/alerts-section";
 
@@ -70,7 +68,7 @@ export function SettingsScreen() {
     <div className={PAGE}>
       <header className="shrink-0 border-b border-by-line bg-by-surface px-4 py-3.5 sm:px-7">
         <h1 className="font-by-display text-by-title leading-[1.2] font-bold tracking-[-0.01em]">Settings</h1>
-        <p className="truncate text-by-body text-by-muted">Connections, account, Media Buyer, alerts and metrics</p>
+        <p className="truncate text-by-body text-by-muted">Connections, account, alerts and metrics</p>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col pt-4.5">
@@ -93,8 +91,7 @@ export function SettingsScreen() {
                 <SectionTitle section={s} id={`settings-h-${s.key}`} />
                 {s.key === "connections" && <ConnectionsSection integrations={integrations} />}
                 {s.key === "plan" && <PlanSection />}
-                {s.key === "account" && <AccountSection integrations={integrations} />}
-                {s.key === "agents" && <MediaBuyerSection />}
+                {s.key === "account" && <AccountSection />}
                 {s.key === "alerts" && <AlertsSection />}
                 {s.key === "metrics" && <MetricsSection />}
               </div>

@@ -138,8 +138,10 @@ export function AlertsSection() {
 
   return (
     <>
+      {/* The conversation opens beside the lists, never between the bar and them. */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex min-w-0 flex-1 flex-col gap-3.5">
       <AlertsAskBar chat={chat} onOpenChange={setAsking} />
-      {asking && <AlertsAskPanel chat={chat} onOpenChange={setAsking} />}
 
       <div ref={tabs} className="contents">
       <TabPill items={items} value={tab} onValueChange={openTab} aria-label="Alert lists" toolbar={newAlert} className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -153,6 +155,9 @@ export function AlertsSection() {
           </TabPanel>
         ))}
       </TabPill>
+      </div>
+      </div>
+      {asking && <AlertsAskPanel chat={chat} onOpenChange={setAsking} />}
       </div>
 
       {editor && (

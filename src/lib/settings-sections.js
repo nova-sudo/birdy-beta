@@ -9,7 +9,6 @@ export const SETTINGS_SECTIONS = [
   { key: "connections", label: "Connections", title: "Connections", sub: "Where your numbers come from" },
   { key: "plan", label: "Plan & credits", title: "Plan & credits", sub: "Your plan, client slots and AI credits" },
   { key: "account", label: "Account", title: "Account", sub: "Your login and preferences" },
-  { key: "agents", label: "Media Buyer", title: "Media Buyer", sub: "How Birdy's media buying works for you" },
   { key: "alerts", label: "Alerts", title: "Alerts", sub: "What Birdy watches for, and what it has caught" },
   { key: "metrics", label: "Metrics", title: "Metrics", sub: "Every metric powering your dashboards and formulas" },
 ];
@@ -24,7 +23,6 @@ const OLD_TABS = {
   general: "account",
   billing: "plan",
   account: "plan",
-  capabilities: "agents",
 };
 
 const isSection = (key) => SETTINGS_SECTIONS.some((s) => s.key === key);

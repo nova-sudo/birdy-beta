@@ -7,6 +7,7 @@
 
 import { AskBar, AskPanel } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
+import { SETTINGS_ASK_PANEL } from "../metrics/metrics-ask";
 
 export function AlertsAskBar({ chat, onOpenChange }) {
   return (
@@ -23,7 +24,7 @@ export function AlertsAskBar({ chat, onOpenChange }) {
 
 export function AlertsAskPanel({ chat, onOpenChange }) {
   return (
-    <AskPanel title="Ask Birdy about alerts" onClose={() => onOpenChange(false)} follow={`${chat.messages.length}-${chat.loading}`} className="max-h-[28rem]">
+    <AskPanel title="Ask Birdy about alerts" onClose={() => onOpenChange(false)} follow={`${chat.messages.length}-${chat.loading}`} className={`${SETTINGS_ASK_PANEL} h-[28rem] lg:sticky lg:top-0 lg:h-[min(40rem,calc(100dvh-15rem))]`}>
       <ChatThread chat={chat} name="Birdy" compact />
     </AskPanel>
   );
