@@ -176,6 +176,8 @@ describe("adLeadRow", () => {
   it("only opens a CRM contact when the lead is one", () => {
     expect(adLeadRow(lead()).contactId).toBeNull()
     expect(adLeadRow(lead({ lead_source: "ghl_attribution", lead_id: "ghl-9", ghl_matched: true })).contactId).toBe("ghl-9")
+    // An instant-form lead matched in the CRM opens the contact it was matched to.
+    expect(adLeadRow(lead({ ghl_matched: true, ghl_contact_id: "ghl-4" })).contactId).toBe("ghl-4")
   })
 
   it("works with the Leads table's filters", () => {

@@ -66,7 +66,8 @@ export function adLeadRow(lead) {
   const stage = status === "won" ? "closed" : status === "lost" || status === "abandoned" ? "lost" : lead.ghl_matched ? "crm" : "new";
   return {
     id: String(lead.lead_id ?? ""),
-    contactId: lead.lead_source === "ghl_attribution" && lead.lead_id ? String(lead.lead_id) : null,
+    // The CRM contact this lead opens: the matched contact where the API gives one, else a CRM-form lead's own id.
+    contactId: lead.ghl_contact_id ? String(lead.ghl_contact_id) : lead.lead_source === "ghl_attribution" && lead.lead_id ? String(lead.lead_id) : null,
     name: String(lead.full_name ?? "").trim() || "Unknown",
     stage,
     stageNote: "",
