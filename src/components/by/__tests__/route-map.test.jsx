@@ -140,6 +140,15 @@ describe("AgentPart", () => {
     expect(screen.getByRole("link", { name: /See Form checker in Context/ })).toHaveAttribute("href", "/media-buyer/context#sub-agent-fc1")
   })
 
+  it("names a helper's main agent, links to that chat and offers no Context link", () => {
+    const route = { ...DONE, steps: [...DONE.steps, step({ id: "s4", agent: "sub:helper-9f", name: "Ad check", kind: "helper", asked_by: "media_buyer", question: "Check every campaign's CPL." })] }
+    render(<AgentPart route={route} stepId="s4" />)
+    expect(screen.getByText("One-off helper of Media Buyer, not saved")).toBeInTheDocument()
+    expect(screen.queryByText(/Sub-agent of/)).toBeNull()
+    expect(screen.queryByRole("link", { name: /in Context/ })).toBeNull()
+    expect(screen.getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
+  })
+
   it("says why a skipped agent was not asked, from the route's limit", () => {
     const route = { ...DONE, limit_hit: "asks", steps: [...DONE.steps, step({ id: "s4", agent: "sub:fc1", name: "Form checker", kind: "sub", asked_by: "s3", status: "skipped", summary: "Not asked: limit of 3 asks" })] }
     render(<AgentPart route={route} stepId="s4" />)

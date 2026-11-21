@@ -5,6 +5,8 @@
 // The server sends `route: null` when no other agent was involved. Otherwise:
 //   { status, seconds, credits, limit_hit, steps: [{ id, agent, name, kind, status,
 //     summary, question, asked_by, tools: [{ name, label, detail }], answer, credits, seconds }] }
+// A one-off helper a main agent started for one job (never saved) has kind "helper" and an
+// agent key "sub:helper-<id>": it is drawn like a sub-agent of that main agent, with no Context row.
 
 /**
  * The main agents. `role` picks the colour pair in the kit (by-ops, by-buyer,
@@ -18,7 +20,7 @@ export const AGENTS = {
 
 const ROUTE_STATUS = ["working", "done", "failed"];
 const STEP_STATUS = ["working", "done", "failed", "skipped"];
-const KINDS = ["orchestrator", "main", "sub"];
+const KINDS = ["orchestrator", "main", "sub", "helper"];
 const LIMITS = ["asks", "depth", "repeat"];
 
 const isSub = (key) => typeof key === "string" && key.startsWith("sub:");
@@ -31,19 +33,20 @@ const strOrNull = (v) => str(v) || null;
  * A sub-agent ("sub:<id>") gets the neutral role and keeps the main agent it belongs to in `parent`.
  *
  * @param {string} key "birdy" | "media_buyer" | "sales_coach" | "sub:<id>"
- * @param {{name?: string, parent?: string|null}} [extra] the step's own name wins over the default
+ * @param {{name?: string, parent?: string|null, helper?: boolean}} [extra] the step's own name wins over the
+ *   default; `helper` marks a one-off helper, which is kept nowhere, so it has no Context link
  */
-export function agentInfo(key, { name, parent = null } = {}) {
+export function agentInfo(key, { name, parent = null, helper = false } = {}) {
   const main = AGENTS[key];
   if (main) return { ...main, name: str(name) || main.name, parent: null };
   const parentInfo = AGENTS[parent] && parent !== "birdy" ? AGENTS[parent] : null;
-  const subId = isSub(key) ? key.slice(4) : null;
+  const subId = isSub(key) && !helper ? key.slice(4) : null;
   return {
     key: str(key) || "unknown",
-    name: str(name) || "Sub-agent",
+    name: str(name) || (helper ? "Helper" : "Sub-agent"),
     role: "neutral",
     icon: "bot",
-    kind: isSub(key) ? "sub" : "main",
+    kind: helper ? "helper" : isSub(key) ? "sub" : "main",
     chat: parentInfo?.chat ?? null,
     parent: parentInfo?.key ?? null,
     parentName: parentInfo?.name ?? null,
@@ -105,7 +108,10 @@ export function normalizeRoute(raw) {
       seconds: num(s.seconds),
     }));
   if (base.length === 0) return null;
-  const steps = base.map((s, i) => ({ ...s, info: agentInfo(s.agent, { name: s.name, parent: s.kind === "sub" ? parentOf(base, i) : null }) }));
+  const steps = base.map((s, i) => {
+    const helper = s.kind === "helper";
+    return { ...s, info: agentInfo(s.agent, { name: s.name, helper, parent: s.kind === "sub" || helper ? parentOf(base, i) : null }) };
+  });
   return {
     status,
     seconds: num(raw.seconds),
@@ -237,6 +243,7 @@ export function stepReason(route, step) {
   const said = step.summary ?? "";
   const took = step.seconds > 0 ? ` after ${formatSeconds(step.seconds)}` : "";
   if (step.status === "skipped") {
+    if (step.kind === "helper" && /limit of \d+ helpers/i.test(said)) return `${name} wasn’t started because this reply had already used its 2 helpers.`;
     const limit = ASKS.test(said) ? "asks" : CHAIN.test(said) ? "depth" : ALREADY.test(said) ? "repeat" : route?.limit_hit ?? null;
     if (limit === "asks") return `${name} wasn’t asked because this reply had already used its 3 agent asks. Ask it on its own to get its answer.`;
     if (limit === "depth") return `${name} wasn’t asked because the chain of agents was already as long as it can go: an agent, Birdy, another agent and one of its sub-agents.`;

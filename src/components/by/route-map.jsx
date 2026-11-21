@@ -113,6 +113,7 @@ function Node({ step, selected, live, onSelect, stacked }) {
         <span className="sr-only">
           {`, ${stepStatusLabel(step.status)}`}
           {info.kind === "sub" && info.parentName ? `, sub-agent of ${info.parentName}` : ""}
+          {info.kind === "helper" && info.parentName ? `, one-off helper of ${info.parentName}` : ""}
         </span>
       </span>
     </button>
@@ -276,6 +277,7 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-by-body font-semibold">{title}</h3>
           {info.kind === "sub" && info.parentName && <p className="text-by-caption text-by-muted">Sub-agent of {info.parentName}</p>}
+          {info.kind === "helper" && info.parentName && <p className="text-by-caption text-by-muted">One-off helper of {info.parentName}, not saved</p>}
         </div>
         {onClose && (
           <button type="button" aria-label={`Close ${title}`} onClick={onClose} className={cn(buttonVariants({ kind: "ghost", size: "sm", iconOnly: true }), "-mr-1")}>
@@ -317,7 +319,7 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
           </Link>
         )}
         <Link href={chatHref ?? agentChatHref(info)} className={cn(buttonVariants({ kind: info.kind === "sub" && info.context ? "ghost" : "soft", size: "sm" }))}>
-          Open {info.kind === "sub" && info.parentName ? `${info.parentName}’s` : `${info.name}’s`} chat
+          Open {(info.kind === "sub" || info.kind === "helper") && info.parentName ? `${info.parentName}’s` : `${info.name}’s`} chat
           <ArrowUpRight aria-hidden="true" />
         </Link>
         {meta && <span className="ml-auto text-by-caption text-by-muted tabular-nums">{stepStatusLabel(step.status)} · {meta}</span>}
