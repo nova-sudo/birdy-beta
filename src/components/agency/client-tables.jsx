@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Phone, Play, Users } from "lucide-react";
 import {
   Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
 import { TableCard, money, tableState, useColumns } from "./table-card";
 import { LeadModal } from "./lead/lead-modal";
 import {
-  AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
+  LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
 } from "@/lib/client-tables";
 
 const STAGE = {
@@ -130,7 +130,7 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
               items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
             />
           )}
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex max-w-full flex-wrap items-center gap-2.5">
             <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className={toolbarStart ? "w-44" : "w-52"} />
             {toolbarEnd}
             <LeadFilters options={options} chosen={filters} onChange={setFilters} />
@@ -202,80 +202,6 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
     {/* Outside the card: a table that reloads under it never closes the lead. */}
     <LeadModal contactId={opened?.contactId ?? null} name={opened?.name} onClose={() => setOpened(null)} />
     </>
-  );
-}
-
-// ── Ads ─────────────────────────────────────────────────────────────────────
-
-const AD_COLUMNS = [{ id: "spend", label: "Spend" }, { id: "leads", label: "Leads" }, { id: "cpl", label: "CPL" }, { id: "inCrm", label: "In CRM" }, { id: "closed", label: "Closed" }];
-
-/**
- * A client's campaigns, ad sets or ads, with what each spent and brought in.
- * @param {{levels?: Record<string, object[]>, rows: object[]}} props.data `levels` holds the rows for each level; without it only ads are shown
- * @param {number|null} [props.cplTarget] a row over this cost per lead is marked
- */
-export function AdsTable({ data, cplTarget = null, currencySymbol = "£", initialLevel = "ads" }) {
-  const [level, setLevel] = useState(initialLevel);
-  const spec = AD_LEVELS.find((l) => l.key === level);
-  const levelRows = data.levels?.[level] ?? data.rows;
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState({ id: "spend", dir: "desc" });
-  const columns = useColumns(AD_COLUMNS);
-  const fmt = money(currencySymbol);
-  const rows = useMemo(() => sortBy(searchBy(levelRows, query, ["name", "campaign"]), sort), [levelRows, query, sort]);
-  const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
-  const plural = spec.label.toLowerCase();
-
-  return (
-    <TableCard
-      toolbar={
-        <>
-          {data.levels && (
-            <TabPill
-              aria-label="Ad level"
-              value={level}
-              onValueChange={setLevel}
-              items={AD_LEVELS.map((l) => ({ value: l.key, label: l.label, count: data.levels[l.key]?.length }))}
-            />
-          )}
-          <div className={data.levels ? "ml-auto flex items-center gap-2.5" : "flex items-center gap-2.5"}>
-            <SearchField placeholder={`Search ${plural}`} value={query} onChange={(e) => setQuery(e.target.value)} className="w-56" />
-            {columns.menu}
-          </div>
-        </>
-      }
-      state={tableState({ data: { ...data, rows: levelRows }, shown: rows.length, noun: plural, icon: <Megaphone />, empty: { title: `No ${plural} ran in this range`, body: `${spec.label} appear here once they spend or bring in a lead.` } })}
-    >
-      <Table>
-        <TableHead>
-          <tr>
-            <Th {...header("name", "asc")} className="min-w-56">{spec.noun}</Th>
-            {columns.shows("spend") && <Th numeric {...header("spend")}>Spend</Th>}
-            {columns.shows("leads") && <Th numeric {...header("leads")}>Leads</Th>}
-            {columns.shows("cpl") && <Th numeric {...header("cpl")}>CPL</Th>}
-            {columns.shows("inCrm") && <Th numeric {...header("inCrm")}>In CRM</Th>}
-            {columns.shows("closed") && <Th numeric {...header("closed")}>Closed</Th>}
-          </tr>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <Tr key={row.id}>
-              <Td className="max-w-96 py-2.5">
-                <span className="block truncate" title={row.name}>{row.name}</span>
-                {row.campaign && <span className="block truncate text-by-caption text-by-muted" title={row.campaign}>{row.campaign}</span>}
-              </Td>
-              {columns.shows("spend") && <Td numeric>{fmt(row.spend, 2)}</Td>}
-              {columns.shows("leads") && <Td numeric>{row.leads.toLocaleString("en-GB")}</Td>}
-              {columns.shows("cpl") && (
-                <Td numeric className={row.cpl != null && cplTarget > 0 && row.cpl > cplTarget ? "font-semibold text-by-danger" : ""}>{row.cpl == null ? "—" : fmt(row.cpl, 2)}</Td>
-              )}
-              {columns.shows("inCrm") && <Td numeric>{row.inCrm.toLocaleString("en-GB")}</Td>}
-              {columns.shows("closed") && <Td numeric>{row.closed.toLocaleString("en-GB")}</Td>}
-            </Tr>
-          ))}
-        </TableBody>
-      </Table>
-    </TableCard>
   );
 }
 

@@ -3,20 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { Megaphone, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import {
   Card, CplChip, Notice, RowArrow, SearchField, SectionHeader, Skeleton, TabPill, Table, TableBody, TableHead, Td, Th, Tr, Button,
 } from "@/components/by";
 import { BUYER_CLIENT_VIEWS, COACH_CLIENT_VIEWS, ClientDashboard } from "@/components/agency/client-dashboard";
 import { CallsTable, LeadsTable, RepsTable } from "@/components/agency/client-tables";
-import { ClientFilter, DrillTrail, useDrill } from "@/components/agency/buyer-drill";
+import { ClientFilter, useDrill } from "@/components/agency/buyer-drill";
+import { AdsDrill, adLeadsCapped } from "@/components/agency/ads-drill";
 import { resolveSection } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { SectionMore } from "@/components/agency/section-more";
 import { useOpenSuggestions } from "@/components/agency/use-suggestions";
 import { apiRequest } from "@/lib/api";
-import { applyDrill, drillInto, drillNames, drillTrail, filtersAt } from "@/lib/buyer-drill";
-import { AD_LEVELS, adLeadRow, adLevelRows, callRows, repRows, searchBy, sortBy, toggleSort } from "@/lib/client-tables";
+import { AGENCY_DRILL, CLIENT_DRILL, drillNames, drillQuery } from "@/lib/buyer-drill";
+import { AD_LEADS_LIMIT, AD_LEVELS, adLeadRow, adLevelRows, callRows, repRows, searchBy, sortBy, toggleSort } from "@/lib/client-tables";
 import { activeGroups } from "@/lib/client-status";
 import { presetToDateRange } from "@/lib/date-utils";
 import { buyerClientRows, coachClientRows } from "@/lib/section-birds-eye";
@@ -123,16 +124,13 @@ const sortHeader = (sort, setSort) => (id, first) => ({ sort: sort?.id === id ? 
 
 // ── Media Buyer ─────────────────────────────────────────────────────────────
 
-const BUYER_LEVELS = [{ key: "clients", label: "Clients", noun: "Client" }, ...AD_LEVELS, { key: "leads", label: "Leads", noun: "Lead" }];
 const CPL_TONE = (cpl, limit) => (cpl == null || !(limit > 0) ? null : cpl > limit ? "danger" : cpl > limit * 0.8 ? "warning" : "success");
-// The Marketing Hub's own cap on the leads it listed.
-const LEADS_LIMIT = 5000;
-const UNDER = { group: "this client", campaign: "this campaign", adset: "this ad set", ad: "this ad" };
 
 /**
  * Media Buyer's Dashboard for the agency: every client's ads on one table, by client, campaign, ad set, ad or lead.
  * Clients over their limit and those with suggestions waiting come first. Clicking a row narrows the next level to it
  * (a client to its campaigns, down to an ad's leads); the level and filters live in the address.
+ * The levels and drill are the shared Ads table's (ads-drill.jsx); only the Clients level is drawn here.
  */
 function BuyerDashboard({ section }) {
   const range = useAddressRange();
@@ -141,12 +139,14 @@ function BuyerDashboard({ section }) {
   const ids = groups.map((g) => g.id).join(",");
   const rollup = useSWR(ids ? `/api/campaigns/opp-rollup?groups=${encodeURIComponent(ids)}${rangeQuery(range.preset)}` : null, json, { revalidateOnFocus: false, keepPreviousData: true });
   // The leads the Marketing Hub listed: every ad-attributed lead, with the ad, ad set and campaign it came from.
-  const leadsRes = useSWR(ids ? `/api/facebook-leads/filtered?groups=${encodeURIComponent(ids)}&limit=${LEADS_LIMIT}${rangeQuery(range.preset)}` : null, json, { revalidateOnFocus: false, keepPreviousData: true });
+  const leadsRes = useSWR(ids ? `/api/facebook-leads/filtered?groups=${encodeURIComponent(ids)}&limit=${AD_LEADS_LIMIT}${rangeQuery(range.preset)}` : null, json, { revalidateOnFocus: false, keepPreviousData: true });
   const waiting = useOpenSuggestions(section.ownsSuggestion);
   const symbol = getSymbolFromCurrency(groups.find((g) => g.facebook?.currency || g.ad_account_currency)?.facebook?.currency || groups.find((g) => g.ad_account_currency)?.ad_account_currency || "GBP") || "£";
   const { money } = useMoney(symbol);
-  const openClient = useOpenClient();
-  const { level, drill, go, setLevel, clear, step, pickClient } = useDrill();
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const nav = useDrill(AGENCY_DRILL);
 
   const levels = useMemo(() => {
     const byName = new Map();
@@ -169,140 +169,72 @@ function BuyerDashboard({ section }) {
     out.leads = (leadsRes.data?.leads ?? []).map(adLeadRow).filter((r) => names.has(r.groupId)).map((r) => ({ ...r, client: names.get(r.groupId) }));
     return out;
   }, [groups, rollup.data, leadsRes.data, waiting]);
-
-  const drilled = useMemo(() => Object.fromEntries(BUYER_LEVELS.map((l) => [l.key, applyDrill(levels[l.key], l.key, drill)])), [levels, drill]);
-  const applied = useMemo(() => new Set(filtersAt(level).map((f) => f.key)), [level]);
   const nameOf = useMemo(() => drillNames(groups), [groups]);
-  const trail = drillTrail(drill, nameOf);
 
-  const [query, setQuery] = useState("");
-  const [sorts, setSorts] = useState({});
-  const sort = sorts[level] ?? (level === "clients" ? { id: "urgency", dir: "desc" } : { id: "spend", dir: "desc" });
-  const setSort = (next) => setSorts((all) => ({ ...all, [level]: typeof next === "function" ? next(sort) : next }));
-  const spec = BUYER_LEVELS.find((l) => l.key === level);
-  const all = drilled[level];
-  const rows = useMemo(() => (level === "leads" ? all : sortBy(searchBy(all, query, ["name", "client", "campaign"]), sort)), [level, all, query, sort]);
-  const header = sortHeader(sort, setSort);
-  const plural = spec.label.toLowerCase();
-  const leadsLoading = Boolean(ids) && leadsRes.isLoading;
-  const counted = (key) => (loading || (key === "leads" && leadsLoading) ? undefined : drilled[key].length);
-  const drillRow = (row) => { const to = drillInto(level, row); if (to) go(to.level, to.drill); };
+  // A client's own dashboard, opened from its chip, keeps the campaign, ad set and ad the drill had reached.
+  const openClient = (id) => {
+    const next = new URLSearchParams();
+    if (search.get("range")) next.set("range", search.get("range"));
+    next.set("client", id);
+    router.push(`${pathname}?${drillQuery(next, nav.level, nav.drill, CLIENT_DRILL)}`);
+  };
 
-  // The deepest filter this level uses names what the table is narrowed to.
-  const deepest = [...trail].reverse().find((c) => applied.has(c.key));
-  const empty = deepest
-    ? { title: `No ${plural} under ${UNDER[deepest.key]} in this range`, body: "Remove a filter above to widen the table, or try a longer date range." }
-    : level === "leads"
-      ? { title: "No leads from your ads in this range", body: "Leads appear here once an ad brings one in. Try a longer date range." }
-      : { title: `No ${plural} ran in this range`, body: `${spec.label} appear here once they spend or bring in a lead. Try a longer date range.` };
+  const clientsLevel = {
+    sort: { id: "urgency", dir: "desc" },
+    render: ({ rows, header, drillRow }) => (
+      <Table>
+        <TableHead>
+          <tr>
+            <Th {...header("name", "asc")} className="min-w-52">Client</Th>
+            <Th numeric {...header("leads")}>Leads</Th>
+            <Th numeric {...header("cpl", "asc")}>CPL</Th>
+            <Th numeric {...header("spend")}>Ad spend</Th>
+            <Th numeric {...header("limit", "asc")}>Limit</Th>
+            <Th {...header("open")}>To review</Th>
+            <Th aria-label="Open" className="w-9" />
+          </tr>
+        </TableHead>
+        <TableBody>
+          {rows.map((row) => {
+            const tone = CPL_TONE(row.cpl, row.limit);
+            return (
+              <Tr key={row.id} interactive onClick={() => drillRow(row)}>
+                <Td className="max-w-72 truncate font-semibold" title={row.name}>{row.name}</Td>
+                {row.cpl == null && row.spend === 0 ? (
+                  <Td numeric colSpan={3} className="text-by-muted">No spend in this range</Td>
+                ) : (
+                  <>
+                    <Td numeric>{whole(row.leads)}</Td>
+                    <Td numeric>{row.cpl == null ? <span className="text-by-muted">No leads</span> : tone ? <CplChip tone={tone}>{money(row.cpl, 2)}</CplChip> : money(row.cpl, 2)}</Td>
+                    <Td numeric>{money(row.spend, 2)}</Td>
+                  </>
+                )}
+                <Td numeric className={row.limit ? "" : "text-by-muted"}>{row.limit ? money(row.limit, 2) : "None set"}</Td>
+                <Td>{row.open > 0 ? <span className="font-semibold text-by-accent">{row.open} {row.open === 1 ? "suggestion" : "suggestions"}</span> : <span className="text-by-muted">—</span>}</Td>
+                <RowArrow />
+              </Tr>
+            );
+          })}
+        </TableBody>
+      </Table>
+    ),
+  };
 
-  const levelSwitch = <TabPill aria-label="Show by" value={level} onValueChange={setLevel} items={BUYER_LEVELS.map((l) => ({ value: l.key, label: l.label, count: counted(l.key) }))} />;
-  const clientFilter = <ClientFilter clients={groups.map((g) => ({ id: String(g.id), name: g.name }))} value={drill.group ?? null} onChange={pickClient} />;
-  const trailLine = <DrillTrail trail={trail} applied={applied} loading={loading} onStep={step} onClear={clear} onOpenClient={openClient} />;
-
-  if (level === "leads") {
-    const fetched = leadsRes.data?.leads?.length ?? 0;
-    const leadData = {
-      rows,
-      total: null,
-      loading: loading || leadsLoading,
-      error: Boolean(leadsRes.error) && !leadsRes.data,
-      retry: () => leadsRes.mutate(),
-      capped: fetched >= LEADS_LIMIT ? `Showing the newest ${whole(LEADS_LIMIT)} leads from your ads in this range; older ones are not listed.` : "",
-    };
-    return (
-      <Frame section={section} range={range} caption={loading ? "Loading" : `${groups.length} client${groups.length === 1 ? "" : "s"}`}>
-        <LeadsTable data={leadData} currencySymbol={symbol} showClient stageTabs={false} calls={false} columnsMenu={false} toolbarStart={levelSwitch} toolbarEnd={clientFilter} toolbarBelow={trailLine} empty={empty} />
-      </Frame>
-    );
-  }
-
-  const data = { rows: all, loading, error: Boolean(error) && clientGroups.length === 0, retry: refresh };
+  const fetched = leadsRes.data?.leads?.length ?? 0;
   return (
     <Frame section={section} range={range} caption={loading ? "Loading" : `${groups.length} client${groups.length === 1 ? "" : "s"}`}>
-      <TableCard
-        toolbar={
-          <>
-            {levelSwitch}
-            <div className="ml-auto flex items-center gap-2.5">
-              <SearchField className="w-56" placeholder={`Search ${plural}`} value={query} onChange={(e) => setQuery(e.target.value)} />
-              {clientFilter}
-            </div>
-            {trailLine}
-          </>
-        }
-        state={tableState({ data, shown: rows.length, noun: plural, icon: <Megaphone />, empty })}
-      >
-        {level === "clients" ? (
-          <Table>
-            <TableHead>
-              <tr>
-                <Th {...header("name", "asc")} className="min-w-52">Client</Th>
-                <Th numeric {...header("leads")}>Leads</Th>
-                <Th numeric {...header("cpl", "asc")}>CPL</Th>
-                <Th numeric {...header("spend")}>Ad spend</Th>
-                <Th numeric {...header("limit", "asc")}>Limit</Th>
-                <Th {...header("open")}>To review</Th>
-                <Th aria-label="Open" className="w-9" />
-              </tr>
-            </TableHead>
-            <TableBody>
-              {rows.map((row) => {
-                const tone = CPL_TONE(row.cpl, row.limit);
-                return (
-                  <Tr key={row.id} interactive onClick={() => drillRow(row)}>
-                    <Td className="max-w-72 truncate font-semibold" title={row.name}>{row.name}</Td>
-                    {row.cpl == null && row.spend === 0 ? (
-                      <Td numeric colSpan={3} className="text-by-muted">No spend in this range</Td>
-                    ) : (
-                      <>
-                        <Td numeric>{whole(row.leads)}</Td>
-                        <Td numeric>{row.cpl == null ? <span className="text-by-muted">No leads</span> : tone ? <CplChip tone={tone}>{money(row.cpl, 2)}</CplChip> : money(row.cpl, 2)}</Td>
-                        <Td numeric>{money(row.spend, 2)}</Td>
-                      </>
-                    )}
-                    <Td numeric className={row.limit ? "" : "text-by-muted"}>{row.limit ? money(row.limit, 2) : "None set"}</Td>
-                    <Td>{row.open > 0 ? <span className="font-semibold text-by-accent">{row.open} {row.open === 1 ? "suggestion" : "suggestions"}</span> : <span className="text-by-muted">—</span>}</Td>
-                    <RowArrow />
-                  </Tr>
-                );
-              })}
-            </TableBody>
-          </Table>
-        ) : (
-          <Table>
-            <TableHead>
-              <tr>
-                <Th {...header("name", "asc")} className="min-w-56">{spec.noun}</Th>
-                <Th {...header("client", "asc")}>Client</Th>
-                <Th numeric {...header("spend")}>Spend</Th>
-                <Th numeric {...header("leads")}>Leads</Th>
-                <Th numeric {...header("cpl", "asc")}>CPL</Th>
-                <Th numeric {...header("inCrm")}>In CRM</Th>
-                <Th numeric {...header("closed")}>Closed</Th>
-                <Th aria-label="Open" className="w-9" />
-              </tr>
-            </TableHead>
-            <TableBody>
-              {rows.map((row) => (
-                <Tr key={row.id} interactive onClick={() => drillRow(row)}>
-                  <Td className="max-w-80 py-2.5">
-                    <span className="block truncate" title={row.name}>{row.name}</span>
-                    {row.campaign && <span className="block truncate text-by-caption text-by-muted" title={row.campaign}>{row.campaign}</span>}
-                  </Td>
-                  <Td className="max-w-48 truncate text-by-text-2" title={row.client}>{row.client}</Td>
-                  <Td numeric>{money(row.spend, 2)}</Td>
-                  <Td numeric>{whole(row.leads)}</Td>
-                  <Td numeric className={row.cpl != null && row.limit > 0 && row.cpl > row.limit ? "font-semibold text-by-danger" : ""}>{row.cpl == null ? "—" : money(row.cpl, 2)}</Td>
-                  <Td numeric>{whole(row.inCrm)}</Td>
-                  <Td numeric>{whole(row.closed)}</Td>
-                  <RowArrow />
-                </Tr>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </TableCard>
+      <AdsDrill
+        nav={nav}
+        levels={levels}
+        ads={{ loading, error: Boolean(error) && clientGroups.length === 0, retry: refresh }}
+        leads={{ loading: loading || (Boolean(ids) && leadsRes.isLoading), error: Boolean(leadsRes.error) && !leadsRes.data, retry: () => leadsRes.mutate(), capped: adLeadsCapped(fetched) }}
+        nameOf={nameOf}
+        currencySymbol={symbol}
+        showClient
+        toolbarEnd={<ClientFilter clients={groups.map((g) => ({ id: String(g.id), name: g.name }))} value={nav.drill.group ?? null} onChange={nav.pickClient} />}
+        onOpenClient={openClient}
+        custom={{ clients: clientsLevel }}
+      />
     </Frame>
   );
 }

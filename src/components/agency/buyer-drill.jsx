@@ -1,27 +1,29 @@
 "use client";
 
-// The drill-down controls on Media Buyer's Dashboard table: the client picker and the trail of
+// The drill-down controls on the Ads tables: the client picker (agency only) and the trail of
 // filters, both kept in the address. The rules for what narrows what live in lib/buyer-drill.
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpRight, Check, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Button, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/by";
-import { clearDrill, drillQuery, readDrill, stepTo } from "@/lib/buyer-drill";
+import { AGENCY_DRILL, clearDrill, drillQuery, readDrill, stepTo } from "@/lib/buyer-drill";
 
 /**
  * The level and filters in the address, and the ways to change them.
  * Every change is a new history entry, so the back button steps back through a drill.
+ * @param {import("@/lib/buyer-drill").DrillScope} [scope] the agency's levels when left out
  */
-export function useDrill() {
+export function useDrill(scope = AGENCY_DRILL) {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
-  const { level, drill } = readDrill(search);
+  const { level, drill } = readDrill(search, scope);
   const go = (nextLevel, nextDrill) => {
-    const query = drillQuery(search, nextLevel, nextDrill);
+    const query = drillQuery(search, nextLevel, nextDrill, scope);
     router.push(query ? `${pathname}?${query}` : pathname);
   };
   return {
+    scope,
     level,
     drill,
     go,

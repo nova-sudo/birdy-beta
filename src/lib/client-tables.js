@@ -50,6 +50,9 @@ export function leadCounts(rows) {
   return counts;
 }
 
+/** How many ad-attributed leads an Ads table's Leads level asks for: the Marketing Hub's own cap. */
+export const AD_LEADS_LIMIT = 5000;
+
 /** What `lead_source` on an ad-attributed lead means, in words. */
 export const AD_LEAD_SOURCES = { instant_form: "Meta instant form", ghl_attribution: "CRM form", tracker: "Tracked form" };
 

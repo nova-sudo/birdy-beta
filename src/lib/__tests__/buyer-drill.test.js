@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyDrill, clearDrill, drillInto, drillNames, drillQuery, drillTrail, filtersAt, readDrill, stepTo } from "../buyer-drill"
+import { AGENCY_DRILL, CLIENT_DRILL, applyDrill, clearDrill, drillInto, drillNames, drillQuery, drillTrail, filtersAt, readDrill, stepTo } from "../buyer-drill"
 
 const rows = [
   { id: "a:1", groupId: "a", campaignId: "c1", adsetId: "s1", adId: "1" },
@@ -94,5 +94,44 @@ describe("drillTrail", () => {
   })
   it("says a name is unknown rather than inventing one", () => {
     expect(drillTrail({ campaign: "gone" }, drillNames(groups))[0].name).toBeNull()
+  })
+})
+
+describe("inside one client", () => {
+  it("has no Clients level and no client filter, and opens on Campaigns", () => {
+    expect(CLIENT_DRILL.levels).toEqual(["campaigns", "adsets", "ads", "leads"])
+    expect(filtersAt("leads", CLIENT_DRILL).map((f) => f.key)).toEqual(["campaign", "adset", "ad"])
+    expect(filtersAt("campaigns", CLIENT_DRILL)).toEqual([])
+    expect(readDrill(new URLSearchParams(""), CLIENT_DRILL)).toEqual({ level: "campaigns", drill: {} })
+  })
+
+  it("ignores an agency level and client filter in the address", () => {
+    expect(readDrill(new URLSearchParams("client=a&level=clients&group=b&campaign=c1"), CLIENT_DRILL)).toEqual({ level: "campaigns", drill: { campaign: "c1" } })
+  })
+
+  it("keeps the client and view in the address and drops a stray group", () => {
+    const search = new URLSearchParams("client=a&view=ads&group=b")
+    expect(drillQuery(search, "adsets", { campaign: "c1" }, CLIENT_DRILL)).toBe("client=a&view=ads&level=adsets&campaign=c1")
+    expect(drillQuery(search, "campaigns", {}, CLIENT_DRILL)).toBe("client=a&view=ads")
+    // A place that opens on Ads leaves that level out instead.
+    expect(drillQuery(search, "ads", {}, { ...CLIENT_DRILL, first: "ads" })).toBe("client=a&view=ads")
+    expect(drillQuery(search, "clients", {}, CLIENT_DRILL)).toBe("client=a&view=ads")
+  })
+
+  it("drills a campaign to its ad sets without adding a client", () => {
+    expect(drillInto("campaigns", { id: "c1", groupId: "a", campaignId: "c1" }, CLIENT_DRILL)).toEqual({ level: "adsets", drill: { campaign: "c1" } })
+    expect(drillInto("ads", { id: "1", groupId: "a", campaignId: "c1", adsetId: "s1", adId: "1" }, CLIENT_DRILL)).toEqual({ level: "leads", drill: { campaign: "c1", adset: "s1", ad: "1" } })
+    expect(drillInto("leads", {}, CLIENT_DRILL)).toBeNull()
+    expect(drillInto("clients", { id: "a" }, CLIENT_DRILL)).toBeNull()
+  })
+
+  it("narrows rows by the client's filters only", () => {
+    expect(applyDrill(rows, "ads", { group: "b", campaign: "c1" }, CLIENT_DRILL).map((r) => r.id)).toEqual(["a:1", "a:2"])
+    expect(drillTrail({ group: "a", campaign: "c1" }, () => "Body Sculpt", CLIENT_DRILL).map((c) => c.key)).toEqual(["campaign"])
+  })
+
+  it("keeps the agency's behaviour as the default", () => {
+    expect(AGENCY_DRILL.first).toBe("clients")
+    expect(readDrill(new URLSearchParams("")).level).toBe("clients")
   })
 })

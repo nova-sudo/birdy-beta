@@ -15,11 +15,20 @@ const hubs = { leads: null, ads: null, calls: null }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => "/dashboard/table", useSearchParams: () => new URLSearchParams(route.search) }))
 vi.mock("@/components/agency/client-tables", () => ({
   LeadsTable: (p) => { hubs.leads = p; return <p>the leads table</p> },
-  AdsTable: (p) => { hubs.ads = p; return <p>the ads table</p> },
   CallsTable: (p) => { hubs.calls = p; return <p>the calls table</p> },
 }))
+vi.mock("@/components/agency/ads-drill", () => ({
+  AdsDrill: (p) => { hubs.ads = p; return <p>the ads table</p> },
+  adLeadsCapped: () => "",
+}))
 const tables = { client: null, preset: null }
-vi.mock("@/components/agency/use-client-tables", () => ({ useClientTables: (client, preset) => { Object.assign(tables, { client, preset }); return { leads: { rows: [{}, {}], total: 34 }, ads: { rows: [{}, {}] }, calls: { rows: [{}, {}, {}] } } } }))
+const ADS = [{ id: "1", limit: 6 }, { id: "2", limit: 6 }]
+vi.mock("@/components/agency/use-client-tables", () => ({
+  useClientTables: (client, preset, options) => {
+    Object.assign(tables, { client, preset, options })
+    return { leads: { rows: [{}, {}], total: 34 }, ads: { rows: ADS, levels: { campaigns: [], adsets: [], ads: ADS } }, adLeads: { rows: [{ id: "L1" }], fetched: 1 }, calls: { rows: [{}, {}, {}] } }
+  },
+}))
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: () => ({ clientGroups: [{ id: "a", name: "Aura", client_status: "Active", health: "Critical", targets: { cpl: 6 }, call_log_provider: "hotprospector" }, { id: "b", name: "Beaulea Clinic", client_status: "Active" }], loading: false, error: null, datePreset: "last_7d", setDatePreset: vi.fn(), refresh: vi.fn(), invalidate: vi.fn() }) }))
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: (...a) => sendChatMessage(...a), markUISubmitted: vi.fn() }))
 vi.mock("@/hooks/useAiCredentials", () => ({ useAiCredentials: () => ({ configured: true, loading: false, refresh: vi.fn(), markUnconfigured: vi.fn() }) }))
@@ -82,7 +91,12 @@ describe("the Dashboard tab inside one client", () => {
     route.search = "client=a&view=ads"
     const ads = render(<DashboardTab />)
     expect(screen.getByText("the ads table")).toBeInTheDocument()
-    expect(hubs.ads.cplTarget).toBe(6)
+    // The agency's drill-down without its Clients level, opening on the ads as it always has, with the leads they brought.
+    expect(hubs.ads.nav.scope.levels).toEqual(["campaigns", "adsets", "ads", "leads"])
+    expect(hubs.ads.nav.level).toBe("ads")
+    expect(hubs.ads.levels.ads).toBe(ADS)
+    expect(hubs.ads.levels.leads).toEqual([{ id: "L1" }])
+    expect(tables.options).toEqual({ adLeads: true })
     await userEvent.click(screen.getByRole("tab", { name: /^Calls/ }))
     expect(replace).toHaveBeenCalledWith("/dashboard/table?client=a&view=calls")
     ads.unmount()

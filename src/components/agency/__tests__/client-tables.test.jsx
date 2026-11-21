@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
-import { AdsTable, CallsTable, LeadsTable } from "../client-tables"
+import { CallsTable, LeadsTable } from "../client-tables"
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
@@ -100,45 +100,6 @@ describe("Leads table", () => {
     view.unmount()
     render(<LeadsTable data={data([])} />)
     expect(screen.getByRole("heading", { name: "No leads in this range" })).toBeInTheDocument()
-  })
-})
-
-describe("Ads table", () => {
-  const ADS = [
-    { id: "a1", name: "Body Sculpting", campaign: "SOUP - CBO", spend: 25.83, leads: 2, cpl: 12.915, inCrm: 2, closed: 0 },
-    { id: "a2", name: "Timelapse", campaign: "SOUP - CBO", spend: 24.03, leads: 8, cpl: 3.0, inCrm: 1, closed: 1 },
-    { id: "a3", name: "No leads yet", campaign: "", spend: 30, leads: 0, cpl: null, inCrm: 0, closed: 0 },
-  ]
-  it("lists ads by spend with their campaign, marking a cost per lead over the client's limit", async () => {
-    render(<AdsTable data={data(ADS)} cplTarget={6} />)
-    expect(names()).toEqual(["No leads yet", "Body SculptingSOUP - CBO", "TimelapseSOUP - CBO"])
-    expect(screen.getByText("£12.92")).toHaveClass("text-by-danger")
-    expect(screen.getByText("£3.00")).not.toHaveClass("text-by-danger")
-    expect(screen.getByRole("row", { name: /No leads yet/ })).toHaveTextContent("—")
-    await userEvent.click(screen.getByRole("button", { name: /^Leads/ }))
-    expect(names()[0]).toBe("TimelapseSOUP - CBO")
-  })
-  it("switches between campaigns, ad sets and ads when all three are given", async () => {
-    const levels = {
-      campaigns: [{ id: "c1", name: "SOUP - CBO", campaign: "", spend: 50, leads: 4, cpl: 12.5, inCrm: 3, closed: 1 }],
-      adsets: [{ id: "s1", name: "Lookalike 1%", campaign: "SOUP - CBO", spend: 50, leads: 4, cpl: 12.5, inCrm: 3, closed: 1 }],
-      ads: ADS,
-    }
-    render(<AdsTable data={{ ...data(ADS), levels }} />)
-    const pill = screen.getByRole("tablist", { name: "Ad level" })
-    expect(within(pill).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Campaigns1", "Ad sets1", "Ads3"])
-    expect(screen.getByRole("columnheader", { name: /^Ad/ })).toBeInTheDocument()
-    await userEvent.click(within(pill).getByRole("tab", { name: /^Campaigns/ }))
-    expect(screen.getByRole("columnheader", { name: /^Campaign/ })).toBeInTheDocument()
-    expect(names()).toEqual(["SOUP - CBO"])
-    expect(screen.getByRole("searchbox", { name: "Search campaigns" })).toBeInTheDocument()
-    await userEvent.click(within(pill).getByRole("tab", { name: /^Ad sets/ }))
-    expect(names()).toEqual(["Lookalike 1%SOUP - CBO"])
-  })
-
-  it("says so when no ad ran", () => {
-    render(<AdsTable data={data([])} />)
-    expect(screen.getByRole("heading", { name: "No ads ran in this range" })).toBeInTheDocument()
   })
 })
 
