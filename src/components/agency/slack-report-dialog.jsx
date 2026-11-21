@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import { Button, Dialog, DialogBody, DialogContent, DialogFooter, Notice, Radio, RadioGroup, SelectField, TextField } from "@/components/by";
+import { Button, Dialog, DialogBody, DialogContent, DialogFooter, Notice, Radio, RadioGroup, NativeSelectField, TextField } from "@/components/by";
 import { DATA_WINDOWS, EVENTS, WEEKDAYS, timezoneOptions } from "@/components/reports/report-format";
 import { ACCOUNT_TZ, ANY_ALERT, BIRDY_CHANNEL, bodyFor, initialForm } from "@/lib/slack-report-form";
 import { fetcher } from "@/lib/fetcher";
@@ -104,7 +104,7 @@ export function SlackReportDialog({ open, onOpenChange, report, api, alerts = []
                 )}
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
                   <TextField label="Time" type="time" value={form.time} onChange={(e) => set({ time: e.target.value })} help="Arrives within 5 minutes of it." />
-                  <SelectField
+                  <NativeSelectField
                     label="Timezone"
                     value={form.timezone}
                     onChange={(e) => set({ timezone: e.target.value })}
@@ -123,7 +123,7 @@ export function SlackReportDialog({ open, onOpenChange, report, api, alerts = []
                   ))}
                 </RadioGroup>
                 {form.event === "alert_fired" && (
-                  <SelectField
+                  <NativeSelectField
                     className="pl-6.5"
                     aria-label="Which alert"
                     value={form.alertId}
@@ -142,7 +142,7 @@ export function SlackReportDialog({ open, onOpenChange, report, api, alerts = []
               </Group>
             )}
 
-            <SelectField
+            <NativeSelectField
               label="Channel"
               value={form.channelId}
               onChange={(e) => set({ channelId: e.target.value })}

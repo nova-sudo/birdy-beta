@@ -17,12 +17,12 @@ describe("activeRailId", () => {
     ["/settings", "settings"],
     ["/billing", "settings"],
     ["/credits", "settings"],
+    ["/metrics", "settings"],
     ["/hub", "other"],
     ["/hub/dashboards/7", "other"],
     ["/ask-birdy", "other"],
     ["/contacts", "other"],
-    ["/metrics", "other"],
-    ["/alerts", "other"],
+    ["/alerts", "settings"],
     ["/changelog", null],
     ["/clientsx", null],
   ])("%s belongs to %s", (pathname, id) => {
@@ -36,7 +36,7 @@ describe("destinations", () => {
   })
 
   it("lists the pages that have no tile of their own", () => {
-    expect(OTHER_PAGES.map((p) => [p.label, p.href])).toEqual([["BirdyHub", "/hub"], ["Ask Birdy", "/ask-birdy"], ["Leads", "/contacts"], ["Metrics", "/metrics"], ["Alerts", "/alerts"]])
+    expect(OTHER_PAGES.map((p) => [p.label, p.href])).toEqual([["BirdyHub", "/hub"], ["Ask Birdy", "/ask-birdy"], ["Leads", "/contacts"]])
   })
 })
 
@@ -91,6 +91,10 @@ describe("isRebuilt", () => {
       expect(isRebuilt(path)).toBe(true)
     }
     expect(isRebuilt("/hub/reports")).toBe(false)
+  })
+
+  it("is true for Settings", () => {
+    expect(isRebuilt("/settings")).toBe(true)
   })
 })
 

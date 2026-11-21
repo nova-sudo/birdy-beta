@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Inbox, Plus } from "lucide-react";
 import { money as formatMoney } from "@/lib/stock-agent-api";
 import {
-  BirdyAvatar, Button, Card, ClientTile, CountBadge, CplChip, Delta, EmptyState, KpiTile, Menu, MenuContent, MenuItem,
+  BirdyAvatar, Button, Card, ClientTile, CountBadge, CplChip, Delta, Disclosure, EmptyState, KpiTile, Menu, MenuContent, MenuItem,
   MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, TabPanel, TabPill, Table, TableBody, TableHead, Td, Th, Tooltip, Tr, UserAvatar,
 } from "@/components/by";
 import { Section, Sub } from "../kit-parts";
@@ -126,6 +126,11 @@ export function DisplaySection() {
                 Media Buyer checks every client against its limits each morning. New suggestions appear here.
               </EmptyState>
             </Card>
+          </Sub>
+          <Sub title="Disclosure">
+            <Disclosure label="Lead tracking per client" count="3 need setup">
+              <p className="text-by-body-sm text-by-text-2">Detail most people skip folds away here until it is wanted.</p>
+            </Disclosure>
           </Sub>
         </div>
       </Section>

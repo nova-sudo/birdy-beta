@@ -1,4 +1,4 @@
-import { Bell, Calculator, LayoutGrid, List, Sparkles } from "lucide-react";
+import { LayoutGrid, List, Sparkles } from "lucide-react";
 
 // Where the rail's items go while the redesign is in progress. Each section
 // opens the nearest page that exists today; as a section's own screens are
@@ -18,8 +18,6 @@ export const OTHER_PAGES = [
   { label: "BirdyHub", href: "/hub", icon: LayoutGrid },
   { label: "Ask Birdy", href: "/ask-birdy", icon: Sparkles },
   { label: "Leads", href: "/contacts", icon: List },
-  { label: "Metrics", href: "/metrics", icon: Calculator },
-  { label: "Alerts", href: "/alerts", icon: Bell },
 ];
 
 const under = (pathname, base) => pathname === base || pathname.startsWith(`${base}/`);
@@ -34,7 +32,7 @@ export function activeRailId(pathname) {
   if (under(pathname, "/media-buyer") || under(pathname, "/campaigns") || under(pathname, "/hub/agents/media-buying")) return "buyer";
   if (under(pathname, "/sales-coach") || under(pathname, "/Sales-Hub")) return "coach";
   if (under(pathname, "/clients")) return "clients";
-  if (under(pathname, "/settings") || under(pathname, "/billing") || under(pathname, "/credits")) return "settings";
+  if (under(pathname, "/settings") || under(pathname, "/metrics") || under(pathname, "/billing") || under(pathname, "/credits") || under(pathname, "/alerts")) return "settings";
   if (OTHER_PAGES.some((page) => under(pathname, page.href))) return "other";
   return null;
 }

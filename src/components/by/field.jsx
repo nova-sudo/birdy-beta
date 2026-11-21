@@ -112,7 +112,7 @@ export function DropdownTrigger({ children, leading, className, ...props }) {
  * @param {string} [props.label] shown above the field; without it pass `aria-label`
  * @param {string} [props.help] a quiet hint under the field
  */
-export function SelectField({ label, error, help, options = [], id, className, ...props }) {
+export function NativeSelectField({ label, error, help, options = [], id, className, ...props }) {
   const auto = useId();
   const fieldId = id ?? auto;
   const messageId = error || help ? `${fieldId}-message` : undefined;
