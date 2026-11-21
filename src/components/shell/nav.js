@@ -44,7 +44,7 @@ export function activeRailId(pathname) {
  * canvas, so the shell gives them the whole content area instead of the padded
  * frame the older pages expect.
  */
-export const isRebuilt = (pathname) => pathname === "/clients" || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`));
+export const isRebuilt = (pathname) => pathname === "/clients" || /^\/contacts\/[^/]+$/.test(pathname) || SECTION_BASES.some((base) => SECTION_TABS.some((tab) => pathname === `${base}${tab}`));
 
 /** The three agent sections' addresses. Each has the same four tabs under it, and Context under "More". */
 const SECTION_BASES = ["/dashboard", "/media-buyer", "/sales-coach"];

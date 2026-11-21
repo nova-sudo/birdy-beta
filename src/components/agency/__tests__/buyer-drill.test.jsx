@@ -19,6 +19,10 @@ vi.mock("swr", () => ({
     return { data: prefix ? swr.data[prefix] : undefined, error: null, isLoading: false, mutate: vi.fn() }
   },
 }))
+// The lead modal itself is tested on its own; here it only says which lead it shows.
+vi.mock("@/components/agency/lead/lead-modal", () => ({
+  LeadModal: ({ contactId, name, onClose }) => (contactId ? <div role="dialog" aria-label={`Lead: ${name}`} data-contact={contactId}><button onClick={onClose}>Close</button></div> : null),
+}))
 vi.mock("@/components/agency/client-dashboard", () => ({ BUYER_CLIENT_VIEWS: [], COACH_CLIENT_VIEWS: [], ClientDashboard: () => null }))
 
 const GROUPS = [
@@ -96,9 +100,11 @@ describe("the Leads level", () => {
   it("opens only leads the CRM knows", async () => {
     show("level=leads")
     await userEvent.click(screen.getByText("Priya Shah"))
-    expect(push).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Priya Shah" })).toBeNull()
     await userEvent.click(screen.getByText("Leanne Turner"))
-    expect(push).toHaveBeenCalledWith("/contacts/L1")
+    expect(screen.getByRole("dialog", { name: "Lead: Leanne Turner" })).toHaveAttribute("data-contact", "L1")
+    expect(push).not.toHaveBeenCalled()
   })
 
   it("is honest when an ad brought no leads", () => {

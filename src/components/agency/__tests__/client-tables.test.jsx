@@ -6,6 +6,10 @@ import { AdsTable, CallsTable, LeadsTable } from "../client-tables"
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
+// The lead modal itself is tested on its own; here it only says which lead it shows.
+vi.mock("@/components/agency/lead/lead-modal", () => ({
+  LeadModal: ({ contactId, name, onClose }) => (contactId ? <div role="dialog" aria-label={`Lead: ${name}`} data-contact={contactId}><button onClick={onClose}>Close</button></div> : null),
+}))
 
 const data = (rows, over = {}) => ({ rows, total: rows.length, loading: false, error: false, retry: vi.fn(), ...over })
 const LEADS = [
@@ -49,7 +53,18 @@ describe("Leads table", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Name/ }))
     expect(names()).toEqual(["Hannah Lewis", "Leah Fenwick", "Leanne Turner"])
     await userEvent.click(screen.getByRole("row", { name: /Hannah Lewis/ }))
-    expect(push).toHaveBeenCalledWith("/contacts/c2")
+    // A lead opens over the table, not on a page of its own.
+    expect(push).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog", { name: "Lead: Hannah Lewis" })).toHaveAttribute("data-contact", "c2")
+    await userEvent.click(screen.getByRole("button", { name: "Close" }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("opens a lead from the keyboard through its name", async () => {
+    render(<LeadsTable data={data(LEADS)} />)
+    screen.getByRole("button", { name: "Leah Fenwick" }).focus()
+    await userEvent.keyboard("{Enter}")
+    expect(screen.getByRole("dialog", { name: "Lead: Leah Fenwick" })).toHaveAttribute("data-contact", "c3")
   })
 
   it("narrows by source, type, opportunity and tag from one menu, and the tab counts follow", async () => {
