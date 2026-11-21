@@ -54,6 +54,18 @@ describe("normalizeRoute", () => {
     expect(nearest.steps[2].info.parentName).toBe("Sales Coach")
   })
 
+  it("draws a one-off helper under the main agent that started it, with no Context row", () => {
+    const r = normalizeRoute({ status: "done", steps: [step({ id: "a", agent: "media_buyer" }), step({ id: "b", agent: "sub:helper-1a2b", name: "Ad check", kind: "helper", asked_by: "media_buyer" })] })
+    expect(r.steps[1].kind).toBe("helper")
+    expect(r.steps[1].info).toMatchObject({ name: "Ad check", kind: "helper", role: "neutral", icon: "bot", parent: "media_buyer", parentName: "Media Buyer", context: null })
+    expect(agentChatHref(r.steps[1].info)).toBe("/media-buyer/chat")
+  })
+
+  it("says why a helper was not started", () => {
+    const r = normalizeRoute({ status: "done", steps: [step({ id: "a", agent: "media_buyer" }), step({ id: "b", agent: "sub:helper-3", name: "Check C", kind: "helper", asked_by: "media_buyer", status: "skipped", summary: "Not started: limit of 2 helpers" })] })
+    expect(stepReason(r, r.steps[1])).toBe("Check C wasn’t started because this reply had already used its 2 helpers.")
+  })
+
   it("is safe to run twice", () => {
     const once = normalizeRoute(ROUTE)
     expect(normalizeRoute(once)).toEqual(once)
