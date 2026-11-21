@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { mutate } from "swr";
 import { AgentAvatar, AskBar, Button, ChatSender, Dialog, DialogBody, DialogContent, Notice } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { apiRequest } from "@/lib/api";
 import { hydrateChat } from "@/lib/chat-store";
 import { agentInfo } from "@/lib/agent-route";
-import { AGENT_NAMES, answerMessage, answered, knownLines, normalizeTeam, replyBlock, saveStep } from "@/lib/team-setup";
+import { AGENT_NAMES, answerMessage, answered, knownLines, normalizeTeam, replyBlock, saveStep, TEAM_KEY } from "@/lib/team-setup";
 import { KnowsPanel } from "./knows-panel";
 import { StepForm, hasForm } from "./step-form";
 
@@ -17,6 +18,8 @@ const INTROS = {
   media_buyer: "I watch your clients’ ads every day and propose changes for you to approve.",
   sales_coach: "I watch how fast new leads get called and how many of them close.",
 };
+// Forms that aren't a step: shown only when the owner asked the agent for one.
+const OPTIONAL_FORMS = ["practice"];
 const NEXT = { media_buyer: "Sales Coach", sales_coach: "sub-agents" };
 
 /** The session key of an agent's setup chat. */
@@ -47,7 +50,8 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   const a = team.agents[agent];
   const name = AGENT_NAMES[agent];
   const avatar = <AgentAvatar info={agentInfo(agent)} size={32} />;
-  const chat = useAgentChat({ sessionKey: interviewKey(agent), page: "team_setup", agent });
+  // The agent can save or change an answer itself from what was typed: read the state again after each reply.
+  const chat = useAgentChat({ sessionKey: interviewKey(agent), page: "team_setup", agent, onSettled: () => mutate(TEAM_KEY) });
   const [answeredAt, setAnsweredAt] = useState([]);
   const [editing, setEditing] = useState(null);
   const lines = knownLines(team, agent);
@@ -75,7 +79,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
 
   const renderAfter = (message, index, { last }) => {
     const block = replyBlock(message);
-    if (!last || !block || !hasForm(block.type) || !a.order.includes(block.type) || answeredAt.includes(index)) return null;
+    if (!last || !block || !hasForm(block.type) || !(a.order.includes(block.type) || OPTIONAL_FORMS.includes(block.type)) || answeredAt.includes(index)) return null;
     return (
       <div className="mt-3">
         <StepForm key={index} step={block.type} initial={block.data.value ?? a.values[block.type]} data={block.data} ctx={formCtx} onSubmit={answerFrom(index, block.type)} />

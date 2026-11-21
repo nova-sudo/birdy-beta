@@ -3,7 +3,7 @@ import {
   answerMessage, answered, isLocked, knownLines, lockedRefusal, lockedSections, nextSection, normalizeTeam, replyBlock, setupPercent, stepsLeftOf, teamDone,
 } from "../team-setup"
 
-const MB_ORDER = ["clients", "cpl", "playbook", "permissions", "schedule", "slack", "practice"]
+const MB_ORDER = ["clients", "cpl", "playbook", "permissions", "schedule", "slack"]
 const SC_ORDER = ["clients", "outcomes", "speed", "schedule", "slack"]
 const raw = (over = {}) => ({
   order: ["birdy", "media_buyer", "sales_coach", "sub_agents"],
@@ -25,7 +25,7 @@ describe("normalizeTeam", () => {
   it("reads the server's state and fills what is missing", () => {
     const team = normalizeTeam(raw())
     expect(team.agents.media_buyer.current).toBe("playbook")
-    expect(team.agents.media_buyer.steps).toEqual({ clients: true, cpl: true, playbook: false, permissions: false, schedule: false, slack: false, practice: false })
+    expect(team.agents.media_buyer.steps).toEqual({ clients: true, cpl: true, playbook: false, permissions: false, schedule: false, slack: false })
     expect(team.agents.sales_coach.waits_on).toBe("media_buyer")
     expect(normalizeTeam({ agents: {} }).agents.media_buyer.status).toBe("locked")
   })
@@ -61,8 +61,8 @@ describe("progress", () => {
   const team = normalizeTeam(raw())
 
   it("counts answers and names what is left", () => {
-    expect(answered(team, "media_buyer")).toEqual({ done: 2, total: 7 })
-    expect(stepsLeftOf(team, "media_buyer")).toEqual(["Playbook", "Permissions", "Schedule", "Slack", "Practice run"])
+    expect(answered(team, "media_buyer")).toEqual({ done: 2, total: 6 })
+    expect(stepsLeftOf(team, "media_buyer")).toEqual(["Playbook", "Permissions", "Schedule", "Slack"])
     expect(nextSection(team)).toBe("buyer")
   })
 
@@ -74,9 +74,9 @@ describe("progress", () => {
 
   it("counts the agents' steps into setup's share", () => {
     const steps = { a: "done", b: "todo" }
-    // Birdy 1 of 2, Media Buyer 2 of 7, Sales Coach 0 of 5, sub-agents 0 of 1.
-    expect(setupPercent(steps, team)).toBe(Math.round((3 / 15) * 100))
-    expect(setupPercent(steps, team, { completed: true })).toBe(Math.round((4 / 15) * 100))
+    // Birdy 1 of 2, Media Buyer 2 of 6, Sales Coach 0 of 5, sub-agents 0 of 1.
+    expect(setupPercent(steps, team)).toBe(Math.round((3 / 14) * 100))
+    expect(setupPercent(steps, team, { completed: true })).toBe(Math.round((4 / 14) * 100))
     expect(setupPercent(steps, null)).toBe(50)
   })
 
