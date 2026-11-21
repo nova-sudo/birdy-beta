@@ -1,7 +1,7 @@
 "use client";
 
 // Settings › Account: name, timezone and currency (GET/PATCH /api/user/profile),
-// the password (POST /api/user/password), and the Slack report's schedule.
+// and the password (POST /api/user/password).
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ import { Button, Card, Disclosure, SelectField, Skeleton, TextField, UserAvatar 
 import { apiRequest } from "@/lib/api";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { CURRENCIES, TIMEZONES, withCurrent } from "@/lib/account-options";
-import { SlackReport } from "./slack-report";
 
 /** One label-and-field row: the label beside the field on a wide screen, above it on a phone. */
 function Row({ label, htmlFor, children }) {
@@ -177,11 +176,6 @@ function ProfileCard() {
   );
 }
 
-export function AccountSection({ integrations }) {
-  return (
-    <>
-      <ProfileCard />
-      <SlackReport slack={integrations.slack} checking={integrations.checking} onSaved={(brief) => integrations.updateSlack({ brief })} />
-    </>
-  );
+export function AccountSection() {
+  return <ProfileCard />;
 }

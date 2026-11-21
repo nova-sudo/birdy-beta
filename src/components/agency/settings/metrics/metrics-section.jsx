@@ -217,7 +217,7 @@ export function MetricsSection() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 gap-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2.5">
           <div className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

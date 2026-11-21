@@ -16,7 +16,7 @@ describe("settings sections", () => {
     expect(sectionFromParams(p("tab=tracking"))).toBe("connections");
     expect(sectionFromParams(p("tab=general"))).toBe("account");
     expect(sectionFromParams(p("tab=billing"))).toBe("plan");
-    expect(sectionFromParams(p("tab=capabilities"))).toBe("agents");
+    expect(sectionFromParams(p("tab=capabilities"))).toBe("connections");
   });
 
   it("writes Connections as plain /settings", () => {

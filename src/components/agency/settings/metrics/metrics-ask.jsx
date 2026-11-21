@@ -8,6 +8,10 @@
 import { AskBar, AskPanel } from "@/components/by";
 import { ChatThread } from "@/components/agency/chat/thread";
 
+// In Settings the conversation is a card of its own beside the list, inside
+// the page padding. Under lg there is no room beside it, so it sits below.
+export const SETTINGS_ASK_PANEL = "w-full overflow-hidden rounded-by-lg border border-by-line shadow-by-card lg:w-[min(400px,36vw)]";
+
 /**
  * @param {object} props.chat what useAgentChat returns
  * @param {(open: boolean) => void} props.onOpenChange
@@ -28,7 +32,7 @@ export function MetricsAskBar({ chat, onOpenChange }) {
 
 export function MetricsAskPanel({ chat, onOpenChange }) {
   return (
-    <AskPanel title="Ask Birdy about metrics" onClose={() => onOpenChange(false)} follow={`${chat.messages.length}-${chat.loading}`}>
+    <AskPanel className={`${SETTINGS_ASK_PANEL} max-lg:h-[24rem]`} title="Ask Birdy about metrics" onClose={() => onOpenChange(false)} follow={`${chat.messages.length}-${chat.loading}`}>
       <ChatThread chat={chat} name="Birdy" compact />
     </AskPanel>
   );

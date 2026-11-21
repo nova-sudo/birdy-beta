@@ -11,7 +11,6 @@ vi.mock("../use-integrations", () => ({ useIntegrations: () => integrations }));
 vi.mock("../connections-section", () => ({ ConnectionsSection: () => <p>connections body</p> }));
 vi.mock("../plan-section", () => ({ PlanSection: () => <p>plan body</p> }));
 vi.mock("../account-section", () => ({ AccountSection: () => <p>account body</p> }));
-vi.mock("../media-buyer-section", () => ({ MediaBuyerSection: () => <p>buyer body</p> }));
 vi.mock("../alerts/alerts-section", () => ({ AlertsSection: () => <p>alerts body</p> }));
 vi.mock("../metrics/metrics-section", () => ({ MetricsSection: () => <p>metrics body</p> }));
 
