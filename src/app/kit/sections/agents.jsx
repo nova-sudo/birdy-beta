@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AgentPart, RouteMap } from "@/components/by";
+import { AgentPart, RouteMap, TeamTree } from "@/components/by";
 import { Section, Sub } from "../kit-parts";
 
 // Made-up routes in the server's shape. Same story as the design mock: the
@@ -102,6 +102,20 @@ export function AgentsSection() {
           <RouteMap route={LONG} selected={narrow} onSelect={setNarrow}>
             {narrow && <AgentPart route={LONG} stepId={narrow} variant="inline" onClose={() => setNarrow(null)} />}
           </RouteMap>
+        </div>
+      </Sub>
+
+      <Sub title="Team tree (the sign-in pages’ illustration, replays its arrival on reload)">
+        <div className="max-w-[600px] rounded-by-lg border border-by-line bg-by-canvas p-6">
+          <TeamTree
+            question="Why did calls drop this week?"
+            lead="Runs the agency view and hands work out"
+            branches={[
+              { agent: "media_buyer", line: "Spend, cost per lead, creatives", subs: ["Budget watcher"] },
+              { agent: "sales_coach", line: "Call trends, recordings, deals", subs: ["Weekly call check"] },
+            ]}
+            label="An example of Birdy's team"
+          />
         </div>
       </Sub>
     </Section>
