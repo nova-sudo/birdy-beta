@@ -85,6 +85,13 @@ describe("isRebuilt", () => {
     }
     expect(isRebuilt("/Sales-Hub")).toBe(false)
   })
+
+  it("is true for Reports, one report's page and Projections", () => {
+    for (const path of ["/dashboard/reports", "/dashboard/reports/r1", "/media-buyer/reports", "/media-buyer/reports/morning", "/media-buyer/projections"]) {
+      expect(isRebuilt(path)).toBe(true)
+    }
+    expect(isRebuilt("/hub/reports")).toBe(false)
+  })
 })
 
 describe("agent sections and clients", () => {

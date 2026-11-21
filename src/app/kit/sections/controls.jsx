@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Calendar, Columns3, Plus, Search, Trash2, Zap } from "lucide-react";
-import { AskBar, Button, Checkbox, DropdownTrigger, Radio, RadioGroup, SearchField, Switch, TextField } from "@/components/by";
+import { AskBar, Button, Checkbox, DropdownTrigger, Radio, RadioGroup, SearchField, SelectField, Switch, TextField } from "@/components/by";
 import { Row, Section, Sub } from "../kit-parts";
 
 const KINDS = ["primary", "secondary", "soft", "ghost", "danger"];
@@ -54,6 +54,7 @@ export function ControlsSection() {
           </DropdownTrigger>
           <TextField className="col-span-2" label="Slack channel" defaultValue="media buyers" error="Channel names can’t contain spaces. Try media-buyers." />
           <TextField label="Notes" placeholder="Disabled" disabled />
+          <SelectField label="Timezone" defaultValue="Europe/London" options={[{ value: "Europe/London", label: "Europe/London" }, { value: "Asia/Dubai", label: "Asia/Dubai" }, { value: "America/New_York", label: "America/New_York" }]} help="A short list, in the browser's own picker." />
         </div>
       </Sub>
 
