@@ -4,6 +4,7 @@
 // journey times) are reused as they are.
 
 import { threadDays } from "./lead-detail";
+import { LEADS_HREF } from "./leads-hub";
 
 const ANSWERED = new Set(["completed", "answered"]);
 
@@ -278,5 +279,5 @@ export function markParts(text, query, base) {
   return out;
 }
 
-/** The leads table the lead belongs to: the client's Dashboard, Leads view. */
-export const clientLeadsHref = (groupId) => (groupId ? `/dashboard/table?client=${encodeURIComponent(groupId)}` : "/contacts");
+/** The leads table the lead belongs to: the client's Dashboard, Leads view; without a client, Media Buyer's Leads level. */
+export const clientLeadsHref = (groupId) => (groupId ? `/dashboard/table?client=${encodeURIComponent(groupId)}` : LEADS_HREF);

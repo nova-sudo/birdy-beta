@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import useSWR from "swr";
 import { apiRequest } from "@/lib/api";
-import { adLevelRows, callRows, leadRow } from "@/lib/client-tables";
+import { AD_LEADS_LIMIT, adLeadRow, adLevelRows, callRows, leadRow } from "@/lib/client-tables";
 import { presetToDateRange } from "@/lib/date-utils";
 
 const LEADS_LIMIT = 500;
@@ -22,15 +23,29 @@ const OPTIONS = { revalidateOnFocus: false, keepPreviousData: true };
  * The rows behind a client's Leads, Ads and Calls tables for one date range.
  * All three load together, so each tab can show its count before it is opened.
  *
+ * The leads its ads brought in (the Ads table's Leads level) are asked for only while the Ads table is open.
+ *
  * @param {object|null} client the client group, with its Meta data
  * @param {string} preset the date range
+ * @param {{adLeads?: boolean}} [options] `adLeads` loads the Ads table's Leads level
  */
-export function useClientTables(client, preset) {
+export function useClientTables(client, preset, { adLeads: wantAdLeads = false } = {}) {
   const id = client?.id;
   const leads = useSWR(id ? `/api/leads/unified?groups=${encodeURIComponent(id)}&page=1&limit=${LEADS_LIMIT}${range(preset)}` : null, json, OPTIONS);
   const rollup = useSWR(id ? `/api/campaigns/opp-rollup?groups=${encodeURIComponent(id)}${range(preset)}` : null, json, OPTIONS);
   const location = client?.ghl_location_id;
   const calls = useSWR(location ? `/api/hotprospector/call-center?location_id=${encodeURIComponent(location)}&skip=0&limit=${CALLS_LIMIT}${range(preset)}` : null, json, OPTIONS);
+
+  // The same ad-attributed leads Media Buyer's agency table lists, for this client alone.
+  const adLeads = useSWR(id && wantAdLeads ? `/api/facebook-leads/filtered?groups=${encodeURIComponent(id)}&limit=${AD_LEADS_LIMIT}${range(preset)}` : null, json, OPTIONS);
+
+  // Every ad level carries the client's CPL limit, which the table marks rows against.
+  const adLevels = useMemo(() => {
+    const limit = Number(client?.targets?.cpl) > 0 ? Number(client.targets.cpl) : null;
+    const of = (level) => adLevelRows(client, rollup.data, level).map((row) => ({ ...row, groupId: String(id ?? ""), adId: level === "ads" ? row.id : "", limit }));
+    return { campaigns: of("campaigns"), adsets: of("adsets"), ads: of("ads") };
+  }, [client, id, rollup.data]);
+  const adLeadRows = useMemo(() => (adLeads.data?.leads ?? []).map(adLeadRow).filter((r) => r.groupId === String(id)), [adLeads.data, id]);
 
   const leadsTotal = leads.data?.meta?.total_contacts ?? null;
   return {
@@ -44,16 +59,19 @@ export function useClientTables(client, preset) {
     },
     ads: {
       // `rows` is the ads level, which the Ads tab counts; `levels` has all three.
-      rows: adLevelRows(client, rollup.data, "ads"),
-      levels: {
-        campaigns: adLevelRows(client, rollup.data, "campaigns"),
-        adsets: adLevelRows(client, rollup.data, "adsets"),
-        ads: adLevelRows(client, rollup.data, "ads"),
-      },
+      rows: adLevels.ads,
+      levels: adLevels,
       // The ads themselves come with the client; only the CRM figures wait on a request.
       loading: false,
       error: false,
       retry: () => rollup.mutate(),
+    },
+    adLeads: {
+      rows: adLeadRows,
+      fetched: adLeads.data?.leads?.length ?? 0,
+      loading: Boolean(id && wantAdLeads) && adLeads.isLoading,
+      error: Boolean(adLeads.error) && !adLeads.data,
+      retry: () => adLeads.mutate(),
     },
     calls: {
       rows: callRows(calls.data?.data),

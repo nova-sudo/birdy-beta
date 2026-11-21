@@ -203,6 +203,6 @@ describe("small labels", () => {
   })
   it("goes back to the client's leads, or to Leads without a client", () => {
     expect(clientLeadsHref("g 1")).toBe("/dashboard/table?client=g%201")
-    expect(clientLeadsHref(null)).toBe("/contacts")
+    expect(clientLeadsHref(null)).toBe("/media-buyer/table?level=leads")
   })
 })

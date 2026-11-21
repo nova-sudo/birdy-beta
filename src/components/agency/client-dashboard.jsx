@@ -12,8 +12,11 @@ import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { OPS_SECTION, sessionKey } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { SectionMore } from "@/components/agency/section-more";
-import { AdsTable, CallsTable, LeadsTable, RepsTable } from "@/components/agency/client-tables";
+import { CallsTable, LeadsTable, RepsTable } from "@/components/agency/client-tables";
+import { AdsDrill, adLeadsCapped } from "@/components/agency/ads-drill";
+import { useDrill } from "@/components/agency/buyer-drill";
 import { useClientTables } from "@/components/agency/use-client-tables";
+import { CLIENT_DRILL, drillNames } from "@/lib/buyer-drill";
 import { groupHasCallCentre } from "@/lib/call-centre-availability";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
@@ -40,6 +43,8 @@ export const COACH_CLIENT_VIEWS = [
   { value: "reps", label: "Callers", ask: "callers" },
 ];
 const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
+// Agency Ops' Ads table opens on the ads themselves, as it always has; Media Buyer's on the campaigns.
+const OPS_ADS_DRILL = { ...CLIENT_DRILL, first: "ads" };
 
 /**
  * A section's Dashboard tab inside one client: its tables on the redesign's
@@ -60,14 +65,14 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
   const tabs = useSectionTabs(section);
   const { clientGroups, loading, error, datePreset, setDatePreset, refresh } = useClientGroupsWithSeries(DEFAULT_DATE_PRESET);
   const client = useMemo(() => clientGroups.find((g) => g.id === clientId) ?? null, [clientGroups, clientId]);
-  const tables = useClientTables(client, datePreset);
+  const first = views[0].value;
+  const requested = search.get("view");
+  const view = views.some((v) => v.value === requested) ? requested : first;
+  const tables = useClientTables(client, datePreset, { adLeads: view === "ads" });
   const callsData = client && !groupHasCallCentre(client) ? { ...tables.calls, unavailable: true } : tables.calls;
   const currencySymbol = getSymbolFromCurrency(client?.facebook?.currency || client?.ad_account_currency || "GBP") || "£";
   const counts = { leads: tables.leads.total ?? tables.leads.rows.length, ads: tables.ads.rows.length, calls: callsData.rows.length, reps: repRows(callsData.rows).length };
 
-  const first = views[0].value;
-  const requested = search.get("view");
-  const view = views.some((v) => v.value === requested) ? requested : first;
   const setView = (value) => {
     const next = new URLSearchParams(search.toString());
     if (value === first) next.delete("view");
@@ -135,7 +140,7 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
             ) : view === "leads" ? (
               <LeadsTable data={tables.leads} currencySymbol={currencySymbol} />
             ) : view === "ads" ? (
-              <AdsTable data={tables.ads} cplTarget={client.targets?.cpl ?? null} currencySymbol={currencySymbol} initialLevel={ops ? "ads" : "campaigns"} />
+              <ClientAdsDrill client={client} tables={tables} currencySymbol={currencySymbol} scope={ops ? OPS_ADS_DRILL : CLIENT_DRILL} />
             ) : view === "reps" ? (
               <RepsTable data={callsData} />
             ) : (
@@ -171,5 +176,27 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
         </AskPanel>
       )}
     </div>
+  );
+}
+
+/**
+ * The client's Ads table: the agency table's levels and drill-down without its Clients level,
+ * always this client's campaigns, ad sets, ads and the leads they brought in.
+ */
+function ClientAdsDrill({ client, tables, currencySymbol, scope }) {
+  const nav = useDrill(scope);
+  const nameOf = useMemo(() => drillNames([client]), [client]);
+  const levels = useMemo(() => ({ ...tables.ads.levels, leads: tables.adLeads.rows }), [tables.ads.levels, tables.adLeads.rows]);
+  return (
+    <AdsDrill
+      nav={nav}
+      levels={levels}
+      ads={tables.ads}
+      leads={{ ...tables.adLeads, capped: adLeadsCapped(tables.adLeads.fetched) }}
+      nameOf={nameOf}
+      currencySymbol={currencySymbol}
+      columnsMenu
+      adsOf="this client’s ads"
+    />
   );
 }

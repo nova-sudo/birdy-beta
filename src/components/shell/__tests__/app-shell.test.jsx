@@ -93,9 +93,10 @@ describe("AppShell: other pages", () => {
   it("lists the pages with no tile and opens one", async () => {
     shell()
     await userEvent.click(screen.getByRole("button", { name: "Other pages" }))
-    expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["BirdyHub", "Ask Birdy", "Leads"])
-    await userEvent.click(screen.getByRole("menuitem", { name: "Leads" }))
-    expect(push).toHaveBeenCalledWith("/contacts")
+    // No Leads: the hub is retired, and leads live in Media Buyer's table.
+    expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["BirdyHub", "Ask Birdy"])
+    await userEvent.click(screen.getByRole("menuitem", { name: "Ask Birdy" }))
+    expect(push).toHaveBeenCalledWith("/ask-birdy")
   })
 })
 

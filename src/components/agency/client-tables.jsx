@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Megaphone, Phone, Play, Users } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Phone, Play, Users } from "lucide-react";
 import {
   Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
 import { TableCard, money, tableState, useColumns } from "./table-card";
 import { LeadModal } from "./lead/lead-modal";
 import {
-  AD_LEVELS, LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
+  LEAD_FILTERS, LEAD_STAGES, filterLeads, leadCounts, leadFilterOptions, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel,
 } from "@/lib/client-tables";
 
 const STAGE = {
@@ -77,7 +77,11 @@ export function LeadFilters({ options, chosen, onChange }) {
 
 const LEAD_COLUMNS = [
   { id: "stage", label: "Stage" }, { id: "from", label: "Came from" }, { id: "added", label: "Added" }, { id: "calls", label: "Calls" }, { id: "value", label: "Value" },
+  // The contact details the old Leads hub listed, off until asked for.
+  { id: "email", label: "Email", hidden: true }, { id: "phone", label: "Phone", hidden: true }, { id: "tags", label: "Tags", hidden: true },
 ];
+// Search reaches the contact details and tags too, whether or not their columns are shown.
+const LEAD_SEARCH = ["name", "campaign", "ad", "source", "client", "email", "phone", "tagText"];
 
 /**
  * A client's leads: tabs by how far each got, search, and where each came from.
@@ -108,7 +112,7 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
   const filtered = useMemo(() => filterLeads(data.rows, filters), [data.rows, filters]);
   const counts = useMemo(() => leadCounts(filtered), [filtered]);
   const rows = useMemo(
-    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab), query, ["name", "campaign", "ad", "source", "client"]), sort),
+    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab).map((r) => ({ ...r, tagText: (r.tags ?? []).join(" ") })), query, LEAD_SEARCH), sort),
     [filtered, stageTabs, tab, query, sort],
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
@@ -130,7 +134,7 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
               items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
             />
           )}
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex max-w-full flex-wrap items-center gap-2.5">
             <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className={toolbarStart ? "w-44" : "w-52"} />
             {toolbarEnd}
             <LeadFilters options={options} chosen={filters} onChange={setFilters} />
@@ -151,6 +155,9 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
             {columns.shows("added") && <Th {...header("added")}>Added</Th>}
             {columns.shows("calls") && <Th numeric {...header("calls")}>Calls</Th>}
             {columns.shows("value") && <Th numeric {...header("value")}>Value</Th>}
+            {columns.shows("email") && <Th {...header("email", "asc")}>Email</Th>}
+            {columns.shows("phone") && <Th>Phone</Th>}
+            {columns.shows("tags") && <Th>Tags</Th>}
             <Th aria-label="Open" className="w-9" />
           </tr>
         </TableHead>
@@ -191,6 +198,18 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
                 {columns.shows("added") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.added)}</Td>}
                 {columns.shows("calls") && <Td numeric className={row.calls ? "" : "text-by-muted"}>{row.calls || "None"}</Td>}
                 {columns.shows("value") && <Td numeric className={row.value ? "" : "text-by-muted"}>{row.value ? fmt(row.value) : "—"}</Td>}
+                {columns.shows("email") && <Td className={`max-w-56 truncate ${row.email ? "" : "text-by-muted"}`} title={row.email}>{row.email || "—"}</Td>}
+                {columns.shows("phone") && <Td className={`whitespace-nowrap tabular-nums ${row.phone ? "" : "text-by-muted"}`}>{row.phone || "—"}</Td>}
+                {columns.shows("tags") && (
+                  <Td className="max-w-64">
+                    {row.tags?.length ? (
+                      <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={row.tags.join(", ")}>
+                        {row.tags.slice(0, 2).map((t) => <Pill key={t} tone="neutral" dot={false} className="max-w-32 truncate">{t}</Pill>)}
+                        {row.tags.length > 2 && <span className="shrink-0 text-by-caption text-by-muted">+{row.tags.length - 2}</span>}
+                      </span>
+                    ) : <span className="text-by-muted">—</span>}
+                  </Td>
+                )}
                 {opens ? <RowArrow /> : <Td aria-hidden="true" className="w-9" />}
               </Tr>
             );
@@ -202,80 +221,6 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
     {/* Outside the card: a table that reloads under it never closes the lead. */}
     <LeadModal contactId={opened?.contactId ?? null} name={opened?.name} onClose={() => setOpened(null)} />
     </>
-  );
-}
-
-// ── Ads ─────────────────────────────────────────────────────────────────────
-
-const AD_COLUMNS = [{ id: "spend", label: "Spend" }, { id: "leads", label: "Leads" }, { id: "cpl", label: "CPL" }, { id: "inCrm", label: "In CRM" }, { id: "closed", label: "Closed" }];
-
-/**
- * A client's campaigns, ad sets or ads, with what each spent and brought in.
- * @param {{levels?: Record<string, object[]>, rows: object[]}} props.data `levels` holds the rows for each level; without it only ads are shown
- * @param {number|null} [props.cplTarget] a row over this cost per lead is marked
- */
-export function AdsTable({ data, cplTarget = null, currencySymbol = "£", initialLevel = "ads" }) {
-  const [level, setLevel] = useState(initialLevel);
-  const spec = AD_LEVELS.find((l) => l.key === level);
-  const levelRows = data.levels?.[level] ?? data.rows;
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState({ id: "spend", dir: "desc" });
-  const columns = useColumns(AD_COLUMNS);
-  const fmt = money(currencySymbol);
-  const rows = useMemo(() => sortBy(searchBy(levelRows, query, ["name", "campaign"]), sort), [levelRows, query, sort]);
-  const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
-  const plural = spec.label.toLowerCase();
-
-  return (
-    <TableCard
-      toolbar={
-        <>
-          {data.levels && (
-            <TabPill
-              aria-label="Ad level"
-              value={level}
-              onValueChange={setLevel}
-              items={AD_LEVELS.map((l) => ({ value: l.key, label: l.label, count: data.levels[l.key]?.length }))}
-            />
-          )}
-          <div className={data.levels ? "ml-auto flex items-center gap-2.5" : "flex items-center gap-2.5"}>
-            <SearchField placeholder={`Search ${plural}`} value={query} onChange={(e) => setQuery(e.target.value)} className="w-56" />
-            {columns.menu}
-          </div>
-        </>
-      }
-      state={tableState({ data: { ...data, rows: levelRows }, shown: rows.length, noun: plural, icon: <Megaphone />, empty: { title: `No ${plural} ran in this range`, body: `${spec.label} appear here once they spend or bring in a lead.` } })}
-    >
-      <Table>
-        <TableHead>
-          <tr>
-            <Th {...header("name", "asc")} className="min-w-56">{spec.noun}</Th>
-            {columns.shows("spend") && <Th numeric {...header("spend")}>Spend</Th>}
-            {columns.shows("leads") && <Th numeric {...header("leads")}>Leads</Th>}
-            {columns.shows("cpl") && <Th numeric {...header("cpl")}>CPL</Th>}
-            {columns.shows("inCrm") && <Th numeric {...header("inCrm")}>In CRM</Th>}
-            {columns.shows("closed") && <Th numeric {...header("closed")}>Closed</Th>}
-          </tr>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <Tr key={row.id}>
-              <Td className="max-w-96 py-2.5">
-                <span className="block truncate" title={row.name}>{row.name}</span>
-                {row.campaign && <span className="block truncate text-by-caption text-by-muted" title={row.campaign}>{row.campaign}</span>}
-              </Td>
-              {columns.shows("spend") && <Td numeric>{fmt(row.spend, 2)}</Td>}
-              {columns.shows("leads") && <Td numeric>{row.leads.toLocaleString("en-GB")}</Td>}
-              {columns.shows("cpl") && (
-                <Td numeric className={row.cpl != null && cplTarget > 0 && row.cpl > cplTarget ? "font-semibold text-by-danger" : ""}>{row.cpl == null ? "—" : fmt(row.cpl, 2)}</Td>
-              )}
-              {columns.shows("inCrm") && <Td numeric>{row.inCrm.toLocaleString("en-GB")}</Td>}
-              {columns.shows("closed") && <Td numeric>{row.closed.toLocaleString("en-GB")}</Td>}
-            </Tr>
-          ))}
-        </TableBody>
-      </Table>
-    </TableCard>
   );
 }
 

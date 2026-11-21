@@ -149,7 +149,7 @@ export function LeadView({ contactId, embed = false }) {
         <EmptyState
           icon={<UserX />}
           title="This lead isn’t in Birdy anymore"
-          action={!embed && <Link href="/contacts" className="inline-flex items-center gap-1.5 text-by-body-sm font-semibold text-by-accent hover:underline"><ArrowLeft aria-hidden="true" className="size-3.5" />Back to Leads</Link>}
+          action={!embed && <Link href={clientLeadsHref(null)} className="inline-flex items-center gap-1.5 text-by-body-sm font-semibold text-by-accent hover:underline"><ArrowLeft aria-hidden="true" className="size-3.5" />Back to Leads</Link>}
         >
           It may have been deleted or merged in GoHighLevel.
         </EmptyState>
