@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import { DEFAULT_DATE_PRESET } from "./constants"
 import { queryKeys } from "./query-keys"
@@ -37,7 +37,17 @@ export function useSetup({ full = true } = {}) {
   const billing = useSWR(wanted ? SETUP_KEYS.billing : null)
   const groups = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
 
-  const ready = settled(onboarding) && (!wanted || (settled(status) && settled(hp) && settled(slack) && settled(billing) && (!groups.loading || groups.error)))
+  // The client list as last loaded. Re-reading the clients (after targets are
+  // saved, or a client is added) clears the list while it reloads: without
+  // this, setup went back to its loading state, the chat unmounted and came
+  // back at the top, which read as the page reloading after every answer. The
+  // last list stays on screen until the new one lands.
+  const [held, setHeld] = useState(null)
+  if (!groups.loading && groups.clientGroups !== held) setHeld(groups.clientGroups)
+  const reloading = groups.loading && held !== null
+  const clients = reloading ? held : groups.clientGroups
+
+  const ready = settled(onboarding) && (!wanted || (settled(status) && settled(hp) && settled(slack) && settled(billing) && (!groups.loading || reloading || groups.error)))
 
   const facts = useMemo(
     () => ({
@@ -45,10 +55,10 @@ export function useSetup({ full = true } = {}) {
       status: status.data ?? null,
       hp: hp.data ?? null,
       slack: slack.data ?? null,
-      clients: groups.clientGroups,
+      clients,
       billing: billing.data ?? null,
     }),
-    [onboarding.data, status.data, hp.data, slack.data, groups.clientGroups, billing.data],
+    [onboarding.data, status.data, hp.data, slack.data, clients, billing.data],
   )
   const steps = useMemo(() => deriveSteps(facts), [facts])
 

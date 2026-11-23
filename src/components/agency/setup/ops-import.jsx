@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Notice } from "@/components/by";
 import { useClientActions } from "@/components/shell/client-actions";
-import { Bubble, Chips, Reply } from "./chat-parts";
+import { Bubble, Chips, Reply, Say } from "./chat-parts";
 import { ClientList } from "./ops-clients";
 
 const ANSWERS = ["Yes, show me my sub-accounts", "Just this one for now"];
@@ -37,7 +37,7 @@ export function ImportStep({ ctx }) {
   return (
     <>
       <Bubble name={agentName} id="step-import">
-        <p>{firstClient ? `${firstClient.name} is in.` : "Your first client is in."} Want me to bring in the rest of your clients from GoHighLevel? I’ll suggest which sub-accounts are still active and match their Meta ad accounts.</p>
+        <Say>{firstClient ? `${firstClient.name} is in.` : "Your first client is in."} Want me to bring in the rest of your clients from GoHighLevel? I’ll suggest which sub-accounts are still active and match their Meta ad accounts.</Say>
         {steps.import !== "done" && (
           <Chips label="Bring in the rest" items={ANSWERS} recommended={ANSWERS[0]} onPick={pick} busy={busy} />
         )}
@@ -47,7 +47,7 @@ export function ImportStep({ ctx }) {
         <>
           {(declined || clients.length >= 2) && <Reply>{declined ? ANSWERS[1] : ANSWERS[0]}</Reply>}
           {clients.length >= 2 && <Bubble name={agentName}><ClientList clients={clients} /></Bubble>}
-          {declined && <Bubble name={agentName}><p>Fine. You can import the rest any time from the client switcher or the Clients page.</p></Bubble>}
+          {declined && <Bubble name={agentName}><Say>Fine. You can import the rest any time from the client switcher or the Clients page.</Say></Bubble>}
         </>
       )}
     </>

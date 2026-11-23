@@ -138,6 +138,14 @@
   from { opacity: 0; transform: translateX(24px); }
 }
 
+/* One piece of confetti falling past a celebration dialog. Its horizontal
+   drift and spin come from the piece itself (--by-drift, --by-spin). */
+@keyframes by-confetti {
+  0% { opacity: 0; transform: translate3d(0, -12vh, 0) rotate(0deg); }
+  8% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--by-drift, 0), 105vh, 0) rotate(var(--by-spin, 540deg)); }
+}
+
 /* The three dots while a reply is being written. */
 @keyframes by-typing {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }

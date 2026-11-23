@@ -6,7 +6,7 @@ import { Hash } from "lucide-react";
 import { Button, Notice, OptionCard, SearchField, Skeleton } from "@/components/by";
 import { apiRequest } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import { Bubble, Chips, ConnectCard, Reply } from "./chat-parts";
+import { Bubble, Chips, ConnectCard, Reply, Say } from "./chat-parts";
 
 const cardState = (step, pending) => (pending === "connecting" || pending === "error" ? pending : step === "issue" ? "issue" : step === "todo" ? "todo" : "done");
 const REPORT = ["Yes, every morning at 9:00", "Not now"];
@@ -45,9 +45,10 @@ export function SlackStep({ ctx }) {
   return (
     <>
       <Bubble name={agentName} id="step-slack">
-        <p>Where should I post alerts and your daily report? Connect Slack and pick a channel.</p>
+        <Say>Where should I post alerts and your daily report? Connect Slack and pick a channel.</Say>
         <div className="flex max-w-xl flex-col gap-2.5">
           <ConnectCard
+            tool="slack"
             name="Slack"
             what="I only post to the channel you pick. I can’t read your other messages."
             state={state}
@@ -62,7 +63,7 @@ export function SlackStep({ ctx }) {
         <>
           <Reply>{channel ? `#${channel}` : "Carry on without a channel"}</Reply>
           <Bubble name={agentName}>
-            <p>{channel ? `I’ll post to #${channel}.` : "You can pick a channel later in Settings."} Want the standard daily report there? You can design your own in Reports.</p>
+            <Say>{channel ? `I’ll post to #${channel}.` : "You can pick a channel later in Settings."} Want the standard daily report there? You can design your own in Reports.</Say>
             {!reportAnswered && (
               <>
                 <Chips label="Daily report" items={REPORT} recommended={REPORT[0]} onPick={report} busy={busy} />

@@ -20,12 +20,12 @@ const CAMPAIGNS = [{ id: "c1", name: "Body Sculpting", effective_status: "ACTIVE
 const GROUPS = [{ id: "g9", name: "Healthy Glow", ghl_location_id: "loc_2", meta_ad_account_id: "act_2", meta_campaign_ids: null }]
 
 let created
-function serve({ locations = LOCATIONS, accounts = ACCOUNTS, create = () => reply({ client_group: { id: "new" } }), locationsFail = false } = {}) {
+function serve({ locations = LOCATIONS, accounts = ACCOUNTS, campaigns = CAMPAIGNS, create = () => reply({ client_group: { id: "new" } }), locationsFail = false, campaignsFail = false } = {}) {
   created = null
   apiRequest.mockImplementation((url, options) => {
     if (url === "/api/subaccount/locations") return locationsFail ? reply({ detail: "GoHighLevel is not connected." }, { ok: false, status: 500 }) : reply({ locations })
     if (url === "/api/facebook/adaccounts") return reply({ data: { data: accounts } })
-    if (/\/api\/facebook\/adaccounts\/.+\/campaigns/.test(url)) return reply({ campaigns: CAMPAIGNS })
+    if (/\/api\/facebook\/adaccounts\/.+\/campaigns/.test(url)) return campaignsFail ? reply({ detail: "Meta timed out." }, { ok: false, status: 502 }) : reply({ campaigns })
     if (url === "/api/client-groups" && options?.method === "POST") { created = JSON.parse(options.body); return create() }
     return reply({})
   })
@@ -43,7 +43,8 @@ async function toStep(n) {
   if (n === 1) return
   await next(); await pick("radio", /Glow Leeds/)
   if (n === 2) return
-  await next(); await pick("radio", /Glow Ads/); await screen.findByRole("checkbox", { name: /All campaigns/ })
+  // The Meta step's two pages: the ad account, then its campaigns.
+  await next(); await pick("radio", /Glow Ads/); await next(); await screen.findByRole("checkbox", { name: /All campaigns/ })
   if (n === 3) return
   await next(); await pick("radio", /Hot Prospector/)
   if (n === 4) return
@@ -85,8 +86,9 @@ describe("Add client: the steps and their rules", () => {
 
   it("requires its own campaigns on an ad account another client uses, and blocks campaigns already taken", async () => {
     open(); await toStep(2); await next()
-    await pick("radio", /Shared Ads/)
+    await pick("radio", /Shared Ads/); await next()
     expect(await screen.findByRole("checkbox", { name: /Body Sculpting/ })).toBeInTheDocument()
+    expect(screen.getByText(/Healthy Glow keeps the rest/)).toBeInTheDocument()
     expect(screen.queryByRole("checkbox", { name: /All campaigns/ })).not.toBeInTheDocument()
     expect(screen.getByRole("checkbox", { name: /Taken one/ })).toBeDisabled()
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled()
@@ -106,6 +108,8 @@ describe("Add client: the steps and their rules", () => {
   it("keeps earlier answers when going back", async () => {
     open(); await toStep(4)
     await userEvent.click(screen.getByRole("button", { name: "Back" }))
+    expect(await screen.findByRole("checkbox", { name: /All campaigns/ })).toBeChecked()
+    await userEvent.click(screen.getByRole("button", { name: "Back" }))
     expect(await screen.findByRole("radio", { name: /Glow Ads/ })).toHaveAttribute("aria-checked", "true")
     await userEvent.click(screen.getByRole("button", { name: "Back" }))
     expect(await screen.findByRole("radio", { name: /Glow Leeds/ })).toHaveAttribute("aria-checked", "true")
@@ -115,6 +119,82 @@ describe("Add client: the steps and their rules", () => {
     open()
     await userEvent.click(screen.getByRole("button", { name: "Import instead" }))
     expect(onImportInstead).toHaveBeenCalledOnce()
+  })
+})
+
+const back = () => userEvent.click(screen.getByRole("button", { name: "Back" }))
+
+describe("Add client: the Meta step’s two pages", () => {
+  it("shows only the ad accounts first, then the campaigns of the chosen one", async () => {
+    open(); await toStep(2); await next()
+    expect(await screen.findByRole("radio", { name: /Glow Ads/ })).toBeInTheDocument()
+    expect(screen.getByText("Meta · 1 of 2: ad account")).toBeInTheDocument()
+    expect(screen.queryByText(/Campaigns in/)).not.toBeInTheDocument()
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled()
+    await pick("radio", /Glow Ads/)
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    await next()
+    expect(await screen.findByRole("checkbox", { name: /All campaigns/ })).toBeChecked()
+    expect(screen.getByText("Meta · 2 of 2: campaigns")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Campaigns in Glow Ads" })).toBeInTheDocument()
+    expect(screen.queryByRole("radio", { name: /Glow Ads/ })).not.toBeInTheDocument()
+  })
+
+  it("goes back from the campaigns page to the ad accounts with the account and campaigns kept", async () => {
+    open(); await toStep(3)
+    await pick("checkbox", /Body Sculpting/)
+    expect(screen.getByRole("checkbox", { name: /All campaigns/ })).not.toBeChecked()
+    await back()
+    expect(await screen.findByRole("radio", { name: /Glow Ads/ })).toHaveAttribute("aria-checked", "true")
+    // Re-picking the same account keeps its campaigns.
+    await pick("radio", /Glow Ads/); await next()
+    expect(await screen.findByRole("checkbox", { name: /Body Sculpting/ })).toBeChecked()
+    await back(); await back()
+    expect(await screen.findByRole("radio", { name: /Glow Leeds/ })).toHaveAttribute("aria-checked", "true")
+  })
+
+  it("resets the campaign choice when the ad account changes", async () => {
+    open(); await toStep(3)
+    await pick("checkbox", /Body Sculpting/)
+    await back(); await pick("radio", /Shared Ads/); await next()
+    expect(await screen.findByRole("checkbox", { name: /Body Sculpting/ })).not.toBeChecked()
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled()
+    await back(); await pick("radio", /Glow Ads/); await next()
+    expect(await screen.findByRole("checkbox", { name: /All campaigns/ })).toBeChecked()
+  })
+
+  it("skips the campaigns page when the agency has no ad accounts", async () => {
+    serve({ accounts: [] })
+    open(); await toStep(2); await next()
+    expect(await screen.findByText(/No Meta ad accounts found/)).toBeInTheDocument()
+    expect(screen.queryByText(/1 of 2/)).not.toBeInTheDocument()
+    await next()
+    expect(await screen.findByRole("radio", { name: /Hot Prospector/ })).toBeInTheDocument()
+    await back()
+    expect(await screen.findByText(/No Meta ad accounts found/)).toBeInTheDocument()
+  })
+
+  it("says plainly what a failed campaign list means: every campaign for an unshared account", async () => {
+    serve({ campaignsFail: true })
+    open(); await toStep(2); await next(); await pick("radio", /Glow Ads/); await next()
+    expect(await screen.findByRole("alert")).toHaveTextContent("Meta timed out.")
+    expect(screen.getByText(/This client will use every campaign/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled()
+  })
+
+  it("blocks a shared account whose campaigns fail to load, and says why", async () => {
+    serve({ campaignsFail: true })
+    open(); await toStep(2); await next(); await pick("radio", /Shared Ads/); await next()
+    expect(await screen.findByText(/Campaigns must load before you continue/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled()
+  })
+
+  it("says so when every campaign of a shared account is taken", async () => {
+    serve({ campaigns: [CAMPAIGNS[1]] })
+    open(); await toStep(2); await next(); await pick("radio", /Shared Ads/); await next()
+    expect(await screen.findByText(/Every campaign in this ad account already belongs to another client/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled()
   })
 })
 
@@ -134,11 +214,33 @@ describe("Add client: creating", () => {
 
   it("sends only the chosen campaigns for a shared ad account", async () => {
     open(); await toStep(2); await next()
-    await pick("radio", /Shared Ads/); await pick("checkbox", /Body Sculpting/)
+    await pick("radio", /Shared Ads/); await next(); await pick("checkbox", /Body Sculpting/)
     await next(); await pick("radio", /GoHighLevel/); await next()
     await userEvent.click(await screen.findByRole("button", { name: "Add client" }))
     await waitFor(() => expect(created).not.toBeNull())
     expect(created).toMatchObject({ meta_ad_account_id: "act_2", meta_campaign_ids: ["c1"], call_log_provider: "ghl", lead_collection_method: "unknown" })
+  })
+
+  it("sends the same payload after going back and forth between the Meta pages", async () => {
+    open(); await toStep(3)
+    await pick("checkbox", /Body Sculpting/)
+    await back(); await next(); await next()
+    await pick("radio", /GoHighLevel/); await next()
+    await userEvent.click(await screen.findByRole("button", { name: "Add client" }))
+    await waitFor(() => expect(created).not.toBeNull())
+    expect(created).toEqual({
+      name: "Glow Aesthetics", ghl_location_id: "loc_1", meta_ad_account_id: "act_1", hotprospector_group_id: null, ad_account_currency: "GBP",
+      meta_campaign_ids: ["c1"], call_log_provider: "ghl", lead_collection_method: "unknown", notes: "",
+    })
+  })
+
+  it("sends no ad account or campaigns when the agency has none", async () => {
+    serve({ accounts: [] })
+    open(); await toStep(2); await next(); await screen.findByText(/No Meta ad accounts found/)
+    await next(); await pick("radio", /Hot Prospector/); await next()
+    await userEvent.click(await screen.findByRole("button", { name: "Add client" }))
+    await waitFor(() => expect(created).not.toBeNull())
+    expect(created).toMatchObject({ meta_ad_account_id: null, ad_account_currency: null, meta_campaign_ids: null })
   })
 
   it("says the plan is full and points to billing, keeping the dialog open", async () => {
@@ -160,6 +262,15 @@ describe("Add client: creating", () => {
     await userEvent.click(within(alert).getByRole("button", { name: "Change GoHighLevel" }))
     expect(await screen.findByRole("radio", { name: /Glow Leeds/ })).toHaveAttribute("aria-checked", "true")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("sends Change Meta to the ad account page", async () => {
+    serve({ create: () => reply({ detail: 'A client group named "Healthy Glow" already uses this ad account.' }, { ok: false, status: 409 }) })
+    open(); await toStep(5)
+    await userEvent.click(screen.getByRole("button", { name: "Add client" }))
+    await userEvent.click(within(await screen.findByRole("alert")).getByRole("button", { name: "Change Meta" }))
+    expect(await screen.findByRole("radio", { name: /Glow Ads/ })).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByText("Meta · 1 of 2: ad account")).toBeInTheDocument()
   })
 
   it("stays open with the answers kept when the server refuses for another reason", async () => {
