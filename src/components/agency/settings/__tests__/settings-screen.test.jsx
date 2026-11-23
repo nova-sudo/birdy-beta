@@ -11,8 +11,9 @@ vi.mock("../use-integrations", () => ({ useIntegrations: () => integrations }));
 vi.mock("../connections-section", () => ({ ConnectionsSection: () => <p>connections body</p> }));
 vi.mock("../plan-section", () => ({ PlanSection: () => <p>plan body</p> }));
 vi.mock("../account-section", () => ({ AccountSection: () => <p>account body</p> }));
-vi.mock("../alerts/alerts-section", () => ({ AlertsSection: () => <p>alerts body</p> }));
-vi.mock("../metrics/metrics-section", () => ({ MetricsSection: () => <p>metrics body</p> }));
+// Alerts and Metrics are the old pages, mounted in their tabs.
+vi.mock("@/components/alerts/AlertsPage", () => ({ default: () => <p>alerts body</p> }));
+vi.mock("@/components/metrics/MetricsPage", () => ({ default: () => <p>metrics body</p> }));
 
 import { SettingsScreen } from "../settings-screen";
 
