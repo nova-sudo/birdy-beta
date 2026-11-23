@@ -37,7 +37,7 @@ describe("AgentGate", () => {
     wrap(<AgentGate agent="sales_coach"><p>Sales Coach page</p></AgentGate>)
     const card = await screen.findByRole("region", { name: "Sales Coach is locked" })
     expect(within(card).getByText(/It unlocks once Media Buyer is set up/)).toBeInTheDocument()
-    expect(within(card).getByText("Birdy is ready")).toBeInTheDocument()
+    expect(within(card).getByText("Agency Ops is ready")).toBeInTheDocument()
     expect(within(card).getByText("Media Buyer: 2 left (Schedule, Slack)")).toBeInTheDocument()
     expect(within(card).getByRole("link", { name: /Continue Media Buyer setup/ })).toHaveAttribute("href", "/welcome?s=buyer")
     expect(screen.queryByText("Sales Coach page")).not.toBeInTheDocument()

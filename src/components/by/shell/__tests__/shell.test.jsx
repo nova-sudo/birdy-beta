@@ -18,7 +18,7 @@ const section = (id) => SECTIONS.find((s) => s.id === id)
 
 describe("sections", () => {
   it("keeps Creative Strategist off the rail", () => {
-    expect(visibleSections().map((s) => s.name)).toEqual(["Birdy", "Media Buyer", "Sales Coach", "Clients"])
+    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Media Buyer", "Sales Coach", "Clients"])
   })
 })
 
@@ -57,7 +57,7 @@ describe("Rail", () => {
 
   it("keeps the mascot out of the sections: Birdy is an icon tile like the others", () => {
     render(<Rail activeId="ops" counts={{ ops: 2 }} />)
-    const button = screen.getByRole("button", { name: "Birdy, 2 waiting" })
+    const button = screen.getByRole("button", { name: "Agency Ops, 2 waiting" })
     expect(button).toHaveAttribute("aria-current", "page")
     expect(button.querySelector(".rounded-full.overflow-hidden")).toBeNull()
     expect(button.querySelector("svg")).not.toBeNull()

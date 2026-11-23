@@ -35,8 +35,8 @@ export const SECTION_CONFIG = {
   ops: {
     key: "ops",
     kit: kit("ops"),
-    // No "dashboard": Birdy's /dashboard is its dashboard (the old Portfolio Dashboard); /dashboard/table redirects there.
-    paths: { chat: "/dashboard/chat", birdseye: "/dashboard", suggestions: "/dashboard/suggestions", context: "/dashboard/context", reports: "/dashboard/reports" },
+    // Bird's Eye is the old Portfolio Dashboard; Dashboard is the old Leads hub's table.
+    paths: { chat: "/dashboard/chat", birdseye: "/dashboard", dashboard: "/dashboard/table", suggestions: "/dashboard/suggestions", context: "/dashboard/context", reports: "/dashboard/reports" },
     // The Birdy section's chat goes out with no page of its own (every tool), addressed to Birdy.
     chat: { page: null, agent: "birdy", session: "ops", starters: "dashboard" },
     hello: "Ask about your clients, campaigns, leads or calls.",

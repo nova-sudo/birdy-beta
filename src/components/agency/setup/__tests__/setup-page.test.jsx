@@ -66,9 +66,9 @@ describe("SetupPage", () => {
     expect(within(list).getByRole("button", { name: /Agency basics/ })).toHaveTextContent("In setup")
     expect(within(list).getByRole("button", { name: /Connect Meta/ })).toHaveTextContent("To do")
     const team = await screen.findByRole("navigation", { name: "Your team" })
-    expect(within(team).getByRole("button", { name: /Birdy/ })).toHaveAttribute("aria-current", "step")
+    expect(within(team).getByRole("button", { name: /Agency Ops/ })).toHaveAttribute("aria-current", "step")
     expect(within(team).getByRole("button", { name: /Media Buyer/ })).toBeDisabled()
-    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("title", "Unlocks after Birdy")
+    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("title", "Unlocks after Agency Ops")
   })
 
   it("saves the basics to the account", async () => {
@@ -146,7 +146,7 @@ describe("SetupPage", () => {
     route.search = "s=mb"
     page()
     await screen.findByRole("navigation", { name: "Your team" })
-    expect(screen.getByRole("heading", { name: "Birdy", level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Agency Ops", level: 1 })).toBeInTheDocument()
   })
 
   it("shows only Birdy's setup when the team state can't be read", async () => {
@@ -154,12 +154,12 @@ describe("SetupPage", () => {
     state.facts = OPS_DONE
     route.search = "s=buyer"
     page()
-    expect(await screen.findByRole("heading", { name: "Birdy", level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Agency Ops", level: 1 })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole("region", { name: "Set up Birdy" })).toBeInTheDocument())
     expect(screen.queryByRole("navigation", { name: "Your team" })).not.toBeInTheDocument()
     // No team to hand over to: the last step only opens the app.
     expect(screen.queryByRole("button", { name: /Set up Media Buyer/ })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Open Birdy" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
   })
 
   it("folds the checklist to a bar", async () => {

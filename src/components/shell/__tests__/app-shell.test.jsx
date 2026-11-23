@@ -59,7 +59,7 @@ describe("AppShell: the rail", () => {
   })
 
   it.each([
-    ["Birdy", "/dashboard"],
+    ["Agency Ops", "/dashboard"],
     ["Sales Coach", "/sales-coach"],
     ["Clients", "/clients"],
     ["Settings", "/settings"],

@@ -1,14 +1,12 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { OpsLeadsDashboard } from "./ops-leads";
 
-// Birdy no longer has a separate Dashboard tab: /dashboard is its dashboard
-// now. Old links land there, keeping the client and the date range.
-export default async function AgencyDashboardRedirect({ searchParams }) {
-  const params = await searchParams;
-  const keep = new URLSearchParams();
-  for (const key of ["client", "range"]) {
-    const value = params?.[key];
-    if (typeof value === "string" && value) keep.set(key, value);
-  }
-  const query = keep.toString();
-  redirect(query ? `/dashboard?${query}` : "/dashboard");
+// Agency Ops' Dashboard tab: the Leads hub's table. It reads the client and the
+// date range from the address, which needs a Suspense boundary.
+export default function AgencyDashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <OpsLeadsDashboard />
+    </Suspense>
+  );
 }

@@ -99,9 +99,9 @@ describe("Birdy's Suggestions tab", () => {
 
   it("opens the conversation beside the page when a question is asked", async () => {
     render(<SuggestionsTab />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Birdy about these suggestions" }), "Which first?{Enter}")
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Agency Ops about these suggestions" }), "Which first?{Enter}")
     expect(sendChatMessage).toHaveBeenCalledWith("by_ops_ask_sugg_agency", expect.objectContaining({ text: "Which first?", page: "dashboard" }), expect.any(Object))
-    expect(screen.getByRole("complementary", { name: "Birdy conversation" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Agency Ops conversation" })).toBeInTheDocument()
   })
 })
 

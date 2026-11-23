@@ -76,7 +76,7 @@ describe("LeadView", () => {
     // A call was made, so the lead sits at Called, as its row in the Leads table does.
     expect(screen.getByText("Called")).toBeInTheDocument()
     expect(screen.getByText("Spicy Leads")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /North Clinic leads/ })).toHaveAttribute("href", "/media-buyer/table?client=g1&view=leads")
+    expect(screen.getByRole("link", { name: /North Clinic leads/ })).toHaveAttribute("href", "/dashboard/table?client=g1")
     expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:07000 000001")
     const figures = screen.getByRole("group", { name: "Lead figures" })
     expect(within(figures).getByText("Open for")).toBeInTheDocument()
@@ -97,7 +97,7 @@ describe("LeadView", () => {
     expect(await screen.findByText("This lead isn’t in Birdy anymore")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
     // Back to the leads, now Media Buyer's Leads level: the old hub is retired.
-    expect(screen.getByRole("link", { name: /Back to Leads/ })).toHaveAttribute("href", "/media-buyer/table?level=leads")
+    expect(screen.getByRole("link", { name: /Back to Leads/ })).toHaveAttribute("href", "/dashboard/table")
   })
 
   it("on a failure, offers a retry that loads it again", async () => {

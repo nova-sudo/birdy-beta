@@ -57,6 +57,8 @@ export function LeadsContent({
   showStatCards = true,
   selectedClientGroup: controlledClientGroup,
   onSelectClientGroup,
+  // Fills the height it is given: the toolbar and pager stay put and only the table scrolls, inside its card.
+  fill = false,
 }) {
   const router = useRouter()
   const [contacts, setContacts] = useState([])
@@ -397,8 +399,8 @@ export function LeadsContent({
   }, [metaData])
 
   return (
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
+    <div className={fill ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0"}>
+      <Stagger className={fill ? "flex min-h-0 flex-1 flex-col gap-6" : "flex flex-col gap-6"}>
         <ErrorBanner error={error} />
 
         {showStatCards && (
@@ -407,7 +409,7 @@ export function LeadsContent({
           </StaggerItem>
         )}
 
-        <StaggerItem>
+        <StaggerItem className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <PageTabs
               label="Pipeline stage"
@@ -455,8 +457,9 @@ export function LeadsContent({
             </div>
           </div>
 
-          <PageTabPanel id={LEADS_PANEL_ID} label="Leads" className="mt-4">
+          <PageTabPanel id={LEADS_PANEL_ID} label="Leads" className={fill ? "mt-4 flex min-h-0 flex-1 flex-col" : "mt-4"}>
             <StyledTable
+              fill={fill}
               columns={contactColumns}
               data={filteredAndSortedContacts}
               columnVisibility={columnVisibilityMap}
@@ -474,7 +477,7 @@ export function LeadsContent({
           </PageTabPanel>
         </StaggerItem>
 
-        <div className="flex justify-center gap-4">
+        <div className={fill ? "flex shrink-0 justify-center gap-4" : "flex justify-center gap-4"}>
           <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
             <ChevronLeft className="h-4 w-4" />Previous
           </Button>
