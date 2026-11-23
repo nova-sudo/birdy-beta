@@ -56,7 +56,12 @@ const CLIENTS_PANEL_ID = "clients-table-panel"
  * Adding and importing go through the shell's dialogs; the shell invalidates
  * every client-groups window when they finish, which refreshes this table.
  */
-export function OldClientsTable() {
+/**
+ * @param {(parts: {dateRange: React.ReactNode, body: React.ReactNode}) => React.ReactNode} [props.frame]
+ *   draws the page around the table: another section's header and tabs, given the date range control
+ *   and the table. Left out, it is the Clients page.
+ */
+export function OldClientsTable({ frame } = {}) {
   const router = useRouter()
   const { openAddClient, openImport } = useClientActions()
   const {
@@ -314,18 +319,13 @@ export function OldClientsTable() {
     { key: "all", label: "All Clients", count: statusCounts.all },
   ]
 
-  return (
-    <div className={PAGE}>
-      <SectionHeader
-        section={CLIENTS_SECTION}
-        // No tab pill here, so the header keeps two columns and the date range sits on the right.
-        className="min-[1440px]:grid-cols-[minmax(0,1fr)_auto]"
-        dateRange={
+  const dateRange = (
           <div className={pdFontClass}>
             <DateRangeSelect value={selectedDateRange} onChange={setSelectedDateRange} />
           </div>
-        }
-      />
+  )
+  const body = (
+    <>
       {/* Full width. Nothing here scrolls but the table inside its card. */}
       <div className={`${pdFontClass} flex min-h-0 w-full flex-1 flex-col gap-6 px-7 pt-6 pb-6`}>
         <ErrorBanner error={error} />
@@ -423,6 +423,19 @@ export function OldClientsTable() {
           </StaggerItem>
         </Stagger>
       </div>
+    </>
+  )
+  if (frame) return frame({ dateRange, body })
+
+  return (
+    <div className={PAGE}>
+      <SectionHeader
+        section={CLIENTS_SECTION}
+        // No tab pill here, so the header keeps two columns and the date range sits on the right.
+        className="min-[1440px]:grid-cols-[minmax(0,1fr)_auto]"
+        dateRange={dateRange}
+      />
+      {body}
     </div>
   )
 }

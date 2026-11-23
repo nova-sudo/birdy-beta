@@ -202,7 +202,7 @@ describe("small labels", () => {
     expect(dialerName(null)).toBe("")
   })
   it("goes back to the client's leads, or to Leads without a client", () => {
-    expect(clientLeadsHref("g 1")).toBe("/dashboard/table?client=g%201")
-    expect(clientLeadsHref(null)).toBe("/dashboard/table")
+    expect(clientLeadsHref("g 1")).toBe("/media-buyer/table?client=g%201&view=leads")
+    expect(clientLeadsHref(null)).toBe("/media-buyer/table?view=leads")
   })
 })

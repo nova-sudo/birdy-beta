@@ -61,6 +61,14 @@ describe("Old clients table", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument()
   })
 
+  it("sits under another section's header when given a frame, with the same table and date range", () => {
+    render(<OldClientsTable frame={({ dateRange, body }) => <div><h1>Agency Ops</h1>{dateRange}{body}</div>} />)
+    expect(screen.getByRole("heading", { level: 1, name: "Agency Ops" })).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 1, name: "Clients" })).toBeNull()
+    expect(screen.getByRole("combobox")).toBeInTheDocument()
+    expect(rowNames().sort()).toEqual(["Aura Aesthetics", "Fallon Physique", "Healthy Glow"])
+  })
+
   it("opens on Active and renders the active clients' rows", () => {
     render(<OldClientsTable />)
     expect(tab("Active")).toHaveAttribute("aria-selected", "true")
