@@ -8,7 +8,7 @@ import { Button, Dialog, DialogBody, DialogContent, DialogFooter, Notice, Option
 import { apiRequest } from "@/lib/api";
 import { clearCache } from "@/lib/cache";
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources";
-import { sharesMetaAccount } from "@/lib/meta-scope";
+import { remainderOwner, sharesMetaAccount } from "@/lib/meta-scope";
 import { CampaignPicker } from "./campaign-picker";
 
 const STEPS = ["Name", "GoHighLevel", "Meta", "Calls", "Leads"];
@@ -17,6 +17,8 @@ const CALL_PROVIDERS = [
   { key: "ghl", title: "GoHighLevel", subtitle: "Calls arrive through your GoHighLevel workflow webhook. Nothing more to set up." },
   { key: "hotprospector", title: "Hot Prospector", subtitle: "Calls sync from your account’s Hot Prospector connection. Nothing to enter here." },
 ];
+// The scrolling part of a page: only this moves, under a fixed heading and search.
+const LIST = "-mx-1 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-1 py-0.5";
 const EMPTY = { name: "", location: null, account: null, campaignIds: null, provider: null, leadSource: "unknown" };
 
 /** Loads a list when `active` turns true; exposes loading, error and retry. */
@@ -76,9 +78,22 @@ function UsedBy({ name }) {
   );
 }
 
-function StepHeading({ title, children }) {
+/** "Meta · 1 of 2: ad account", with two dots, so a step split in pages says there is a second one. */
+function SubProgress({ step, page, pages }) {
   return (
-    <div className="mb-3.5">
+    <p className="mb-1.5 flex items-center gap-2 text-by-caption font-medium text-by-muted">
+      <span aria-hidden="true" className="flex gap-1">
+        {pages.map((p, i) => <span key={p} className={`size-1.5 rounded-full ${i === page ? "bg-by-accent" : "bg-by-line-strong"}`} />)}
+      </span>
+      {step} · {page + 1} of {pages.length}: {pages[page]}
+    </p>
+  );
+}
+
+function StepHeading({ title, progress, children }) {
+  return (
+    <div className="mb-3.5 shrink-0">
+      {progress}
       <h3 className="font-by-display text-by-heading font-semibold">{title}</h3>
       <p className="mt-0.5 text-by-body-sm text-by-text-2">{children}</p>
     </div>
@@ -87,7 +102,9 @@ function StepHeading({ title, children }) {
 
 /**
  * Add one client, in five steps: name, GoHighLevel sub-account, Meta ad
- * account, where calls come from, how leads arrive.
+ * account, where calls come from, how leads arrive. The Meta step has two
+ * pages, the ad account and then its campaigns, so neither hides below the
+ * other.
  *
  * The rules are today's: a sub-account and an ad account must be picked when
  * the agency has any; an ad account another client already uses needs its own
@@ -102,6 +119,8 @@ function StepHeading({ title, children }) {
 export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, onImportInstead }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  // The Meta step has two pages: 0 picks the ad account, 1 its campaigns.
+  const [metaPage, setMetaPage] = useState(0);
   const [form, setForm] = useState(EMPTY);
   const [queries, setQueries] = useState({ location: "", account: "" });
   const [saving, setSaving] = useState(false);
@@ -112,6 +131,7 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
   useEffect(() => {
     if (open) {
       setStep(0);
+      setMetaPage(0);
       setForm(EMPTY);
       setQueries({ location: "", account: "" });
       setProblem(null);
@@ -127,12 +147,15 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
   const shared = Boolean(form.account) && sharesMetaAccount(clientGroups, form.account.id);
   // A shared account needs its own campaigns, and a list must not be empty.
   const campaignsMissing = Boolean(form.account) && (shared || Array.isArray(form.campaignIds)) && !(Array.isArray(form.campaignIds) && form.campaignIds.length > 0);
+  // With no ad account (the agency has none) there are no campaigns to decide, so the second page is skipped.
+  const onCampaigns = step === 2 && metaPage === 1 && Boolean(form.account);
 
   const canContinue =
     step === 0 ? form.name.trim().length > 0
     // A list that failed to load is not an empty list: nothing may be skipped on a guess.
     : step === 1 ? !locations.loading && !locations.error && (Boolean(form.location) || locations.items.length === 0)
-    : step === 2 ? !accounts.loading && !accounts.error && (Boolean(form.account) || accounts.items.length === 0) && !campaignsMissing
+    : step === 2 && !onCampaigns ? !accounts.loading && !accounts.error && (Boolean(form.account) || accounts.items.length === 0)
+    : step === 2 ? !campaignsMissing
     : step === 3 ? Boolean(form.provider)
     : true;
 
@@ -175,7 +198,25 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
     }
   };
 
-  const next = () => (step < STEPS.length - 1 ? setStep(step + 1) : create());
+  const goTo = (to, page = 0) => {
+    setMetaPage(page);
+    setStep(to);
+  };
+  const next = () => {
+    if (step === 2 && !onCampaigns && form.account) return setMetaPage(1);
+    return step < STEPS.length - 1 ? goTo(step + 1) : create();
+  };
+  // Back from the campaigns page keeps the account; back from Calls lands on the campaigns page.
+  const back = () => {
+    setProblem(null);
+    if (onCampaigns) return setMetaPage(0);
+    if (step === 3) return goTo(2, form.account ? 1 : 0);
+    goTo(step - 1);
+  };
+  const metaProgress = accounts.loading || accounts.error || accounts.items.length > 0
+    ? <SubProgress step="Meta" page={onCampaigns ? 1 : 0} pages={["ad account", "campaigns"]} />
+    : null;
+  const keepsRest = shared ? remainderOwner(clientGroups, form.account.id) : null;
   const match = (text, q) => !q.trim() || (text || "").toLowerCase().includes(q.trim().toLowerCase());
   const shownLocations = locations.items.filter((l) => match(l.name, queries.location) || match(l.locationId, queries.location));
   const shownAccounts = accounts.items.filter((a) => match(a.name, queries.account) || match(a.id, queries.account));
@@ -184,18 +225,19 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent title="Add client" description={step > 0 ? form.name.trim() : "Link a client’s accounts so Birdy can watch them."}>
         <Stepper steps={STEPS} current={step} className="shrink-0 border-b border-by-line-soft px-5 py-3.5" />
-        <DialogBody className="min-h-[21rem]">
+        {/* A fixed height: each page's heading and search stay put and only its list scrolls. */}
+        <DialogBody className="flex flex-[0_1_28rem] flex-col overflow-hidden">
           {problem?.kind === "limit" && (
-            <Notice tone="warning" className="mb-3.5" action={<Button size="sm" onClick={() => { onOpenChange(false); router.push("/billing"); }}>Go to billing</Button>}>
+            <Notice tone="warning" className="mb-3.5 shrink-0" action={<Button size="sm" onClick={() => { onOpenChange(false); router.push("/billing"); }}>Go to billing</Button>}>
               Your plan’s client limit is full. Add client slots from Billing to continue.
             </Notice>
           )}
           {problem?.kind === "in-use" && (
-            <Notice tone="danger" className="mb-3.5" action={<><Button size="sm" onClick={() => { setProblem(null); setStep(1); }}>Change GoHighLevel</Button><Button size="sm" onClick={() => { setProblem(null); setStep(2); }}>Change Meta</Button></>}>
+            <Notice tone="danger" className="mb-3.5 shrink-0" action={<><Button size="sm" onClick={() => { setProblem(null); goTo(1); }}>Change GoHighLevel</Button><Button size="sm" onClick={() => { setProblem(null); goTo(2, 0); }}>Change Meta</Button></>}>
               The GoHighLevel sub-account or Meta ad account you picked is already linked to “{problem.owner}”. Choose a different one.
             </Notice>
           )}
-          {problem?.kind === "other" && <Notice tone="danger" className="mb-3.5">{problem.message}</Notice>}
+          {problem?.kind === "other" && <Notice tone="danger" className="mb-3.5 shrink-0">{problem.message}</Notice>}
 
           {step === 0 && (
             <>
@@ -215,8 +257,9 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
               {ListState({ list: locations, noun: "sub-accounts" }) ?? (locations.items.length === 0 ? (
                 <Notice>No GoHighLevel sub-accounts found on your account. You can link one later from the client’s page.</Notice>
               ) : (
-                <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="GoHighLevel sub-accounts">
-                  <SearchField placeholder="Search sub-accounts by name or ID" value={queries.location} onChange={(e) => setQueries((q) => ({ ...q, location: e.target.value }))} />
+                <>
+                  <SearchField className="mb-1.5 shrink-0" placeholder="Search sub-accounts by name or ID" value={queries.location} onChange={(e) => setQueries((q) => ({ ...q, location: e.target.value }))} />
+                  <div className={LIST} role="radiogroup" aria-label="GoHighLevel sub-accounts">
                   {shownLocations.map((l) => (
                     <OptionCard
                       key={l.locationId}
@@ -228,53 +271,58 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
                     />
                   ))}
                   {shownLocations.length === 0 && <p className="px-1 py-2 text-by-body-sm text-by-muted">No sub-account matches “{queries.location.trim()}”.</p>}
-                </div>
+                  </div>
+                </>
               ))}
             </>
           )}
 
-          {step === 2 && (
+          {step === 2 && !onCampaigns && (
             <>
-              <StepHeading title="Link a Meta ad account">Campaigns and spend for this client come from here.</StepHeading>
+              <StepHeading title="Link a Meta ad account" progress={metaProgress}>Campaigns and spend for this client come from here.</StepHeading>
               {ListState({ list: accounts, noun: "ad accounts" }) ?? (accounts.items.length === 0 ? (
                 <Notice>No Meta ad accounts found on your account. You can link one later from the client’s page.</Notice>
               ) : (
-                <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Meta ad accounts">
-                  <SearchField placeholder="Search ad accounts by name or ID" value={queries.account} onChange={(e) => setQueries((q) => ({ ...q, account: e.target.value }))} />
-                  {shownAccounts.map((a) => {
-                    const user = accountUser(a.id);
-                    return (
-                      <OptionCard
-                        key={a.id}
-                        selected={form.account?.id === a.id}
-                        // Re-picking the same account must not wipe the campaigns already chosen.
-                        onSelect={() => form.account?.id !== a.id && set({ account: a, campaignIds: sharesMetaAccount(clientGroups, a.id) ? [] : null })}
-                        title={a.name || "Unnamed ad account"}
-                        subtitle={a.id}
-                        aside={user ? <UsedBy name={user} /> : null}
-                      />
-                    );
-                  })}
-                  {shownAccounts.length === 0 && <p className="px-1 py-2 text-by-body-sm text-by-muted">No ad account matches “{queries.account.trim()}”.</p>}
-                </div>
+                <>
+                  <SearchField className="mb-1.5 shrink-0" placeholder="Search ad accounts by name or ID" value={queries.account} onChange={(e) => setQueries((q) => ({ ...q, account: e.target.value }))} />
+                  <div className={LIST} role="radiogroup" aria-label="Meta ad accounts">
+                    {shownAccounts.map((a) => {
+                      const user = accountUser(a.id);
+                      return (
+                        <OptionCard
+                          key={a.id}
+                          selected={form.account?.id === a.id}
+                          // Re-picking the same account must not wipe the campaigns already chosen.
+                          onSelect={() => form.account?.id !== a.id && set({ account: a, campaignIds: sharesMetaAccount(clientGroups, a.id) ? [] : null })}
+                          title={a.name || "Unnamed ad account"}
+                          subtitle={a.id}
+                          aside={user ? <UsedBy name={user} /> : null}
+                        />
+                      );
+                    })}
+                    {shownAccounts.length === 0 && <p className="px-1 py-2 text-by-body-sm text-by-muted">No ad account matches “{queries.account.trim()}”.</p>}
+                  </div>
+                </>
               ))}
-              {form.account && (
-                <div className="mt-5">
-                  <h4 className="text-by-body font-semibold">Campaigns</h4>
-                  <p className="mt-0.5 mb-2.5 text-by-body-sm text-by-text-2">
-                    {shared ? "Another client already uses this ad account. Pick the campaigns that belong to this one." : "Use every campaign, or only the ones that belong to this client."}
-                  </p>
-                  <CampaignPicker adAccountId={form.account.id} value={form.campaignIds} onChange={(campaignIds) => set({ campaignIds })} required={shared} />
-                  {campaignsMissing && <p className="mt-2 text-by-caption text-by-warning">Pick at least one campaign to continue.</p>}
-                </div>
-              )}
+            </>
+          )}
+
+          {onCampaigns && (
+            <>
+              <StepHeading title={`Campaigns in ${form.account.name || form.account.id}`} progress={metaProgress}>
+                {shared
+                  ? `Another client already uses this ad account. Pick the campaigns that belong to this one.${keepsRest ? ` ${keepsRest} keeps the rest.` : ""}`
+                  : "Use every campaign, or only the ones that belong to this client."}
+              </StepHeading>
+              <CampaignPicker adAccountId={form.account.id} value={form.campaignIds} onChange={(campaignIds) => set({ campaignIds })} required={shared} />
+              {campaignsMissing && <p className="mt-2 shrink-0 text-by-caption text-by-warning">Pick at least one campaign to continue.</p>}
             </>
           )}
 
           {step === 3 && (
             <>
               <StepHeading title="Where do calls come from?">The provider that feeds this client’s call logs.</StepHeading>
-              <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Call provider">
+              <div className={LIST} role="radiogroup" aria-label="Call provider">
                 {CALL_PROVIDERS.map((p) => (
                   <OptionCard key={p.key} selected={form.provider === p.key} onSelect={() => set({ provider: p.key })} title={p.title} subtitle={p.subtitle} />
                 ))}
@@ -285,7 +333,7 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
           {step === 4 && (
             <>
               <StepHeading title="How does this client get leads?">Only a client’s own landing page needs the Birdy pixel. You can decide later.</StepHeading>
-              <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Lead source">
+              <div className={LIST} role="radiogroup" aria-label="Lead source">
                 {LEAD_SOURCES.map((o) => (
                   <OptionCard key={o.key} selected={form.leadSource === o.key} onSelect={() => set({ leadSource: o.key })} title={o.label} subtitle={o.brief} />
                 ))}
@@ -294,7 +342,7 @@ export function AddClientDialog({ open, onOpenChange, clientGroups, onCreated, o
           )}
         </DialogBody>
         <DialogFooter>
-          <Button disabled={step === 0 || saving} onClick={() => { setProblem(null); setStep(step - 1); }}><ArrowLeft aria-hidden="true" />Back</Button>
+          <Button disabled={step === 0 || saving} onClick={back}><ArrowLeft aria-hidden="true" />Back</Button>
           <span className="flex-1" />
           <Button kind="primary" disabled={!canContinue} loading={saving} onClick={next}>{step < STEPS.length - 1 ? "Continue" : "Add client"}</Button>
         </DialogFooter>
