@@ -1,12 +1,11 @@
 import { Suspense } from "react";
-import { OpsLeadsDashboard } from "./ops-leads";
+import { OpsClientsDashboard } from "./ops-clients";
 
-// Agency Ops' Dashboard tab: the Leads hub's table. It reads the client and the
-// date range from the address, which needs a Suspense boundary.
+// Agency Ops' Dashboard tab: the Clients table. It reads the address, which needs a Suspense boundary.
 export default function AgencyDashboardPage() {
   return (
     <Suspense fallback={null}>
-      <OpsLeadsDashboard />
+      <OpsClientsDashboard />
     </Suspense>
   );
 }

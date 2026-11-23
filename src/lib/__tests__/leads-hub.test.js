@@ -4,13 +4,13 @@ import { LEADS_HREF, leadsHubRedirect } from "../leads-hub"
 describe("leadsHubRedirect", () => {
   it("sends the hub to Media Buyer's Leads level", () => {
     expect(leadsHubRedirect()).toBe(LEADS_HREF)
-    expect(leadsHubRedirect({})).toBe("/dashboard/table")
+    expect(leadsHubRedirect({})).toBe("/media-buyer/table?view=leads")
   })
 
   it("carries one client over as the table's client filter", () => {
-    expect(leadsHubRedirect({ group: "g1" })).toBe("/dashboard/table?client=g1")
-    expect(leadsHubRedirect(new URLSearchParams("client=g2"))).toBe("/dashboard/table?client=g2")
-    expect(leadsHubRedirect({ client_group: ["g3", "g4"] })).toBe("/dashboard/table?client=g3")
+    expect(leadsHubRedirect({ group: "g1" })).toBe("/media-buyer/table?client=g1&view=leads")
+    expect(leadsHubRedirect(new URLSearchParams("client=g2"))).toBe("/media-buyer/table?client=g2&view=leads")
+    expect(leadsHubRedirect({ client_group: ["g3", "g4"] })).toBe("/media-buyer/table?client=g3&view=leads")
   })
 
   it("drops what doesn't map: all clients, a list of them, an unknown range", () => {
@@ -20,6 +20,6 @@ describe("leadsHubRedirect", () => {
   })
 
   it("keeps a known date range", () => {
-    expect(leadsHubRedirect({ range: "last_30d", group: "g1" })).toBe("/dashboard/table?client=g1&range=last_30d")
+    expect(leadsHubRedirect({ range: "last_30d", group: "g1" })).toBe("/media-buyer/table?client=g1&view=leads&range=last_30d")
   })
 })
