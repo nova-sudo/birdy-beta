@@ -13,6 +13,29 @@ export const DESTINATIONS = {
   settings: "/settings",
 };
 
+/** The agent sections: the ones a client and a date range carry across. */
+const AGENT_SECTIONS = ["ops", "buyer", "coach"];
+
+/**
+ * Where a rail tile goes. Between the agent sections the client and the date
+ * range on the current address come along, so picking a client and then
+ * opening another agent stays inside that client. Clients and Settings open plain.
+ * @param {string} id the tile's id
+ * @param {string} [search] the current address's query
+ */
+export function railHref(id, search = "") {
+  const base = DESTINATIONS[id];
+  if (!AGENT_SECTIONS.includes(id)) return base;
+  const from = new URLSearchParams(search);
+  const keep = new URLSearchParams();
+  for (const key of ["client", "range"]) {
+    const value = from.get(key);
+    if (value) keep.set(key, value);
+  }
+  const query = keep.toString();
+  return query ? `${base}?${query}` : base;
+}
+
 /** Pages with no tile of their own, listed under the dashed "Other pages" tile. */
 export const OTHER_PAGES = [
   { label: "BirdyHub", href: "/hub", icon: LayoutGrid },

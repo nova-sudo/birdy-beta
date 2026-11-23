@@ -13,7 +13,7 @@ import { lockedSections, nextSection, setupPercent, teamDone, useTeamSetup } fro
 import { useSetup } from "@/lib/use-setup";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, sectionBase } from "./nav";
+import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, railHref, sectionBase } from "./nav";
 
 // Hand-set health -> the switcher's dot. An inactive client gets no colour.
 const HEALTH_DOT = { Critical: "danger", Warning: "warning", Healthy: "success" };
@@ -62,7 +62,8 @@ export function AppShell({ children }) {
       <Rail
         className="font-by-body"
         activeId={activeId}
-        onSelect={(id) => router.push(DESTINATIONS[id])}
+        // Read at click time: the query is not available here without a Suspense boundary.
+        onSelect={(id) => router.push(railHref(id, window.location.search))}
         onHome={() => router.push(DESTINATIONS.ops)}
         counts={{ buyer: openWork ?? 0 }}
         locks={lockedSections(team)}
