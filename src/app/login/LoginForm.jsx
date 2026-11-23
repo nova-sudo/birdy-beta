@@ -7,6 +7,7 @@ import { Button, Notice, PasswordField, TextField } from "@/components/by"
 import { AuthHeading, SwitchLink } from "@/components/auth/auth-layout"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
+import { setupHolds } from "@/lib/setup-steps"
 import { writeSession, ADMIN_HOME } from "@/lib/session"
 import { apiRequest, publicRequest } from "@/lib/api"
 
@@ -91,12 +92,14 @@ export default function LoginForm() {
       // ── 3.5 First-run onboarding gate ────────────────────────────────────
       // A user who has never completed onboarding goes straight to the wizard
       // instead of the app. Grandfathering for pre-wizard accounts happens
-      // server-side, so existing users always come back completed here.
+      // server-side, so existing users always come back completed here. A
+      // finished account without a plan (`needs_plan`) is held there the same
+      // way: the plan is the step it has left.
       try {
         const obRes = await apiRequest("/api/onboarding/status")
         if (obRes.ok) {
           const ob = await obRes.json()
-          if (!ob.completed) {
+          if (setupHolds(ob)) {
             localStorage.setItem("onboarding_incomplete", "1")
             writeSession({
               expiresAt: expiresAt.toISOString(),

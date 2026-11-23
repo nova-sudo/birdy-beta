@@ -13,7 +13,9 @@ import { CallingStep, ToolsStep } from "./ops-tools";
  * Birdy's setup chat, in order: the basics, Meta and GoHighLevel, calling,
  * the first client, its targets, Slack, the rest of the clients. Each part
  * appears once the one before it is done, so coming back shows the answers
- * so far and the next question.
+ * so far and the next question. The plan comes between calling and the first
+ * client, on a screen of its own (plan-step), so nothing after calling shows
+ * here until it's done.
  */
 export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
   const { steps, names } = ctx;
@@ -21,7 +23,8 @@ export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
   const tools = done("basics");
   const connected = tools && done("meta") && done("ghl");
   const calling = connected && done("calling");
-  const client = calling && steps.client !== "todo";
+  const plan = calling && done("plan");
+  const client = plan && steps.client !== "todo";
   const targets = client && done("targets");
   const slack = targets && done("slack");
   const all = slack && done("import");
@@ -30,7 +33,7 @@ export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
       <BasicsStep ctx={ctx} />
       {tools && <ToolsStep ctx={ctx} />}
       {connected && <CallingStep ctx={ctx} />}
-      {calling && <ClientStep ctx={ctx} />}
+      {plan && <ClientStep ctx={ctx} />}
       {client && <TargetsStep ctx={ctx} />}
       {targets && <SlackStep ctx={ctx} />}
       {slack && <ImportStep ctx={ctx} />}

@@ -86,6 +86,24 @@ export function rewriteSessionRole(role) {
   writeSession({ expiresAt: new Date(current.exp).toISOString(), role, onboardingIncomplete: false })
 }
 
+/** localStorage's copy of "this account belongs in setup" (ProtectedLayout gates on it). */
+export const SETUP_FLAG = "onboarding_incomplete"
+
+/**
+ * Hold the account in setup, or let it out: the localStorage flag
+ * ProtectedLayout reads and the cookie the proxy reads, together, so the very
+ * next navigation is routed on the new answer. An admin's session is never held.
+ */
+export function setSetupLock(on) {
+  try {
+    if (on) localStorage.setItem(SETUP_FLAG, "1")
+    else localStorage.removeItem(SETUP_FLAG)
+  } catch { /* the server copy still decides at next login */ }
+  const current = readSession()
+  if (!current || current.role === "admin" || Boolean(current.ob) === Boolean(on)) return
+  writeSession({ expiresAt: new Date(current.exp).toISOString(), role: current.role, onboardingIncomplete: Boolean(on) })
+}
+
 /** Where an admin who is not impersonating anyone belongs: the only place. */
 export const ADMIN_HOME = "/admin"
 

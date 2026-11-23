@@ -119,6 +119,31 @@ describe("login page", () => {
     expect(checkTokens).not.toHaveBeenCalled()
   })
 
+  it("holds a finished account that has no plan in setup", async () => {
+    publicRequest.mockResolvedValue(json({ message: "Login successful", user: USER }))
+    apiRequest.mockResolvedValue(json({ completed: true, needs_plan: true }))
+    render(<LoginPage />)
+
+    await signIn()
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/welcome"))
+    expect(localStorage.getItem("onboarding_incomplete")).toBe("1")
+    expect(decodeURIComponent(document.cookie)).toContain('"ob":true')
+    expect(checkTokens).not.toHaveBeenCalled()
+  })
+
+  it("lets a finished account with a plan into the app", async () => {
+    publicRequest.mockResolvedValue(json({ message: "Login successful", user: USER }))
+    apiRequest.mockResolvedValue(json({ completed: true, needs_plan: false }))
+    checkTokens.mockImplementation(async (to) => to)
+    render(<LoginPage />)
+
+    await signIn()
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"))
+    expect(localStorage.getItem("onboarding_incomplete")).toBeNull()
+  })
+
   it("sends an admin to the admin console", async () => {
     publicRequest.mockResolvedValue(json({ message: "Login successful", user: { ...USER, role: "admin" } }))
     render(<LoginPage />)

@@ -77,7 +77,7 @@ export default function RegisterPage() {
       birdyState={birdyState}
       legal={<LegalLinks lead="By creating an account, you agree to our" />}
     >
-      <AuthHeading title="Create your account">Get started with your free account.</AuthHeading>
+      <AuthHeading title="Create your account">Set up Birdy for your agency in a few minutes.</AuthHeading>
 
       {error && (
         <Notice tone="danger" icon={<CircleAlert aria-hidden="true" />} className="mb-4">

@@ -172,3 +172,30 @@ describe("addresses typed with the wrong spelling", () => {
     expect(destinationOf(proxy(requestWith("/Sales-Hub", undefined)))).toBeNull()
   })
 })
+
+describe("setSetupLock", () => {
+  beforeEach(() => {
+    localStorage.clear()
+    document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`
+  })
+
+  it("puts the flag and the cookie up together, and takes them down together", async () => {
+    const { setSetupLock, writeSession, readSession } = await import("@/lib/session")
+    writeSession({ expiresAt: new Date(Date.now() + HOUR).toISOString(), role: "user" })
+    setSetupLock(true)
+    expect(localStorage.getItem("onboarding_incomplete")).toBe("1")
+    expect(readSession().ob).toBe(true)
+    // With the cookie saying so, the proxy holds every other page in setup.
+    expect(destinationOf(proxy(requestWith("/clients", document.cookie.split("=").slice(1).join("="))))).toBe("/welcome")
+    setSetupLock(false)
+    expect(localStorage.getItem("onboarding_incomplete")).toBeNull()
+    expect(readSession().ob).toBe(false)
+  })
+
+  it("never marks an admin's session", async () => {
+    const { setSetupLock, writeSession, readSession } = await import("@/lib/session")
+    writeSession({ expiresAt: new Date(Date.now() + HOUR).toISOString(), role: "admin" })
+    setSetupLock(true)
+    expect(readSession().ob).toBe(false)
+  })
+})

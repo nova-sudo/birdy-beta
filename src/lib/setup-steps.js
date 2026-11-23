@@ -12,6 +12,7 @@ export const STEPS = [
   { id: "meta", label: "Connect Meta" },
   { id: "ghl", label: "Connect GoHighLevel" },
   { id: "calling", label: "Calling: GoHighLevel or Hot Prospector" },
+  { id: "plan", label: "Pick your plan" },
   { id: "client", label: "Your first client" },
   { id: "targets", label: "Targets" },
   { id: "slack", label: "Slack: alerts and reports" },
@@ -90,6 +91,7 @@ export const CURRENCIES = [
  * @property {{connected?: boolean}|null} hp GET /api/hotprospector/status
  * @property {{installed?: boolean, needs_reconnect?: boolean, notify_channel_id?: string}|null} slack GET /api/integrations/slack/status
  * @property {object[]|null} clients the client groups
+ * @property {{subscribed?: boolean, needs_plan?: boolean, sandbox?: boolean, plan?: object}|null} [billing] GET /api/billing/status
  */
 
 /** The basics as known: the saved answers first, then the profile. */
@@ -108,6 +110,58 @@ export function callingTool(facts) {
   if (tool === "ghl" || tool === "hp" || tool === "none") return tool
   if (facts.hp?.connected) return "hp"
   return null
+}
+
+/**
+ * The plan step: done with an active subscription, or when the account needs
+ * no plan (an admin gave it a client limit). Billing's own answer comes first,
+ * then onboarding's. When neither says (an older backend), a finished account
+ * is left alone and an unfinished one is asked.
+ */
+function planState(facts) {
+  const billing = facts.billing
+  if (billing?.subscribed) return "done"
+  const needsPlan = billing?.needs_plan ?? facts.onboarding?.needs_plan
+  if (needsPlan === false) return "done"
+  if (needsPlan === true) return "todo"
+  return facts.onboarding?.completed ? "done" : "todo"
+}
+
+/** The steps that come before the plan: the plan step opens once these are done. */
+export const BEFORE_PLAN = ["basics", "meta", "ghl", "calling"]
+
+/**
+ * Is the plan step the one on screen? It is when it isn't done and the tools
+ * are connected, or at once for an account that finished setup before plans
+ * were required: that account only has the plan left to do.
+ */
+export function planIsCurrent(steps, completed = false) {
+  if (steps.plan === "done") return false
+  return completed || BEFORE_PLAN.every((id) => steps[id] === "done")
+}
+
+/**
+ * Does the account belong in setup until it's done? Unfinished setup does,
+ * and so does a finished account without a plan. With `steps` (billing read
+ * too) the plan step decides; without, onboarding's own `needs_plan` does.
+ */
+export function setupHolds(onboarding, steps) {
+  if (!onboarding) return false
+  if (!onboarding.completed) return true
+  return steps ? steps.plan !== "done" : onboarding.needs_plan === true
+}
+
+/**
+ * How many clients the plan has to fit, from what setup already knows: the
+ * GoHighLevel sub-accounts Birdy holds tokens for, or the clients already in
+ * Birdy, whichever is more. Null when neither says.
+ * @returns {{count: number, source: "ghl"|"clients"}|null}
+ */
+export function clientsToFit(facts) {
+  const subs = Object.keys(facts.status?.gohighlevel?.subaccounts || {}).length
+  const clients = (facts.clients || []).length
+  if (!subs && !clients) return null
+  return subs >= clients ? { count: subs, source: "ghl" } : { count: clients, source: "clients" }
 }
 
 /** @returns {Record<string, StepState>} */
@@ -134,8 +188,9 @@ export function deriveSteps(facts) {
   const slackState = slack.installed
     ? slack.needs_reconnect ? "issue" : slack.notify_channel_id || data.slack ? "done" : "setup"
     : "todo"
+  const plan = planState(facts)
   const importState = clients.length >= 2 || data.wants_sync === false || onboarding.completed ? "done" : "todo"
-  return { basics, meta, ghl: ghlState, calling, client, targets, slack: slackState, import: importState }
+  return { basics, meta, ghl: ghlState, calling, plan, client, targets, slack: slackState, import: importState }
 }
 
 export const pctDone = (steps) => Math.round((STEPS.filter((s) => steps[s.id] === "done").length / STEPS.length) * 100)
