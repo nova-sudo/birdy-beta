@@ -10,7 +10,7 @@ import { WHOP_ENVIRONMENT, storedEmail } from "@/components/billing/whop";
 import { apiRequest } from "@/lib/api";
 import { EXTRA_CLIENT_PRICE } from "@/lib/plan-billing";
 import { clientsToFit } from "@/lib/setup-steps";
-import { Checklist } from "./checklist";
+import { Bubble, Reply, Say } from "./chat-parts";
 
 function CheckoutSkeleton() {
   return (
@@ -75,23 +75,60 @@ function capacity(plan) {
     : `Up to ${plan.maxClients} clients`;
 }
 
+/** What the person picked, for their reply once the plan is on: "Growth · $297/mo". Null when billing doesn't say. */
+export function pickedPlanLine(billing) {
+  if (!billing?.subscribed || !billing.plan) return null;
+  const known = PLANS.find((p) => p.id === billing.plan.id);
+  if (known) return `${known.name} · $${known.price}/mo`;
+  return billing.plan.name || null;
+}
+
+/** Agency Ops' line before the plans: the tools are in, pick a plan, and how many clients it has to fit when known. */
+function planLine(fit, completed) {
+  const found = fit && (fit.source === "ghl"
+    ? `I found ${plural(fit.count, "sub-account")} in GoHighLevel.`
+    : `You have ${plural(fit.count, "client")} in Birdy.`);
+  if (completed) return `Every account now needs a plan.${found ? ` ${found}` : ""} Everything you set up is kept, and you carry on where you left off once it’s active.`;
+  return `Your tools are connected.${found ? ` ${found}` : ""} Pick a plan to carry on, and we’ll add your first client next.`;
+}
+
 /**
- * Setup's plan step, a screen of its own while it's the current step (the chat
- * steps aside): the checklist on the left with this step marked Now, and a
- * sheet with the three plans beside the checkout for the one picked. A sandbox
- * account starts a plan without paying. When the subscription is active,
- * `onActive` is called and setup carries on.
+ * Setup's plan step, in the chat: Agency Ops says the tools are in, and the
+ * three plans sit under it beside the checkout for the one picked (a sandbox
+ * account starts a plan without paying). It's required: nothing after it
+ * shows until the plan is on. Once it is, the line stays in the chat with
+ * the person's pick as their reply, and setup carries on with the first client.
  *
  * @param {object} props.facts setup's facts (lib/use-setup), with `billing`
  * @param {Record<string, string>} props.steps
+ * @param {string} props.agentName
  * @param {boolean} [props.completed] setup was finished before plans were required
- * @param {() => void | Promise<void>} props.onActive
+ * @param {() => void | Promise<void>} props.onActive called once the subscription is active
  */
-export function PlanStep({ facts, steps, completed = false, onActive }) {
+export function PlanStep({ facts, steps, agentName, completed = false, onActive }) {
+  const fit = clientsToFit(facts);
+  if (steps.plan === "done") {
+    const picked = pickedPlanLine(facts.billing);
+    return (
+      <>
+        <Bubble name={agentName} id="step-plan"><Say>{planLine(null, completed)}</Say></Bubble>
+        {picked && <Reply>{picked}</Reply>}
+      </>
+    );
+  }
+  return (
+    <Bubble name={agentName} id="step-plan">
+      <Say>{planLine(fit, completed)}</Say>
+      <PlanPicker facts={facts} fit={fit} onActive={onActive} />
+    </Bubble>
+  );
+}
+
+/** The three plans beside the checkout for the one picked, or the sandbox's start button. */
+function PlanPicker({ facts, fit, onActive }) {
   const search = useSearchParams();
   const billing = facts.billing;
   const sandbox = Boolean(billing?.sandbox);
-  const fit = clientsToFit(facts);
   const fitting = fit ? planThatFits(fit.count) : null;
   const tooBig = Boolean(fit && !fitting);
   const buyable = (p) => sandbox || Boolean(p.planId);
@@ -181,19 +218,10 @@ export function PlanStep({ facts, steps, completed = false, onActive }) {
     }
   };
 
-  const lead = completed
-    ? "Every account now needs a plan. Everything you set up is kept, and you carry on where you left off once it’s active."
-    : sandbox
-      ? "Setup carries on as soon as the plan starts."
-      : "Setup carries on as soon as the payment goes through.";
-  const found = fit && (fit.source === "ghl"
-    ? `${plural(fit.count, "sub-account")} found in GoHighLevel.`
-    : `You have ${plural(fit.count, "client")} in Birdy.`);
-
   const right = (() => {
     if (phase === "waiting") {
       return (
-        <div role="status" className="flex flex-col gap-2 rounded-by-lg border border-by-line bg-by-canvas p-4">
+        <div role="status" className="flex flex-col gap-2 rounded-by-lg border border-by-line bg-by-surface p-4 shadow-by-card">
           <span className="inline-flex items-center gap-1.5 text-by-body-sm font-semibold text-by-success"><Check aria-hidden="true" className="size-4" strokeWidth={2.5} />Payment sent</span>
           <span className="inline-flex items-center gap-2 text-by-body text-by-text"><Loader2 aria-hidden="true" className="size-4 text-by-accent motion-safe:animate-spin" />Waiting for the payment to show up</span>
           <p className="text-by-body-sm text-by-muted">{slow ? "This is taking longer than usual. It can take a minute, and setup carries on by itself." : "This usually takes a few seconds."}</p>
@@ -202,7 +230,7 @@ export function PlanStep({ facts, steps, completed = false, onActive }) {
     }
     if (sandbox) {
       return (
-        <div className="flex flex-col gap-3 rounded-by-lg border border-by-line bg-by-canvas p-4">
+        <div className="flex flex-col gap-3 rounded-by-lg border border-by-line bg-by-surface p-4 shadow-by-card">
           <Pill tone="accent" dot={false} className="self-start">Sandbox account</Pill>
           <p className="text-by-body text-by-text-2">This account runs on generated data, so nothing is charged. The plan starts straight away.</p>
           {problem && <Notice tone="danger">{problem}</Notice>}
@@ -229,7 +257,7 @@ export function PlanStep({ facts, steps, completed = false, onActive }) {
             The checkout is taking a while to load. Check your connection and try again.
           </Notice>
         )}
-        <div className="min-h-72 rounded-by-lg border border-by-line bg-by-surface p-3">
+        <div className="min-h-72 rounded-by-lg border border-by-line bg-by-surface p-3 shadow-by-card">
           <WhopCheckoutEmbed
             key={`${plan.id}:${attempt}`}
             planId={plan.planId}
@@ -249,47 +277,34 @@ export function PlanStep({ facts, steps, completed = false, onActive }) {
   })();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <aside className="shrink-0 border-by-line bg-by-surface px-4 py-5 lg:w-80 lg:overflow-y-auto lg:border-r lg:px-4.5">
-        <Checklist steps={steps} current="plan" flat />
-      </aside>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="flex min-h-full items-start justify-center px-4 py-6 sm:px-7 lg:items-center">
-          <section aria-labelledby="plan-step-title" id="step-plan" className="flex w-full max-w-[900px] flex-col gap-5 rounded-by-xl border border-by-line bg-by-surface p-5 shadow-by-floating sm:p-7">
-            <div>
-              <h2 id="plan-step-title" className="font-by-display text-by-title font-semibold text-by-text">Pick your plan</h2>
-              <p className="mt-1.5 text-by-body text-by-muted">{found ? `${found} ` : ""}{lead}</p>
-            </div>
-            {tooBig && (
-              <Notice tone="warning">
-                That’s more than any plan holds: Scale covers {PLANS[PLANS.length - 1].maxClients} clients. Once it’s active you can add extra client slots for ${EXTRA_CLIENT_PRICE} a month each in Settings.
-              </Notice>
-            )}
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-              <div role="radiogroup" aria-label="Plans" className="flex flex-col gap-2">
-                {PLANS.map((p) => (
-                  <OptionCard
-                    key={p.id}
-                    selected={p.id === planId}
-                    disabled={phase !== "picking" || !buyable(p)}
-                    onSelect={() => pick(p.id)}
-                    className="py-3"
-                    title={<>{p.name}{fitting?.id === p.id && <Pill tone="accent" dot={false} className="ml-2 align-middle">Fits {plural(fit.count, "client")}</Pill>}</>}
-                    subtitle={capacity(p)}
-                    aside={<span className="shrink-0 font-semibold text-by-text tabular-nums">${p.price}/mo</span>}
-                  />
-                ))}
-              </div>
-              <div className="flex min-w-0 flex-col gap-2.5">
-                {right}
-                {plan && phase === "picking" && (
-                  <p className="text-by-body-sm text-by-muted">
-                    {plan.name} · ${plan.price} a month.{sandbox ? " Nothing is charged on a sandbox account." : " Cancel any time in Settings."}
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
+    <div className="@container flex max-w-4xl flex-col gap-3">
+      {tooBig && (
+        <Notice tone="warning">
+          That’s more than any plan holds: Scale covers {PLANS[PLANS.length - 1].maxClients} clients. Once it’s active you can add extra client slots for ${EXTRA_CLIENT_PRICE} a month each in Settings.
+        </Notice>
+      )}
+      <div className="grid gap-3 @2xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div role="radiogroup" aria-label="Plans" className="flex flex-col gap-2">
+          {PLANS.map((p) => (
+            <OptionCard
+              key={p.id}
+              selected={p.id === planId}
+              disabled={phase !== "picking" || !buyable(p)}
+              onSelect={() => pick(p.id)}
+              className="py-3"
+              title={<>{p.name}{fitting?.id === p.id && <Pill tone="accent" dot={false} className="ml-2 align-middle">Fits {plural(fit.count, "client")}</Pill>}</>}
+              subtitle={capacity(p)}
+              aside={<span className="shrink-0 font-semibold text-by-text tabular-nums">${p.price}/mo</span>}
+            />
+          ))}
+        </div>
+        <div className="flex min-w-0 flex-col gap-2.5">
+          {right}
+          {plan && phase === "picking" && (
+            <p className="text-by-body-sm text-by-muted">
+              {plan.name} · ${plan.price} a month.{sandbox ? " Nothing is charged on a sandbox account." : " Cancel any time in Settings."}
+            </p>
+          )}
         </div>
       </div>
     </div>

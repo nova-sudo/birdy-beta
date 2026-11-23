@@ -2,27 +2,31 @@
 
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/by";
-import { Bubble, Lead } from "./chat-parts";
+import { Bubble, Lead, Say } from "./chat-parts";
 import { BasicsStep } from "./ops-basics";
 import { ClientStep, TargetsStep } from "./ops-clients";
 import { ImportStep } from "./ops-import";
 import { SlackStep } from "./ops-slack";
 import { CallingStep, ToolsStep } from "./ops-tools";
+import { PlanStep } from "./plan-step";
 
 /**
  * Birdy's setup chat, in order: the basics, Meta and GoHighLevel, calling,
- * the first client, its targets, Slack, the rest of the clients. Each part
- * appears once the one before it is done, so coming back shows the answers
- * so far and the next question. The plan comes between calling and the first
- * client, on a screen of its own (plan-step), so nothing after calling shows
- * here until it's done.
+ * the plan, the first client, its targets, Slack, the rest of the clients.
+ * Each part appears once the one before it is done, so coming back shows the
+ * answers so far and the next question. The plan is required: nothing after
+ * it shows until it's on. An account that finished setup before plans were
+ * required sees the plan straight away.
+ *
+ * @param {() => void | Promise<void>} props.onPlanActive the plan's subscription is on
  */
-export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
+export function OpsSetup({ ctx, onFinish, onPlanActive, finishing, completed = false, withTeam = true }) {
   const { steps, names } = ctx;
   const done = (id) => steps[id] === "done";
   const tools = done("basics");
   const connected = tools && done("meta") && done("ghl");
   const calling = connected && done("calling");
+  const planOpen = calling || (completed && steps.plan !== "done");
   const plan = calling && done("plan");
   const client = plan && steps.client !== "todo";
   const targets = client && done("targets");
@@ -33,6 +37,7 @@ export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
       <BasicsStep ctx={ctx} />
       {tools && <ToolsStep ctx={ctx} />}
       {connected && <CallingStep ctx={ctx} />}
+      {planOpen && <PlanStep facts={ctx.facts} steps={steps} agentName={ctx.agentName} completed={completed} onActive={onPlanActive} />}
       {plan && <ClientStep ctx={ctx} />}
       {client && <TargetsStep ctx={ctx} />}
       {targets && <SlackStep ctx={ctx} />}
@@ -40,9 +45,9 @@ export function OpsSetup({ ctx, onFinish, finishing, withTeam = true }) {
       {all && (
         <Bubble name={ctx.agentName} id="step-ops-done">
           {withTeam ? (
-            <p><Lead>{names.ops} is set up.</Lead>{names.buyer} is next. It already knows your clients, tools and targets, and it will ask you a few questions of its own before it starts.</p>
+            <Say><Lead>{names.ops} is set up.</Lead>{names.buyer} is next. It already knows your clients, tools and targets, and it will ask you a few questions of its own before it starts.</Say>
           ) : (
-            <p><Lead>{names.ops} is set up.</Lead>Your clients, tools and targets are in. Your clients’ history keeps loading in the background.</p>
+            <Say><Lead>{names.ops} is set up.</Lead>Your clients, tools and targets are in. Your clients’ history keeps loading in the background.</Say>
           )}
           <div className="flex flex-wrap gap-2">
             {withTeam && <Button kind="primary" loading={finishing === "buyer"} disabled={Boolean(finishing)} onClick={() => onFinish("buyer")}>Set up {names.buyer}<ArrowRight aria-hidden="true" /></Button>}

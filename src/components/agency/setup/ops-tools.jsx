@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Notice, TextField } from "@/components/by";
 import { callingTool } from "@/lib/setup-steps";
-import { Bubble, Chips, ConnectCard, Reply } from "./chat-parts";
+import { Bubble, Chips, ConnectCard, Reply, Say } from "./chat-parts";
 
 /** A connection's card state: what the account says, unless a hop is in flight or just failed. */
 const cardState = (step, pending) => (pending === "connecting" || pending === "error" ? pending : step === "issue" ? "issue" : step === "done" ? "done" : "todo");
@@ -14,9 +14,10 @@ export function ToolsStep({ ctx }) {
   const { steps, actions, agentName } = ctx;
   return (
     <Bubble name={agentName} id="step-meta">
-      <p>Got it. Now your tools: I read your ads from Meta and your leads from GoHighLevel.</p>
+      <Say>Got it. Now your tools: I read your ads from Meta and your leads from GoHighLevel.</Say>
       <div className="flex max-w-xl flex-col gap-2.5">
         <ConnectCard
+          tool="meta"
           name="Meta"
           what="Ads, spend and leads. I can’t post or spend for you."
           state={cardState(steps.meta, actions.pending.meta)}
@@ -25,6 +26,7 @@ export function ToolsStep({ ctx }) {
         />
         <span id="step-ghl" className="scroll-mt-24" />
         <ConnectCard
+          tool="ghl"
           name="GoHighLevel"
           what="Sub-accounts, contacts and pipelines. I never change your data."
           state={cardState(steps.ghl, actions.pending.ghl)}
@@ -61,7 +63,7 @@ export function CallingStep({ ctx }) {
   return (
     <>
       <Bubble name={agentName} id="step-calling">
-        <p>Both connected. How does your team call leads?</p>
+        <Say>Both connected. How does your team call leads?</Say>
         {!tool && steps.calling !== "done" && (
           <>
             <Chips label="How your team calls leads" items={Object.keys(TOOLS)} onPick={pick} busy={busy} />
@@ -71,9 +73,9 @@ export function CallingStep({ ctx }) {
       </Bubble>
       {tool && <Reply>{ANSWER[tool]}</Reply>}
       {tool === "hp" && <HotProspector ctx={ctx} onChange={() => pick("GoHighLevel calling")} />}
-      {tool === "ghl" && <Bubble name={agentName}><p>Good: I’ll read calls from GoHighLevel, so there’s nothing else to connect.</p></Bubble>}
-      {tool === "none" && <Bubble name={agentName}><p>Fine. I’ll leave calls out for now; connect a dialler from Settings whenever you start calling.</p></Bubble>}
-      {!tool && steps.calling === "done" && <Bubble name={agentName}><p>Your clients already say where their calls come from, so there’s nothing to connect here.</p></Bubble>}
+      {tool === "ghl" && <Bubble name={agentName}><Say>Good: I’ll read calls from GoHighLevel, so there’s nothing else to connect.</Say></Bubble>}
+      {tool === "none" && <Bubble name={agentName}><Say>Fine. I’ll leave calls out for now; connect a dialler from Settings whenever you start calling.</Say></Bubble>}
+      {!tool && steps.calling === "done" && <Bubble name={agentName}><Say>Your clients already say where their calls come from, so there’s nothing to connect here.</Say></Bubble>}
     </>
   );
 }
@@ -93,7 +95,7 @@ function HotProspector({ ctx, onChange }) {
   return (
     <Bubble name={agentName}>
       <div className="flex max-w-xl flex-col gap-2.5">
-        <ConnectCard name="Hot Prospector" what="Calls, recordings and outcomes" state={state === "error" ? "todo" : state}>
+        <ConnectCard tool="hp" name="Hot Prospector" what="Calls, recordings and outcomes" state={state === "error" ? "todo" : state}>
           {!connected && (
             <form onSubmit={submit} className="mt-3 flex flex-col gap-2.5 border-t border-by-line-soft pt-3">
               <p className="text-by-body-sm text-by-text-2">Paste your API UID and key. Both are in your Hot Prospector settings.</p>

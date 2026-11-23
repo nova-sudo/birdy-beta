@@ -2,24 +2,42 @@
 
 import { Check, Loader2, RotateCcw } from "lucide-react";
 import { Button, ChatSender, UserMessage, cn } from "@/components/by";
+import { ToolLogo } from "./tool-logo";
 
 const ENTER = "motion-safe:animate-[by-enter_var(--by-dur-base)_var(--by-ease-out)]";
 
 /**
- * One of the agent's messages in a setup chat. The sender line shows on the
- * first of a run. `id` is what the checklist scrolls to.
+ * One of the agent's turns in a setup chat: what it says (`Say`), then any
+ * controls (chips, a form, connect cards) under it, outside the bubble so a
+ * card never sits inside a card. The sender line shows on the first turn of a
+ * run: the chat's first message, any turn right after the person's reply, or
+ * when `first` is passed. Turns and replies are siblings in the chat column,
+ * which is what the selectors below rely on. `id` is what the checklist
+ * scrolls to.
  */
 export function Bubble({ name, first = false, id, className, children }) {
   return (
-    <div id={id} className={cn("flex scroll-mt-6 flex-col gap-1.5", ENTER, className)}>
-      {first && <ChatSender name={name} />}
-      <div className="flex flex-col gap-3 text-by-body-lg sm:pl-10 text-by-text [&_p]:leading-relaxed">{children}</div>
+    <div id={id} data-turn="" className={cn("flex scroll-mt-6 flex-col gap-1.5", ENTER, className)}>
+      <ChatSender
+        name={name}
+        className={cn(first ? "flex" : "hidden", "[[data-reply]+[data-turn]>&]:flex [[data-turn]:first-child>&]:flex")}
+      />
+      <div className="flex flex-col gap-2.5 text-by-body-lg text-by-text sm:pl-10">{children}</div>
     </div>
   );
 }
 
+/** What the agent says: a white bubble with the kit's card border, so its words stand out from the page. */
+export function Say({ children, className }) {
+  return (
+    <p className={cn("w-fit max-w-2xl rounded-by-xl rounded-tl-by-sm border border-by-line bg-by-surface px-4 py-2.5 font-medium leading-relaxed text-by-text shadow-by-card", className)}>
+      {children}
+    </p>
+  );
+}
+
 /** The person's answer, on the right. */
-export const Reply = ({ children }) => <UserMessage>{children}</UserMessage>;
+export const Reply = ({ children }) => <UserMessage data-reply="">{children}</UserMessage>;
 
 /** A heading-weight first line inside a bubble. */
 export const Lead = ({ children }) => <span className="block font-by-display text-by-heading font-semibold">{children}</span>;
@@ -46,15 +64,18 @@ export function Chips({ items, onPick, recommended, busy, label }) {
 
 /**
  * A tool to connect, in the chat: Connect, Connecting…, Connected, or what went wrong and Retry.
+ * @param {"meta"|"ghl"|"hp"|"slack"} props.tool whose logo leads the card
  * @param {"todo"|"connecting"|"done"|"error"|"issue"} props.state `issue`: connected once, needs connecting again
  * @param {string} [props.problem] says what went wrong in the error and issue states
  */
-export function ConnectCard({ name, what, state, problem, onConnect, connectLabel = "Connect", children }) {
+export function ConnectCard({ tool, name, what, state, problem, onConnect, connectLabel = "Connect", children }) {
   const bad = state === "error" || state === "issue";
   return (
     <div className={cn("rounded-by-lg border bg-by-surface p-3.5 shadow-by-card", bad ? "border-by-danger" : "border-by-line")}>
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-by-md bg-by-accent-soft font-by-display text-by-body-lg font-bold text-by-accent">{name[0]}</span>
+        <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-by-md border border-by-line-soft bg-by-surface">
+          <ToolLogo tool={tool} />
+        </span>
         <span className="min-w-0 flex-1">
           <b className="block font-semibold text-by-text">{name}</b>
           <span className={cn("block text-by-body-sm", bad ? "text-by-danger" : "text-by-muted")}>{bad && problem ? problem : what}</span>
