@@ -280,4 +280,4 @@ export function markParts(text, query, base) {
 }
 
 /** The leads table the lead belongs to: the client's Media Buyer Dashboard, Leads view; without a client, Media Buyer's Leads level. */
-export const clientLeadsHref = (groupId) => (groupId ? `/media-buyer/table?client=${encodeURIComponent(groupId)}&view=leads` : LEADS_HREF);
+export const clientLeadsHref = (groupId) => (groupId ? `${LEADS_HREF}?client=${encodeURIComponent(groupId)}` : LEADS_HREF);

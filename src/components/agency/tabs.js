@@ -18,14 +18,10 @@ export const SECTION_TABS = [
 ];
 
 /**
- * Birdy's tab pill. Its Bird's Eye (/dashboard) is the old Portfolio Dashboard, and there is
- * no separate Dashboard tab.
+ * Agency Ops' tab pill: the same four. Its Bird's Eye (/dashboard) is the old Portfolio
+ * Dashboard and its Dashboard (/dashboard/table) the old Leads hub's table.
  */
-export const OPS_TABS = [
-  { value: "chat", label: "Chat" },
-  { value: "birdseye", label: "Bird's Eye" },
-  { value: "suggestions", label: "Suggestions" },
-];
+export const OPS_TABS = SECTION_TABS;
 
 /**
  * The pages under the "More" menu at the end of the tab pill, in the reference's order. A section

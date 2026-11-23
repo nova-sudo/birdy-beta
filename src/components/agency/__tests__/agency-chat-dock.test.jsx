@@ -22,7 +22,7 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }))
 describe("the chat page's composer", () => {
   it("moves with the thread while an agent's part is docked, and goes back when it closes", () => {
     const { container } = render(<AgencyChat />)
-    const box = () => screen.getByRole("textbox", { name: "Message Birdy" }).closest("[data-composer] > div > div")
+    const box = () => screen.getByRole("textbox", { name: "Message Agency Ops" }).closest("[data-composer] > div > div")
     const outer = () => container.querySelector("[data-composer]")
     expect(box().getAttribute("style")).toBeNull()
     act(() => dock.tell({ shift: 154, pad: 186, gutter: 15 }))

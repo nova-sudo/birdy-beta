@@ -42,8 +42,8 @@ describe("Birdy's Dashboard", () => {
   it("shows the old page under the section header, with Chat, Bird's Eye and Suggestions", () => {
     render(<OpsDashboard />)
     expect(screen.getByText("Portfolio page")).toBeInTheDocument()
-    const views = screen.getByRole("tablist", { name: "Birdy views" })
-    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Bird's Eye", "Suggestions2"])
+    const views = screen.getByRole("tablist", { name: "Agency Ops views" })
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Bird's Eye", "Dashboard", "Suggestions2"])
     expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     expect(screen.getByText("Portfolio dashboard · 12 clients")).toBeInTheDocument()
   })
