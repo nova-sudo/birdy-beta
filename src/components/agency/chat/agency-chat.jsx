@@ -224,7 +224,7 @@ export function AgencyChat({ section: which }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <ChatScroll follow={`${chat.messages.length}-${chat.loading}`}>
-            <div className="mx-auto w-full max-w-[800px] px-7 py-6">
+            <div className="w-full px-7 py-6">
               {opening ? (
                 <div aria-busy="true" aria-label="Opening conversation" className="flex flex-col gap-3"><Skeleton className="w-40" /><Skeleton className="w-full" /><Skeleton className="w-3/4" /></div>
               ) : empty ? (
@@ -239,7 +239,7 @@ export function AgencyChat({ section: which }) {
           {/* Built like the thread's box above it (same width and padding), so the composer moves with
               the thread when an agent's part is docked on the right. */}
           <div data-composer className="shrink-0 pb-5" style={room?.gutter ? { paddingRight: room.gutter } : undefined}>
-            <div className="mx-auto w-full max-w-[800px] px-7">
+            <div className="w-full px-7">
               <div style={room ? { marginLeft: -room.shift, paddingRight: room.pad } : undefined}>
               {empty && !opening && (
                 <div className="mb-2.5 flex flex-wrap gap-2">

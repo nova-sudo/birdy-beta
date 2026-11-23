@@ -150,7 +150,7 @@ export function SetupPage() {
                 </div>
               </div>
               <div className="shrink-0 px-4 pb-5 sm:px-7">
-                <div className="mx-auto w-full max-w-[800px]">
+                <div className="w-full">
                   <AskBar placeholder={`Message ${NAMES.ops}`} onSubmit={() => toast("Pick one of the options in the chat to carry on")} />
                 </div>
               </div>
