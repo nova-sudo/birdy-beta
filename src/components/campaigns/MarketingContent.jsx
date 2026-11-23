@@ -144,6 +144,8 @@ export function MarketingContent({
   granularity: controlledGranularity,
   onAskBirdy,
   fill = false,
+  // Hides the Creatives tab (and ignores links to it). Media Buyer's Dashboard hides it for now.
+  hideCreatives = false,
 }) {
   const { currency: userCurrency, currencySymbol } = useCurrency()
   const showHero = part !== "table"
@@ -163,10 +165,10 @@ export function MarketingContent({
   const urlParams = useSearchParams()
   useEffect(() => {
     if (!showTable) return
-    if (urlParams?.get("tab") === "creatives" || urlParams?.get("creative")) setActiveTab("creatives")
+    if (!hideCreatives && (urlParams?.get("tab") === "creatives" || urlParams?.get("creative"))) setActiveTab("creatives")
     // A lead's "back to this client's leads" link (lib/lead-view clientLeadsHref) lands on the Leads tab.
     else if (urlParams?.get("view") === "leads") setActiveTab("leads")
-  }, [urlParams, showTable])
+  }, [urlParams, showTable, hideCreatives])
   // Ads-tab-only layout switch: the same rows and column order drawn either as
   // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
   const [adsView, setAdsView] = useState("table")
@@ -1411,7 +1413,7 @@ export function MarketingContent({
             <PageTabs
               label="Marketing Hub section"
               panelId={TABLE_PANEL_ID}
-              tabs={SECTION_TABS.map(tab => ({ ...tab, badge: tabBadge(tab.key) ?? undefined }))}
+              tabs={SECTION_TABS.filter(tab => !(hideCreatives && tab.key === "creatives")).map(tab => ({ ...tab, badge: tabBadge(tab.key) ?? undefined }))}
               value={activeTab}
               onChange={setActiveTab}
             />
