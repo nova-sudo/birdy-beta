@@ -88,6 +88,14 @@ describe("MarketingContent's hero half", () => {
 })
 
 describe("MarketingContent's table half", () => {
+  it("hides the Creatives tab when told to, and ignores links to it", () => {
+    search = "tab=creatives"
+    mount({ part: "table", fill: true, hideCreatives: true })
+    expect(screen.queryByText("Creatives")).toBeNull()
+    expect(screen.queryByTestId("creatives-tab")).toBeNull()
+    expect(screen.getByText("Campaigns")).toBeInTheDocument()
+  })
+
   it("draws the tabs and the table, and no hero", () => {
     mount({ part: "table", fill: true })
     expect(screen.getByPlaceholderText(/Search campaigns/)).toBeInTheDocument()

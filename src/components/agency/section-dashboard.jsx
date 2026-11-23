@@ -84,6 +84,7 @@ export function SectionDashboard({ section: which }) {
               selectedClientGroup={clientId}
               onCacheInvalidate={invalidate}
               fill
+              hideCreatives
             />
           )}
         </div>
