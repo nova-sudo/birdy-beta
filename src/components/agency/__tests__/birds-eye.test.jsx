@@ -78,8 +78,8 @@ describe("Bird's Eye for the agency", () => {
     render(<BirdsEye />)
     const views = screen.getByRole("tablist", { name: "Birdy views" })
     // Birdy's first view is its Dashboard (the old Portfolio Dashboard); it has no separate Dashboard tab.
-    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Dashboard", "Suggestions5"])
-    expect(within(views).getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true")
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Bird's Eye", "Suggestions5"])
+    expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     await userEvent.click(within(views).getByRole("tab", { name: "Chat" }))
     expect(push).toHaveBeenCalledWith("/dashboard/chat")
     await userEvent.click(within(views).getByRole("tab", { name: /^Suggestions/ }))

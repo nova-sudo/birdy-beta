@@ -18,12 +18,12 @@ export const SECTION_TABS = [
 ];
 
 /**
- * Birdy's tab pill. Its first view (the "birdseye" address, /dashboard) is the old Portfolio
- * Dashboard, so it is called Dashboard, and there is no separate Dashboard tab.
+ * Birdy's tab pill. Its Bird's Eye (/dashboard) is the old Portfolio Dashboard, and there is
+ * no separate Dashboard tab.
  */
 export const OPS_TABS = [
   { value: "chat", label: "Chat" },
-  { value: "birdseye", label: "Dashboard" },
+  { value: "birdseye", label: "Bird's Eye" },
   { value: "suggestions", label: "Suggestions" },
 ];
 

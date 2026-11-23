@@ -207,6 +207,23 @@ function kpiCell(label) {
 }
 
 describe("Portfolio Dashboard", () => {
+  it("narrows the figures and the suggestions to one client", async () => {
+    const named = vi.fn();
+    render(
+      <DashboardControlsProvider>
+        <PortfolioDashboardPage clientId="b" onClientName={named} />
+      </DashboardControlsProvider>
+    );
+    await waitFor(() => expect(screen.getByText("Total ad spend")).toBeInTheDocument());
+
+    // Tylaesthetics alone: £300 spend, not the portfolio's £400.
+    expect(within(kpiCell("Total ad spend")).getByText("£300")).toBeInTheDocument();
+    expect(named).toHaveBeenLastCalledWith("Tylaesthetics");
+    // Suggestions for other clients are left out.
+    await waitFor(() => expect(screen.queryByText("Pause 2 underperforming ads")).toBeNull());
+    expect(screen.queryByText("Raise daily budget")).toBeNull();
+  });
+
   it("rolls the portfolio up from real client groups", async () => {
     await renderPage();
 
