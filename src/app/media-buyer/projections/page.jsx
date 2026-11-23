@@ -1,11 +1,6 @@
-import { Suspense } from "react";
-import { ProjectionsTab } from "@/components/agency/projections-tab";
+import { redirect } from "next/navigation";
 
-// Media Buyer's Projections, under "More": this month's budget pacing.
+// Projections is off Media Buyer's menu for now. Old links land on its Bird's Eye.
 export default function MediaBuyerProjectionsPage() {
-  return (
-    <Suspense fallback={null}>
-      <ProjectionsTab section="buyer" />
-    </Suspense>
-  );
+  redirect("/media-buyer");
 }

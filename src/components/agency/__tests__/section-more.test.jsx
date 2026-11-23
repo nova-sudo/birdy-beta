@@ -9,17 +9,17 @@ const route = { search: "" }
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(route.search) }))
 
 describe("the More menu", () => {
-  it("lists Media Buyer's Reports, Projections and Context, keeping the client the page is narrowed to", async () => {
+  it("lists Media Buyer's Reports and Context, keeping the client the page is narrowed to", async () => {
     route.search = "client=g0&range=last_14d"
     render(<SectionMore section={BUYER_SECTION} tab="birdseye" />)
     const more = screen.getByRole("button", { name: "More" })
     expect(more).not.toHaveAttribute("data-pill-current")
     await userEvent.click(more)
     const items = screen.getAllByRole("menuitem")
-    expect(items.map((i) => i.textContent)).toEqual(["Reports", "Projections", "Context"])
+    // Projections is off the menu for now.
+    expect(items.map((i) => i.textContent)).toEqual(["Reports", "Context"])
     expect(items[0]).toHaveAttribute("href", "/media-buyer/reports?client=g0&range=last_14d")
-    expect(items[1]).toHaveAttribute("href", "/media-buyer/projections?client=g0&range=last_14d")
-    expect(items[2]).toHaveAttribute("href", "/media-buyer/context?client=g0&range=last_14d")
+    expect(items[1]).toHaveAttribute("href", "/media-buyer/context?client=g0&range=last_14d")
   })
 
   it("lists only the pages a section has something real for", async () => {

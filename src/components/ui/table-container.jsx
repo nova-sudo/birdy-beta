@@ -95,6 +95,9 @@ const StyledTable = ({
   // card shrinks to the space it is given, its rows scroll inside it under a
   // header that stays put, and the pagination stays below it.
   fill = false,
+  // Rows this says yes to come first, whatever the sort; the sort still orders each half.
+  // The Marketing table uses it to keep what is switched on above what is off.
+  pinFirst = null,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -185,8 +188,9 @@ const StyledTable = ({
   }, [flattenedData, searchQuery, visibleColumns]);
 
   const sortedData = useMemo(() => {
-    if (!sortConfig.key) return filteredData;
+    if (!sortConfig.key && !pinFirst) return filteredData;
     const copy = [...filteredData];
+    if (sortConfig.key)
     copy.sort((a, b) => {
       let av = a[sortConfig.key];
       let bv = b[sortConfig.key];
@@ -200,8 +204,9 @@ const StyledTable = ({
       }
       return sortConfig.direction === "asc" ? cmp : -cmp;
     });
-    return copy;
-  }, [filteredData, sortConfig]);
+    if (!pinFirst) return copy;
+    return [...copy.filter((row) => pinFirst(row)), ...copy.filter((row) => !pinFirst(row))];
+  }, [filteredData, sortConfig, pinFirst]);
 
   /* ---------- PAGINATION ---------- */
   const totalPages = Math.ceil(sortedData.length / pageSize);

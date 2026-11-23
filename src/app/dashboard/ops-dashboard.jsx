@@ -6,6 +6,8 @@ import { SectionHeader } from "@/components/by";
 import { OPS_SECTION } from "@/components/agency/sections";
 import { SectionMore } from "@/components/agency/section-more";
 import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
+import { AskDock, useSectionChat } from "@/components/agency/section-parts";
+import { useClientGroups } from "@/lib/useClientGroups";
 import {
   DashboardControlsProvider,
   DashboardHeaderControls,
@@ -32,6 +34,11 @@ export function OpsDashboard() {
  */
 function AgencyDashboard({ clientId }) {
   const [clientName, setClientName] = useState(null);
+  // The ask bar every other tab has: the question goes to Agency Ops, about the client when there is one.
+  const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
+  const client = clientId ? clientGroups.find((g) => g.id === clientId) ?? null : null;
+  const chat = useSectionChat(OPS_SECTION, "ask", client);
+  const name = OPS_SECTION.kit.name;
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -62,7 +69,14 @@ function AgencyDashboard({ clientId }) {
           onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
           dateRange={<DashboardHeaderControls />}
         />
-        <PortfolioDashboard clientId={clientId} onClientName={setClientName} showRail={false} />
+        <AskDock
+          section={OPS_SECTION}
+          chat={chat}
+          title={client ? `${name} · ${client.name}` : undefined}
+          placeholder={client ? `Ask ${name} about ${client.name}` : `Ask ${name} about ${OPS_SECTION.askAbout}`}
+        >
+          <PortfolioDashboard clientId={clientId} onClientName={setClientName} showRail={false} footSpace />
+        </AskDock>
       </div>
     </DashboardControlsProvider>
   );

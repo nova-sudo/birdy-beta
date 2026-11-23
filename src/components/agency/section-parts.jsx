@@ -56,7 +56,7 @@ export function RangeMenu({ preset, label, onPick }) {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <DropdownTrigger leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${label}`}>
+        <DropdownTrigger className="rounded-full px-4" leading={<Calendar aria-hidden="true" />} aria-label={`Date range: ${label}`}>
           <span className="font-semibold">{label}</span>
         </DropdownTrigger>
       </MenuTrigger>
@@ -77,7 +77,7 @@ export function GranularityMenu({ value, onPick }) {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <DropdownTrigger leading={<Clock aria-hidden="true" />} aria-label={`Chart granularity: ${value}`}>
+        <DropdownTrigger className="rounded-full px-4" leading={<Clock aria-hidden="true" />} aria-label={`Chart granularity: ${value}`}>
           <span className="font-semibold">{value}</span>
         </DropdownTrigger>
       </MenuTrigger>

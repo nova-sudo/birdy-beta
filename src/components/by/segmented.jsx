@@ -15,7 +15,7 @@ import { FOCUS_RING } from "./motion";
  */
 export function Segmented({ items, value, onValueChange, "aria-label": ariaLabel, className, ...props }) {
   return (
-    <div role="group" aria-label={ariaLabel} className={cn("inline-flex shrink-0 gap-0.5 rounded-by-md bg-by-sunken p-0.5", className)} {...props}>
+    <div role="group" aria-label={ariaLabel} className={cn("inline-flex shrink-0 gap-0.5 rounded-full border border-by-line-strong/70 bg-by-line p-0.5", className)} {...props}>
       {items.map((item) => {
         const on = item.value === value;
         return (
@@ -26,7 +26,7 @@ export function Segmented({ items, value, onValueChange, "aria-label": ariaLabel
             aria-label={item.count != null ? `${item.label}, ${item.count}` : undefined}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[calc(var(--radius-by-md)-2px)] px-2.5 font-by-body text-by-body-sm font-semibold",
+              "inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 font-by-body text-by-body-sm font-semibold",
               "transition-colors duration-(--by-dur-fast) ease-by-out",
               on ? "bg-by-surface text-by-text shadow-by-raised" : "text-by-text-2 hover:text-by-text",
               FOCUS_RING,

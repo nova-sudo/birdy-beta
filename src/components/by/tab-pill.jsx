@@ -8,7 +8,7 @@ import { CountBadge } from "./pill";
 
 /** The look of one entry in the pill. Tabs use it; so should a `trailing` button. */
 export const PILL_EXTRA = cn(
-  "relative z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-by-md px-3.5",
+  "relative z-10 inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3.5",
   "font-by-body text-by-body font-semibold text-by-text-2 transition-colors duration-(--by-dur-fast) ease-by-out",
   "hover:text-by-text [&_svg]:size-3.5",
   FOCUS_RING,
@@ -56,12 +56,12 @@ export function TabPill({ items, value, onValueChange, "aria-label": ariaLabel, 
       <TabsPrimitive.List
         ref={listRef}
         aria-label={ariaLabel}
-        className={cn("relative inline-flex gap-0.5 rounded-by-lg border border-by-line bg-by-sunken p-1", className)}
+        className={cn("relative inline-flex gap-0.5 rounded-full border border-by-line bg-by-sunken p-1", className)}
       >
         {chip && (
           <span
             aria-hidden="true"
-            className="absolute top-1 bottom-1 left-0 rounded-by-md bg-by-surface shadow-by-raised [transition:transform_var(--by-dur-tab)_var(--by-ease-spring),width_var(--by-dur-tab)_var(--by-ease-spring)] motion-reduce:transition-none"
+            className="absolute top-1 bottom-1 left-0 rounded-full bg-by-surface shadow-by-raised [transition:transform_var(--by-dur-tab)_var(--by-ease-spring),width_var(--by-dur-tab)_var(--by-ease-spring)] motion-reduce:transition-none"
             style={{ width: chip.width, transform: `translateX(${chip.left}px)` }}
           />
         )}

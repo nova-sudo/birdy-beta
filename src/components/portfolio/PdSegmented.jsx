@@ -52,7 +52,9 @@ export function PdSegmented({
       aria-label={label}
       className={cn(
         // A pill track with pill chips: concentric by construction.
-        "flex gap-[5px] rounded-full bg-pd-divider p-1",
+        // `isolate`: the selected chip is at -z-10, and without a stacking context of its own it slid
+        // under the page background and the open tab looked like the rest.
+        "isolate flex gap-[5px] rounded-full bg-pd-divider p-1",
         className
       )}
     >

@@ -50,7 +50,7 @@ export const SECTION_CONFIG = {
   buyer: {
     key: "buyer",
     kit: kit("buyer"),
-    paths: { chat: "/media-buyer/chat", birdseye: "/media-buyer", dashboard: "/media-buyer/table", suggestions: "/media-buyer/suggestions", context: "/media-buyer/context", reports: "/media-buyer/reports", projections: "/media-buyer/projections" },
+    paths: { chat: "/media-buyer/chat", birdseye: "/media-buyer", dashboard: "/media-buyer/table", suggestions: "/media-buyer/suggestions", context: "/media-buyer/context", reports: "/media-buyer/reports" },
     // "campaigns" is the old Marketing Hub's page: the ads tools, and the creative test tools.
     chat: { page: "campaigns", agent: "media_buyer", session: "buyer", starters: "campaigns" },
     hello: "Ask about ads, spend and cost per lead across your clients.",
