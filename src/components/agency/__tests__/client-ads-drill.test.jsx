@@ -26,7 +26,6 @@ vi.mock("swr", () => ({
 vi.mock("@/components/agency/lead/lead-modal", () => ({
   LeadModal: ({ contactId, name }) => (contactId ? <div role="dialog" aria-label={`Lead: ${name}`} data-contact={contactId} /> : null),
 }))
-vi.mock("@/components/clients/list/clients-list", () => ({ ClientsList: () => null }))
 
 const GROUPS = [
   {

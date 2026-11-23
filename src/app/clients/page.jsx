@@ -1,7 +1,7 @@
-import { ClientsList } from "@/components/clients/list/clients-list";
+import { OldClientsTable } from "@/components/clients/list/old-clients-table";
 
 export const metadata = { title: "Clients · Birdy" };
 
 export default function ClientsPage() {
-  return <ClientsList />;
+  return <OldClientsTable />;
 }
