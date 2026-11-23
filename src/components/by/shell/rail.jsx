@@ -6,6 +6,7 @@ import { FOCUS_RING, LIFT, SELECTION } from "../motion";
 import { Tooltip } from "../tooltip";
 import { Menu, MenuContent, MenuLabel, MenuTrigger } from "../popover-menu";
 import { BirdyAvatar, UserAvatar } from "../avatar";
+import { useBirdy } from "@/components/birdy/use-birdy";
 import { CreditsRing } from "./credits-ring";
 import { SECTIONS, visibleSections } from "./sections";
 
@@ -21,17 +22,9 @@ function SectionButton({ section, active, count, locked, onSelect }) {
         aria-label={waiting ? `${section.name}, ${waiting}` : section.name}
         aria-current={active ? "page" : undefined}
         onClick={() => onSelect?.(section.id)}
-        className={cn(
-          TILE,
-          section.mascot
-            ? // The mascot keeps its round frame at the tiles' size. The bird inside is
-              // scaled up from its feet so it reads at rail size, cropped by the circle.
-              // When the section is open, an accent ring marks it.
-              cn("rounded-full", active && "outline-2 outline-offset-2 outline-by-accent")
-            : active ? cn(section.solid, "shadow-by-raised") : section.tile,
-        )}
+        className={cn(TILE, active ? cn(section.solid, "shadow-by-raised") : section.tile)}
       >
-        {section.mascot ? <BirdyAvatar size={40} className="[&>svg]:origin-bottom [&>svg]:scale-[1.18]" /> : <Icon aria-hidden="true" />}
+        <Icon aria-hidden="true" />
         {locked ? (
           <span aria-hidden="true" data-lock="" className="absolute -right-1 -bottom-1 grid size-4.5 place-items-center rounded-full bg-by-surface text-by-muted shadow-by-card ring-1 ring-by-line [&>svg]:size-2.5">
             <Lock strokeWidth={2.6} />
@@ -43,8 +36,27 @@ function SectionButton({ section, active, count, locked, onSelect }) {
 }
 
 /**
- * The app's left rail: client switcher, sections, then settings, credits and the user.
+ * Birdy's brand mark at the top of the rail: the animated mascot in its round
+ * frame, following the cursor and reacting to the app like the old sidebar's.
+ * It is not a section, so it never shows an active ring or a count.
  *
+ * @param {() => void} [props.onHome] given: the mark is a button that opens the home section
+ */
+export function RailBrand({ onHome }) {
+  const { state } = useBirdy();
+  const mark = <BirdyAvatar size={40} state={state} speedK={1.15} />;
+  if (!onHome) return <span className="grid size-10 place-items-center">{mark}</span>;
+  return (
+    <button type="button" aria-label="Birdy home" onClick={onHome} className={cn("grid size-10 cursor-pointer place-items-center rounded-full", LIFT, FOCUS_RING)}>
+      {mark}
+    </button>
+  );
+}
+
+/**
+ * The app's left rail: Birdy's mark, the client switcher, sections, then settings, credits and the user.
+ *
+ * @param {() => void} [props.onHome] makes Birdy's mark at the top a button, e.g. to open the home section
  * @param {string} props.activeId the open section's id, or "settings"
  * @param {(id: string) => void} [props.onSelect]
  * @param {Record<string, number>} [props.counts] open suggestions per section id; a dot shows when above zero
@@ -57,9 +69,10 @@ function SectionButton({ section, active, count, locked, onSelect }) {
  * @param {object[]} [props.sections] defaults to SECTIONS; disabled ones are skipped
  * @param {React.ReactNode} [props.setup] sits under the switcher while setup isn't finished: a SetupRing
  */
-export function Rail({ activeId, onSelect, counts = {}, locks = {}, switcher, credits, user, extra, account, sections = SECTIONS, setup, className, ...props }) {
+export function Rail({ activeId, onSelect, onHome, counts = {}, locks = {}, switcher, credits, user, extra, account, sections = SECTIONS, setup, className, ...props }) {
   return (
     <aside className={cn("flex w-17 shrink-0 flex-col items-center gap-3 border-r border-by-line bg-by-rail pt-4 pb-3.5", SELECTION, className)} {...props}>
+      <RailBrand onHome={onHome} />
       {switcher}
       {setup}
       <span aria-hidden="true" className="my-0.5 h-px w-8 bg-by-line" />

@@ -28,6 +28,8 @@ export default function KitShellPage() {
       <Rail
         activeId={sectionId}
         onSelect={(id) => { if (id !== "settings") setSectionId(id); }}
+        // Birdy's mark at the top opens the home section.
+        onHome={() => setSectionId("ops")}
         counts={COUNTS}
         // A section whose agent isn't set up yet shows a lock.
         locks={{ coach: true }}

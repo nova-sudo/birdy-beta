@@ -1,16 +1,13 @@
-import { Megaphone, Palette, Phone, Sparkles, Users } from "lucide-react";
+import { Building2, Megaphone, Palette, Phone, Users } from "lucide-react";
 
 /**
  * The app's sections, in rail order. Each has one colour pair: `tile` for its
  * resting icon tile, `solid` for the tile when the section is open.
  *
- * `mascot: true` shows Birdy in its round frame on the rail. Everywhere else
- * (the section header) the section uses its `icon` like the others.
- *
  * `enabled: false` keeps a section out of the rail without deleting it.
  */
 export const SECTIONS = [
-  { id: "ops", name: "Birdy", description: "Your entire agency", mascot: true, icon: Sparkles, tile: "bg-by-ops-bg text-by-ops", solid: "bg-by-ops text-by-on-accent", enabled: true },
+  { id: "ops", name: "Birdy", description: "Your entire agency", icon: Building2, tile: "bg-by-ops-bg text-by-ops", solid: "bg-by-ops text-by-on-accent", enabled: true },
   { id: "buyer", name: "Media Buyer", description: "Your entire agency", icon: Megaphone, tile: "bg-by-buyer-bg text-by-buyer", solid: "bg-by-buyer text-by-on-accent", enabled: true },
   { id: "coach", name: "Sales Coach", description: "Your entire agency", icon: Phone, tile: "bg-by-coach-bg text-by-coach", solid: "bg-by-coach text-by-on-accent", enabled: true },
   // Hidden for launch. Its colour has not been chosen, so it borrows the neutral tile.

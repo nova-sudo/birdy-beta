@@ -45,11 +45,33 @@ describe("Rail", () => {
     expect(screen.getByRole("button", { name: "Media Buyer" }).querySelector("[data-lock]")).toBeNull()
   })
 
-  it("shows the mascot for Birdy inside its round frame", () => {
-    render(<Rail activeId="ops" />)
-    const frame = screen.getByRole("button", { name: "Birdy" }).querySelector(".rounded-full.overflow-hidden")
+  it("starts with Birdy's mark in its round frame, above the switcher", () => {
+    render(<Rail activeId="ops" switcher={<span data-testid="switcher" />} />)
+    const rail = screen.getByTestId("switcher").parentElement
+    const mark = rail.firstElementChild
+    const frame = mark.querySelector(".rounded-full.overflow-hidden")
     expect(frame).not.toBeNull()
     expect(frame.querySelector("svg")).not.toBeNull()
+    expect(mark.nextElementSibling).toBe(screen.getByTestId("switcher"))
+  })
+
+  it("keeps the mascot out of the sections: Birdy is an icon tile like the others", () => {
+    render(<Rail activeId="ops" counts={{ ops: 2 }} />)
+    const button = screen.getByRole("button", { name: "Birdy, 2 waiting" })
+    expect(button).toHaveAttribute("aria-current", "page")
+    expect(button.querySelector(".rounded-full.overflow-hidden")).toBeNull()
+    expect(button.querySelector("svg")).not.toBeNull()
+  })
+
+  it("opens home from Birdy's mark when given, and reports no section", async () => {
+    const onHome = vi.fn()
+    const onSelect = vi.fn()
+    const { rerender } = render(<Rail activeId="buyer" onSelect={onSelect} />)
+    expect(screen.queryByRole("button", { name: "Birdy home" })).not.toBeInTheDocument()
+    rerender(<Rail activeId="buyer" onSelect={onSelect} onHome={onHome} />)
+    await userEvent.click(screen.getByRole("button", { name: "Birdy home" }))
+    expect(onHome).toHaveBeenCalledTimes(1)
+    expect(onSelect).not.toHaveBeenCalled()
   })
 
   it("reports the section or settings that was chosen", async () => {

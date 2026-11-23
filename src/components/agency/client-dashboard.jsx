@@ -119,8 +119,8 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
           }
         />
 
-        {/* The same 1040px column as Bird's Eye. Nothing here scrolls but the table inside its card. */}
-        <div className="mx-auto flex min-h-0 w-full max-w-[calc(1040px+3.5rem)] flex-1 flex-col px-7 pt-5 pb-3">
+        {/* Full width. Nothing here scrolls but the table inside its card. */}
+        <div className="flex min-h-0 w-full flex-1 flex-col px-7 pt-5 pb-3">
           <div className="shrink-0 text-by-body-sm font-medium text-by-text-2">{rangeLabel} · {client?.name ?? "Client"}</div>
           <div className="mt-3.5 shrink-0">
             <TabPill

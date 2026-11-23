@@ -34,7 +34,7 @@ export { BirdyAvatar, ClientTile, UserAvatar } from "./avatar"
 
 // Shell
 export { SECTIONS, visibleSections } from "./shell/sections"
-export { Rail, RailMenuTile, RailAccount } from "./shell/rail"
+export { Rail, RailBrand, RailMenuTile, RailAccount } from "./shell/rail"
 export { ClientSwitcher } from "./shell/client-switcher"
 export { SectionHeader } from "./shell/section-header"
 export { CreditsRing } from "./shell/credits-ring"

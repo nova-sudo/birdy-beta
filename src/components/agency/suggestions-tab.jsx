@@ -69,7 +69,7 @@ export function SuggestionsTab({ section: which }) {
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
-            <div className={`mx-auto grid max-w-[1040px] items-start gap-5 ${section.ownsHistory ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
+            <div className={`grid items-start gap-5 ${section.ownsHistory ? "lg:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
               <section aria-labelledby="sugg-heading" className="min-w-0">
                 {/* Changes proposed in this agent's area, from chats and sub-agent runs, come first. */}
                 {!ops && <PendingProposals agent={section.chat.agent} clientId={clientId} />}

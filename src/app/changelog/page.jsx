@@ -66,7 +66,7 @@ function CategoryBlock({ category, items }) {
 
 export default function ChangelogPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full">
       {/* Page header */}
       <header className="mb-10">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-pd-primary px-3 py-1 text-[11px] font-bold text-white">

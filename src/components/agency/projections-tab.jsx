@@ -229,7 +229,7 @@ export function BuyerProjections({ client }) {
 export function ProjectionsTab({ section: which = "buyer" }) {
   const section = resolveSection(which);
   return (
-    <SectionPage section={section} tab="projections" width="max-w-[1040px]" placeholder={`Ask ${section.kit.name} about this month’s spend`}>
+    <SectionPage section={section} tab="projections" placeholder={`Ask ${section.kit.name} about this month’s spend`}>
       {(client) => <BuyerProjections client={client} />}
     </SectionPage>
   );

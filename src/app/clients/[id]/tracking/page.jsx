@@ -144,7 +144,7 @@ export default function TrackingPortalPage() {
   if (!portal) {
     return (
       <div
-        className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}
+        className={cn(pdFontClass, "flex w-full flex-col gap-5 px-4 py-6")}
         aria-busy="true"
         aria-label="Loading tracking setup"
       >
@@ -189,7 +189,7 @@ export default function TrackingPortalPage() {
     )}`
 
   return (
-    <Stagger className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}>
+    <Stagger className={cn(pdFontClass, "flex w-full flex-col gap-5 px-4 py-6")}>
       <StaggerItem className="flex items-center gap-3">
         <Button
           variant="outline"
