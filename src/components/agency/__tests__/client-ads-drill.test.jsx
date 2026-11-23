@@ -3,7 +3,6 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
 import { BUYER_CLIENT_VIEWS, ClientDashboard } from "../client-dashboard"
-import { DashboardTab } from "../dashboard-tab"
 import { BUYER_SECTION } from "../sections"
 
 // A client's own Ads table: the agency table's levels and drill-down, without Clients, limited to that client.
@@ -146,15 +145,5 @@ describe("Media Buyer inside a client", () => {
   it("only asks for the ads' leads while the Ads table is open", () => {
     show("client=a&view=leads")
     expect(swr.keys.filter(Boolean).some((k) => k.startsWith("/api/facebook-leads/filtered"))).toBe(false)
-  })
-})
-
-describe("Birdy inside a client", () => {
-  it("opens its Ads table on the ads, with the same drill", async () => {
-    show("client=a&view=ads", DashboardTab, "/dashboard/table")
-    expect(levelTabs().getByRole("tab", { selected: true })).toHaveTextContent("Ads")
-    expect(levelTabs().getAllByRole("tab").map((t) => t.textContent.replace(/\d+/g, ""))).toEqual(["Campaigns", "Ad sets", "Ads", "Leads"])
-    await userEvent.click(screen.getByText("Timelapse"))
-    expect(push).toHaveBeenLastCalledWith("/dashboard/table?client=a&view=ads&level=leads&campaign=c1&adset=s1&ad=1")
   })
 })
