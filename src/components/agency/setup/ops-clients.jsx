@@ -6,7 +6,7 @@ import { Button, Checkbox, ClientTile, Notice, TextField } from "@/components/by
 import { useClientActions } from "@/components/shell/client-actions";
 import { apiRequest } from "@/lib/api";
 import { buildTargetsPayload, hasAnyTarget } from "@/lib/setup-steps";
-import { Bubble, Reply } from "./chat-parts";
+import { Bubble, Reply, Say } from "./chat-parts";
 
 const loading = (g) => g.status === "creating" || g.status === "pending";
 
@@ -18,7 +18,7 @@ export function ClientStep({ ctx }) {
   const done = steps.client !== "todo";
   return (
     <Bubble name={agentName} id="step-client">
-      <p>Now your first client. Link its GoHighLevel sub-account and Meta ad account, and I’ll start loading its numbers.</p>
+      <Say>Now your first client. Link its GoHighLevel sub-account and Meta ad account, and I’ll start loading its numbers.</Say>
       {!done ? (
         <div><Button kind="primary" onClick={openAddClient}><Plus aria-hidden="true" />Add your first client</Button></div>
       ) : (
@@ -108,7 +108,7 @@ export function TargetsStep({ ctx }) {
   return (
     <>
       <Bubble name={agentName} id="step-targets">
-        <p>Now your targets. What should {name} aim for each month? I flag it when it drifts.</p>
+        <Say>Now your targets. What should {name} aim for each month? I flag it when it drifts.</Say>
         {!done && (
           <form onSubmit={save} className="flex max-w-xl flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-3">

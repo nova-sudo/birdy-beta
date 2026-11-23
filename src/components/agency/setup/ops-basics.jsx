@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, DropdownTrigger, Menu, MenuContent, MenuItem, MenuTrigger, Notice, TextField } from "@/components/by";
 import { CURRENCIES, basicsOf } from "@/lib/setup-steps";
-import { Bubble, Lead, Reply } from "./chat-parts";
+import { Bubble, Lead, Reply, Say } from "./chat-parts";
 
 const QUICK = ["GBP", "USD", "EUR", "AUD"];
 
@@ -35,10 +35,10 @@ export function BasicsStep({ ctx }) {
   return (
     <>
       <Bubble name={agentName} first id="step-basics">
-        <p><Lead>Hi{first ? ` ${first}` : ""}, I’m Birdy.</Lead>Let’s get your agency set up: a few quick questions, then your tools. I suggest, you confirm.</p>
+        <Say><Lead>Hi{first ? ` ${first}` : ""}, I’m Birdy.</Lead>Let’s get your agency set up: a few quick questions, then your tools. I suggest, you confirm.</Say>
+        {!done && <Say>First, what should I call you, what’s your agency called, and which currency do you report in?</Say>}
         {!done && (
-          <form onSubmit={save} className="flex flex-col gap-3">
-            <p>First, what should I call you, what’s your agency called, and which currency do you report in?</p>
+          <form onSubmit={save} className="flex max-w-2xl flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField label="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" />
               <TextField label="Agency name" value={agency} onChange={(e) => setAgency(e.target.value)} autoComplete="organization" />

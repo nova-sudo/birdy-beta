@@ -73,9 +73,9 @@ describe("SetupPage", () => {
   it("shows the checklist from the account's state, with Media Buyer locked in the team", async () => {
     replies["GET /api/team/setup"] = [200, FRESH_TEAM]
     page()
-    const list = screen.getByRole("region", { name: "Set up Birdy" })
-    expect(within(list).getByRole("button", { name: /Agency basics/ })).toHaveTextContent("In setup")
-    expect(within(list).getByRole("button", { name: /Connect Meta/ })).toHaveTextContent("To do")
+    const list = screen.getByRole("complementary", { name: "Set up Birdy" })
+    expect(within(list).getByRole("button", { name: /Agency basics/ })).toHaveTextContent("Now")
+    expect(within(list).getByText("Connect Meta").closest("li")).toHaveTextContent("To do")
     const team = await screen.findByRole("navigation", { name: "Your team" })
     expect(within(team).getByRole("button", { name: /Agency Ops/ })).toHaveAttribute("aria-current", "step")
     expect(within(team).getByRole("button", { name: /Media Buyer/ })).toBeDisabled()
@@ -166,19 +166,59 @@ describe("SetupPage", () => {
     route.search = "s=buyer"
     page()
     expect(await screen.findByRole("heading", { name: "Agency Ops", level: 1 })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole("region", { name: "Set up Birdy" })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole("complementary", { name: "Set up Birdy" })).toBeInTheDocument())
     expect(screen.queryByRole("navigation", { name: "Your team" })).not.toBeInTheDocument()
     // No team to hand over to: the last step only opens the app.
     expect(screen.queryByRole("button", { name: /Set up Media Buyer/ })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
   })
 
-  it("folds the checklist to a bar", async () => {
-    state.facts = { ...OPS_DONE, clients: OPS_DONE.clients.slice(0, 1) }
+})
+
+describe("SetupPage: the checklist beside the chat", () => {
+  it("lists the nine steps beside the chat, which starts with the greeting", () => {
+    state.facts = TOOLS_IN()
     page()
-    await userEvent.click(screen.getByRole("button", { name: "Fold the checklist" }))
-    expect(screen.getByRole("button", { name: /Setup 89% done. Show the checklist/ })).toBeInTheDocument()
-    expect(localStorage.getItem("birdy_setup_checklist_folded")).toBe("true")
+    const list = screen.getByRole("complementary", { name: "Set up Birdy" })
+    expect(list).toHaveTextContent("44% done · 5 to go")
+    expect(within(list).getAllByRole("listitem")).toHaveLength(9)
+    const row = (label) => within(list).getByText(label).closest("li")
+    expect(row("Connect Meta")).toHaveTextContent("Done")
+    expect(row("Pick your plan")).toHaveTextContent("Now")
+    expect(row("Pick your plan")).toHaveAttribute("aria-current", "step")
+    expect(row("Targets")).toHaveTextContent("To do")
+    // Done and current rows jump to their step; a step still to do has nothing to show yet.
+    expect(within(row("Connect Meta")).getByRole("button")).toBeInTheDocument()
+    expect(within(row("Targets")).queryByRole("button")).not.toBeInTheDocument()
+    // The checklist isn't in the chat: the chat's first message is Agency Ops' greeting.
+    const chat = document.querySelector('[aria-live="polite"]')
+    expect(chat.contains(list)).toBe(false)
+    expect(chat.firstElementChild.firstElementChild).toHaveAttribute("id", "step-basics")
+  })
+
+  it("scrolls the chat to a step from its row", async () => {
+    state.facts = TOOLS_IN()
+    const spy = vi.spyOn(Element.prototype, "scrollIntoView")
+    page()
+    const list = screen.getByRole("complementary", { name: "Set up Birdy" })
+    await userEvent.click(within(list).getByRole("button", { name: /Connect GoHighLevel/ }))
+    expect(spy.mock.contexts.at(-1)).toBe(document.getElementById("step-ghl"))
+    await userEvent.click(within(list).getByRole("button", { name: /Pick your plan/ }))
+    expect(spy.mock.contexts.at(-1)).toBe(document.getElementById("step-plan"))
+    spy.mockRestore()
+  })
+
+  it("folds into a bar on a phone, and the rail's ring opens it", async () => {
+    state.facts = TOOLS_IN()
+    const first = page()
+    const toggle = screen.getByRole("button", { name: "Show the setup steps" })
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    await userEvent.click(toggle)
+    expect(screen.getByRole("button", { name: "Hide the setup steps" })).toHaveAttribute("aria-expanded", "true")
+    first.unmount()
+    route.search = "checklist=1"
+    page()
+    expect(screen.getByRole("button", { name: "Hide the setup steps" })).toHaveAttribute("aria-expanded", "true")
   })
 })
 
@@ -192,22 +232,33 @@ const TOOLS_IN = (extra = {}) => ({
 })
 
 describe("SetupPage: the plan step", () => {
-  it("replaces the chat with the plan screen once the tools are in", async () => {
+  it("asks for the plan in the chat once the tools are in", async () => {
     state.facts = TOOLS_IN()
     page()
-    expect(screen.getByRole("heading", { name: "Pick your plan" })).toBeInTheDocument()
-    expect(screen.getByText(/23 sub-accounts found in GoHighLevel/)).toBeInTheDocument()
-    // The chat and its composer step aside, and nothing after the plan shows.
-    expect(screen.queryByPlaceholderText("Message Agency Ops")).not.toBeInTheDocument()
+    // The chat stays: the answers so far, then Agency Ops' line and the plans under it.
+    const step = document.getElementById("step-plan")
+    const chat = document.querySelector('[aria-live="polite"]')
+    expect(chat.contains(step)).toBe(true)
+    expect(screen.getByText("GoHighLevel calling")).toBeInTheDocument()
+    expect(within(step).getByText(/Your tools are connected\. I found 23 sub-accounts in GoHighLevel\. Pick a plan to carry on/)).toBeInTheDocument()
+    expect(within(step).getByRole("radiogroup", { name: "Plans" })).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Pick your plan" })).not.toBeInTheDocument()
+    // The composer stays, but can't skip the plan; nothing after the plan shows.
+    expect(screen.getByPlaceholderText("Message Agency Ops")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Add your first client" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Not now/ })).not.toBeInTheDocument()
-    // The checklist stays, with the plan as step 5, Now.
-    const list = screen.getByRole("region", { name: "Set up Birdy" })
-    const row = within(list).getByText("Pick your plan").closest("li")
-    expect(row).toHaveAttribute("aria-current", "step")
-    expect(row).toHaveTextContent("5")
-    expect(row).toHaveTextContent("Now")
-    expect(list).toHaveTextContent("44% done · 5 to go")
+    expect(screen.queryByRole("button", { name: /skip/i })).not.toBeInTheDocument()
+    // The plan is the chat's newest message.
+    expect(chat.firstElementChild.lastElementChild).toBe(step)
+  })
+
+  it("says to pick a plan when someone types instead", async () => {
+    const { toast } = await import("sonner")
+    state.facts = TOOLS_IN()
+    page()
+    await userEvent.type(screen.getByPlaceholderText("Message Agency Ops"), "skip this{Enter}")
+    expect(toast).toHaveBeenCalledWith("Pick a plan in the chat to carry on")
+    expect(screen.getByRole("radiogroup", { name: "Plans" })).toBeInTheDocument()
   })
 
   it("marks and picks the smallest plan that fits, and mounts its checkout", async () => {
@@ -262,7 +313,7 @@ describe("SetupPage: the plan step", () => {
     state.facts = TOOLS_IN({ billing: { ...NO_PLAN, sandbox: true } })
     replies["POST /api/billing/sandbox-plan"] = [200, { ...PAID, sandbox: true }]
     page()
-    expect(screen.getByText(/nothing is charged/)).toBeInTheDocument()
+    expect(within(document.getElementById("step-plan")).getByText(/nothing is charged/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Start Scale" }))
     expect(sent("POST", "/api/billing/sandbox-plan")[0].body).toEqual({ plan_id: "scale" })
     await waitFor(() => expect(refresh).toHaveBeenCalledWith("billing"))
@@ -279,12 +330,24 @@ describe("SetupPage: the plan step", () => {
     expect(refresh).not.toHaveBeenCalledWith("billing")
   })
 
-  it("shows the chat again, at the first client, once the plan is active", async () => {
+  it("answers with the plan picked once it's active, and carries on at the first client", async () => {
     state.facts = TOOLS_IN({ billing: PAID })
     page()
-    expect(screen.queryByRole("heading", { name: "Pick your plan" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("radiogroup", { name: "Plans" })).not.toBeInTheDocument()
+    expect(screen.getByText("Growth · $297/mo")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Add your first client" })).toBeInTheDocument()
     expect(screen.getByPlaceholderText("Message Agency Ops")).toBeInTheDocument()
+  })
+
+  it("swaps the picker for the reply in place when the plan turns on, without leaving the chat", async () => {
+    state.facts = TOOLS_IN({ billing: { ...NO_PLAN, sandbox: true } })
+    const view = page()
+    const greeting = document.getElementById("step-basics")
+    state.facts = TOOLS_IN({ billing: { ...PAID, sandbox: true, plan: { id: "scale", name: "Scale" } } })
+    view.rerender(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><SetupPage /></SWRConfig>)
+    expect(document.getElementById("step-basics")).toBe(greeting)
+    expect(screen.getByText("Scale · $497/mo")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Add your first client" })).toBeInTheDocument()
   })
 
   it("holds a finished account without a plan on /welcome, then lets it into the app", async () => {
@@ -294,9 +357,9 @@ describe("SetupPage: the plan step", () => {
     replies["POST /api/billing/sandbox-plan"] = [200, { ...PAID, sandbox: true }]
     route.search = "s=buyer"
     const view = page()
-    // Whatever section was asked for, the plan is the step to do; the rest shows done.
-    expect(screen.getByRole("heading", { name: "Pick your plan" })).toBeInTheDocument()
-    const list = screen.getByRole("region", { name: "Set up Birdy" })
+    // Whatever section was asked for, the plan is the step to do, in the chat; the rest shows done.
+    expect(within(document.getElementById("step-plan")).getByText(/Every account now needs a plan/)).toBeInTheDocument()
+    const list = screen.getByRole("complementary", { name: "Set up Birdy" })
     expect(within(list).getByText("Connect Meta").closest("li")).toHaveTextContent("Done")
     expect(within(list).getByText("Pick your plan").closest("li")).toHaveTextContent("Now")
     expect(localStorage.getItem("onboarding_incomplete")).toBe("1")
@@ -325,5 +388,146 @@ describe("SetupPage: the plan step", () => {
     const after = screen.queryAllByRole("button", { name: "Not now" }).filter((b) => importStep.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
     expect(after).toHaveLength(0)
     expect(screen.queryByRole("radiogroup", { name: "Plans" })).not.toBeInTheDocument()
+  })
+})
+
+describe("SetupPage: answering keeps the chat in place", () => {
+  // jsdom lays nothing out: the chat sits at the top of the window and its newest message 1200px down it.
+  let rect
+  beforeEach(() => {
+    rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const top = this.getAttribute("aria-live") === "polite" ? 0 : 1200
+      return { top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON() {} }
+    })
+    return () => rect.mockRestore()
+  })
+  const rerenderPage = (view) => view.rerender(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><SetupPage /></SWRConfig>)
+
+  it("keeps the chat mounted when a step saves, and scrolls only down to the next message", async () => {
+    state.facts = { onboarding: ob(), status: both, hp: { connected: false }, slack: null, clients: [], billing: PAID }
+    const view = page()
+    const chat = document.querySelector('[aria-live="polite"]')
+    const greeting = document.getElementById("step-basics")
+    // A chat taller than its window, scrolled part way down.
+    Object.defineProperty(chat, "scrollHeight", { configurable: true, value: 2000 })
+    Object.defineProperty(chat, "clientHeight", { configurable: true, value: 600 })
+    chat.scrollTop = 300
+    const scrolls = []
+    chat.scrollTo = (opts) => scrolls.push(opts)
+
+    await userEvent.click(screen.getByRole("button", { name: "GoHighLevel calling" }))
+    expect(sent("PUT", "/api/onboarding/state")[0].body).toEqual({ data: { sales_tool: "ghl" } })
+    // The save lands: the account now says GoHighLevel calling.
+    state.facts = { ...state.facts, onboarding: ob({}, { sales_tool: "ghl" }) }
+    rerenderPage(view)
+    await act(async () => { await new Promise((r) => requestAnimationFrame(r)) })
+
+    expect(document.querySelector('[aria-live="polite"]')).toBe(chat)
+    expect(document.getElementById("step-basics")).toBe(greeting)
+    expect(screen.queryByLabelText("Loading your setup")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Add your first client" })).toBeInTheDocument()
+    // Down to the new message, gently; never back to the top.
+    expect(scrolls.length).toBeGreaterThan(0)
+    expect(scrolls.every((s) => s.top > 300)).toBe(true)
+    expect(scrolls.at(-1).behavior).toBe("smooth")
+  })
+
+  it("lands at the step being done when arriving, say back from Meta's login", async () => {
+    state.facts = { onboarding: ob(), status: { facebook: { connected: true } }, hp: null, slack: null, clients: [], billing: NO_PLAN }
+    const proto = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight")
+    const scrolls = []
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get() { return this.getAttribute?.("aria-live") === "polite" ? 1500 : 0 } })
+    const scrollTo = vi.fn((opts) => scrolls.push(opts))
+    Element.prototype.scrollTo = scrollTo
+    try {
+      page()
+      await act(async () => { await new Promise((r) => requestAnimationFrame(r)) })
+      expect(scrolls).toHaveLength(1)
+      expect(scrolls[0].behavior).toBe("auto")
+      expect(scrolls[0].top).toBeGreaterThan(0)
+      expect(scrollTo.mock.contexts[0]).toBe(document.querySelector('[aria-live="polite"]'))
+    } finally {
+      if (proto) Object.defineProperty(HTMLElement.prototype, "scrollHeight", proto)
+      else delete HTMLElement.prototype.scrollHeight
+      delete Element.prototype.scrollTo
+    }
+  })
+})
+
+describe("SetupPage: connect cards", () => {
+  it("shows each tool's own logo, not a letter", () => {
+    state.facts = { onboarding: ob({}, { sales_tool: "hp" }), status: both, hp: { connected: false }, slack: null, clients: [], billing: PAID }
+    page()
+    const card = (name) => screen.getByText(name, { selector: "b" }).closest(".rounded-by-lg")
+    expect(card("Meta").querySelector('[data-logo="meta"]')).toBeInTheDocument()
+    expect(card("GoHighLevel").querySelector('[data-logo="ghl"]')).toBeInTheDocument()
+    expect(card("Hot Prospector").querySelector('[data-logo="hp"]')).toBeInTheDocument()
+  })
+
+  it("draws Slack's mark on its card", () => {
+    state.facts = { ...OPS_DONE, slack: { installed: false }, clients: [C("a", { targets: { cpa: 40 } })] }
+    page()
+    const card = screen.getByText("Slack", { selector: "b" }).closest(".rounded-by-lg")
+    expect(card.querySelector('svg[data-logo="slack"]')).toBeInTheDocument()
+    expect(card.querySelector('svg[data-logo="slack"]').parentElement).toHaveTextContent("")
+  })
+})
+
+describe("SetupPage: the celebration", () => {
+  const rerenderPage = (view) => view.rerender(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><SetupPage /></SWRConfig>)
+  const LAST_STEP = { ...OPS_DONE, clients: OPS_DONE.clients.slice(0, 1) }
+  const user = () => localStorage.setItem("user", JSON.stringify({ email: "sam@northside.test", role: "user" }))
+
+  it("opens the moment the last step is done, with what's now in place", async () => {
+    user()
+    replies["GET /api/team/setup"] = [200, FRESH_TEAM]
+    state.facts = LAST_STEP
+    const view = page()
+    await screen.findByRole("navigation", { name: "Your team" })
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+
+    state.facts = OPS_DONE
+    rerenderPage(view)
+    const dialog = await screen.findByRole("dialog", { name: "Agency Ops is set up" })
+    expect(dialog).toHaveTextContent("3 clients in Birdy")
+    expect(dialog).toHaveTextContent("Meta and GoHighLevel connected")
+    expect(dialog).toHaveTextContent("Alerts and reports go to #alerts")
+    expect(within(dialog).getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
+    expect(localStorage.getItem("birdy_ops_celebrated:sam@northside.test")).toBe("1")
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /Set up Media Buyer/ }))
+    expect(sent("POST", "/api/onboarding/complete")).toHaveLength(1)
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/welcome?s=buyer"))
+  })
+
+  it("closes back to the chat, with its own buttons still there", async () => {
+    user()
+    state.facts = LAST_STEP
+    const view = page()
+    state.facts = OPS_DONE
+    rerenderPage(view)
+    const dialog = await screen.findByRole("dialog", { name: "Agency Ops is set up" })
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
+  })
+
+  it("doesn't open on a visit to a setup that's already done", async () => {
+    user()
+    state.facts = OPS_DONE
+    page()
+    expect(await screen.findByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("shows once per account, even if the last step is done again", async () => {
+    user()
+    localStorage.setItem("birdy_ops_celebrated:sam@northside.test", "1")
+    state.facts = LAST_STEP
+    const view = page()
+    state.facts = OPS_DONE
+    rerenderPage(view)
+    await screen.findByRole("button", { name: "Open Agency Ops" })
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })
