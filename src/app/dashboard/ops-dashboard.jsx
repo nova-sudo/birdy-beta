@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SectionHeader } from "@/components/by";
-import { BirdsEye } from "@/components/agency/birds-eye";
 import { OPS_SECTION } from "@/components/agency/sections";
 import { SectionMore } from "@/components/agency/section-more";
 import { opsTabHref, useOpsTabs } from "@/components/agency/tabs";
@@ -16,14 +15,13 @@ import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { PortfolioDashboard } from "./portfolio-dashboard";
 
 /**
- * Birdy's Dashboard tab at /dashboard. For the whole agency it is the old
- * Portfolio Dashboard under the section header; narrowed to one client
- * (`?client=<id>`, where the rail's client switcher leads) it stays the
- * client view it was.
+ * Birdy's Bird's Eye tab at /dashboard: the old Portfolio Dashboard under the
+ * section header. For the whole agency it covers every client; narrowed to one
+ * (`?client=<id>`, where the rail's client switcher leads) it is the same page
+ * with every figure, and the suggestions and activity, for that client only.
  */
 export function OpsDashboard() {
-  const clientId = useSearchParams().get("client");
-  return clientId ? <BirdsEye /> : <AgencyDashboard />;
+  return <AgencyDashboard clientId={useSearchParams().get("client")} />;
 }
 
 /**
@@ -32,7 +30,8 @@ export function OpsDashboard() {
  * kept in the address as `?range=`, like every other tab, so it carries over
  * when the tab changes; granularity only re-buckets the chart and stays local.
  */
-function AgencyDashboard() {
+function AgencyDashboard({ clientId }) {
+  const [clientName, setClientName] = useState(null);
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -56,14 +55,14 @@ function AgencyDashboard() {
       <div className="flex min-h-0 flex-1 flex-col">
         <SectionHeader
           section={OPS_SECTION.kit}
-          subtitle={<PortfolioSubtitle />}
+          subtitle={clientId ? <ClientSubtitle name={clientName} /> : <PortfolioSubtitle />}
           tabs={tabs}
           tab="birdseye"
           more={<SectionMore section={OPS_SECTION} tab="birdseye" />}
           onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
           dateRange={<DashboardHeaderControls />}
         />
-        <PortfolioDashboard />
+        <PortfolioDashboard clientId={clientId} onClientName={setClientName} />
       </div>
     </DashboardControlsProvider>
   );
@@ -75,4 +74,9 @@ function PortfolioSubtitle() {
   return clientCount
     ? `Portfolio dashboard · ${clientCount.toLocaleString()} ${clientCount === 1 ? "client" : "clients"}`
     : "Portfolio dashboard";
+}
+
+/** The line under the section name when the page is narrowed to one client. */
+function ClientSubtitle({ name }) {
+  return name ? <>Scoped to <b className="font-semibold text-by-text">{name}</b></> : "One client";
 }

@@ -85,7 +85,11 @@ function EmptyState({ title, body }) {
   );
 }
 
-export function PortfolioDashboard() {
+/**
+ * @param {string|null} [props.clientId] narrows every figure, and the suggestions and activity, to one client
+ * @param {(name: string|null) => void} [props.onClientName] told the client's name once it is known
+ */
+export function PortfolioDashboard({ clientId = null, onClientName } = {}) {
   // The date preset picks the window every figure covers; granularity only
   // changes how finely the chart buckets that same window.
   // The date range and granularity chips live in the global top bar, so their
@@ -112,7 +116,12 @@ export function PortfolioDashboard() {
     hasClients,
     hasComparison,
     hasCallCentre,
-  } = usePortfolioData({ preset, granularity, chartMetric });
+    clientName,
+  } = usePortfolioData({ preset, granularity, chartMetric, clientId });
+
+  useEffect(() => {
+    onClientName?.(clientName ?? null);
+  }, [clientName, onClientName]);
 
   // Optimistic rail state layered over what the hook fetched, so acting on a
   // card is immediate and a failed request puts it back.

@@ -20,13 +20,14 @@ vi.mock("next/navigation", () => ({
 }))
 vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 2 }))
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
-vi.mock("@/components/agency/birds-eye", () => ({ BirdsEye: () => <p>Client view</p> }))
 // The page itself is covered by page.test.jsx; here it only reports what it was handed and publishes a count.
 vi.mock("../portfolio-dashboard", () => ({
-  PortfolioDashboard: function Stub() {
+  PortfolioDashboard: function Stub({ clientId, onClientName }) {
     const { preset, setClientCount } = useDashboardControls()
     seen.preset = preset
+    seen.clientId = clientId
     useEffect(() => setClientCount(12), [setClientCount])
+    useEffect(() => onClientName?.(clientId ? "Aura Aesthetics" : null), [clientId, onClientName])
     return <p>Portfolio page</p>
   },
 }))
@@ -38,12 +39,12 @@ beforeEach(() => {
 })
 
 describe("Birdy's Dashboard", () => {
-  it("shows the old page under the section header, with Chat, Dashboard and Suggestions", () => {
+  it("shows the old page under the section header, with Chat, Bird's Eye and Suggestions", () => {
     render(<OpsDashboard />)
     expect(screen.getByText("Portfolio page")).toBeInTheDocument()
     const views = screen.getByRole("tablist", { name: "Birdy views" })
-    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Dashboard", "Suggestions2"])
-    expect(within(views).getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true")
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Bird's Eye", "Suggestions2"])
+    expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
     expect(screen.getByText("Portfolio dashboard · 12 clients")).toBeInTheDocument()
   })
 
@@ -69,10 +70,11 @@ describe("Birdy's Dashboard", () => {
     expect(push).toHaveBeenCalledWith("/dashboard/chat?range=last_30d")
   })
 
-  it("stays the client view inside a client", () => {
+  it("is the same old page inside a client, narrowed to that client", () => {
     route.search = "client=a"
     render(<OpsDashboard />)
-    expect(screen.getByText("Client view")).toBeInTheDocument()
-    expect(screen.queryByText("Portfolio page")).toBeNull()
+    expect(screen.getByText("Portfolio page")).toBeInTheDocument()
+    expect(seen.clientId).toBe("a")
+    expect(screen.getByText("Aura Aesthetics")).toBeInTheDocument()
   })
 })

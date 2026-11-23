@@ -90,6 +90,10 @@ export function usePortfolioData({
     [allGroups, clientId]
   );
 
+  // Suggestions and activity come for the whole account and name their client,
+  // so one client's view keeps the ones carrying its name.
+  const clientName = clientId ? clientGroups?.[0]?.name ?? null : null;
+
   // The lead fetch keys off this rather than the array itself: which clients
   // are in the portfolio is what the request depends on, and an identity check
   // on the array would re-fire on any render that happened to rebuild it.
@@ -462,6 +466,19 @@ export function usePortfolioData({
     [preset]
   );
 
+  const scopedRail = useMemo(() => {
+    if (!clientId) return rail;
+    const mine = (item) => clientName != null && sameClient(item.client, clientName);
+    const activity = rail.activity.filter(mine);
+    return {
+      ...rail,
+      suggestions: rail.suggestions.filter(mine),
+      activity,
+      activityCount: activity.length,
+      wins: (rail.wins ?? []).filter(mine),
+    };
+  }, [rail, clientId, clientName]);
+
   return {
     clientCount: current.clientCount,
     dateRangeLabel,
@@ -481,7 +498,9 @@ export function usePortfolioData({
     leaderboards: buildLeaderboards(current, formatMoney),
     chartMetrics,
 
-    ...rail,
+    ...scopedRail,
+    // The client the figures are narrowed to, once its group has loaded.
+    clientName,
 
     loading: groupsLoading || presetSyncing,
     seriesLoading: seriesLoading || presetSyncing,
@@ -524,3 +543,6 @@ export async function dismissSuggestionRequest(id) {
     return false;
   }
 }
+
+/** Whether a suggestion's or activity row's client is this client, by name. */
+const sameClient = (a, b) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();

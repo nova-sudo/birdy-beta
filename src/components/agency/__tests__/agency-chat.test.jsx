@@ -119,7 +119,7 @@ describe("Birdy chat", () => {
     resetChat.mockClear()
     await userEvent.click(screen.getByRole("button", { name: "New chat" }))
     expect(resetChat).toHaveBeenCalledWith("by_ops_chat_a")
-    await userEvent.click(screen.getByRole("tab", { name: "Dashboard" }))
+    await userEvent.click(screen.getByRole("tab", { name: "Bird's Eye" }))
     expect(push).toHaveBeenCalledWith("/dashboard?client=a")
   })
 
