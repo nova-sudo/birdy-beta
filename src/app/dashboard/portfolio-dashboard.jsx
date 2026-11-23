@@ -88,8 +88,9 @@ function EmptyState({ title, body }) {
 /**
  * @param {string|null} [props.clientId] narrows every figure, and the suggestions and activity, to one client
  * @param {(name: string|null) => void} [props.onClientName] told the client's name once it is known
+ * @param {boolean} [props.showRail] the Suggestions / Activity column beside the page; Agency Ops leaves it out (it has a Suggestions tab)
  */
-export function PortfolioDashboard({ clientId = null, onClientName } = {}) {
+export function PortfolioDashboard({ clientId = null, onClientName, showRail = true } = {}) {
   // The date preset picks the window every figure covers; granularity only
   // changes how finely the chart buckets that same window.
   // The date range and granularity chips live in the global top bar, so their
@@ -426,12 +427,14 @@ export function PortfolioDashboard({ clientId = null, onClientName } = {}) {
           </Stagger>
         )}
 
-        <SidePanel
-          panels={panels}
-          active={panel}
-          onChange={setPanel}
-          label="Rail panel"
-        />
+        {showRail && (
+          <SidePanel
+            panels={panels}
+            active={panel}
+            onChange={setPanel}
+            label="Rail panel"
+          />
+        )}
       </div>
     </div>
   );

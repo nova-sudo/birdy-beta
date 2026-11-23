@@ -62,7 +62,7 @@ function AgencyDashboard({ clientId }) {
           onTabChange={(value) => value !== "birdseye" && router.push(opsTabHref(value, search))}
           dateRange={<DashboardHeaderControls />}
         />
-        <PortfolioDashboard clientId={clientId} onClientName={setClientName} />
+        <PortfolioDashboard clientId={clientId} onClientName={setClientName} showRail={false} />
       </div>
     </DashboardControlsProvider>
   );

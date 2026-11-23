@@ -207,6 +207,17 @@ function kpiCell(label) {
 }
 
 describe("Portfolio Dashboard", () => {
+  it("leaves the Suggestions and Activity column out when told to", async () => {
+    render(
+      <DashboardControlsProvider>
+        <PortfolioDashboardPage showRail={false} />
+      </DashboardControlsProvider>
+    );
+    await waitFor(() => expect(screen.getByText("Total ad spend")).toBeInTheDocument());
+    expect(screen.queryByText("Pause 2 underperforming ads")).toBeNull();
+    expect(screen.queryByRole("tab", { name: /Activity/ })).toBeNull();
+  });
+
   it("narrows the figures and the suggestions to one client", async () => {
     const named = vi.fn();
     render(
