@@ -168,7 +168,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
           </div>
         </div>
         <div className="shrink-0 px-4 pb-5 sm:px-7">
-          <div className="mx-auto w-full max-w-[720px]">
+          <div className="w-full">
             <AskBar placeholder={`Answer ${name}`} busy={chat.loading} onSubmit={chat.send} />
           </div>
         </div>

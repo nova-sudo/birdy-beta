@@ -165,7 +165,7 @@ export function BirdsEye() {
       <div className="flex min-h-0 flex-1">
       <div className="relative flex min-w-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
-        <div className="mx-auto flex max-w-[1040px] flex-col gap-3.5">
+        <div className="flex flex-col gap-3.5">
           <div>
             <div className="flex items-center gap-3 text-by-body-sm font-medium text-by-text-2">
               <span>{rangeLabel} · {scoped ? client?.name ?? "Client" : `${clientCount} client${clientCount === 1 ? "" : "s"}`}</span>
@@ -315,7 +315,7 @@ export function BirdsEye() {
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 px-7 pb-5">
         <AskBar
-          className="pointer-events-auto mx-auto max-w-[820px]"
+          className="pointer-events-auto"
           placeholder={scoped && client ? `Ask ${OPS.name} about ${client.name}` : `Ask ${OPS.name} about these numbers`}
           busy={chat.loading}
           onSubmit={ask}
