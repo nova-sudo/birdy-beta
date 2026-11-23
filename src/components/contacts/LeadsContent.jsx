@@ -1,5 +1,5 @@
 "use client"
-import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useColumnViews } from "@/lib/useColumnViews"
@@ -9,6 +9,10 @@ import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StyledTable from "@/components/ui/table-container"
+import {
+  Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
+} from "@/components/ui/pagination"
+import { pageNumbers } from "@/lib/page-numbers"
 import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -377,6 +381,7 @@ export function LeadsContent({
     selectedTags.length > 0
 
 
+  const totalPages = metaData?.total_pages || 1
   const handlePreviousPage = () => {
     if (currentPage > 1) fetchContacts(currentPage - 1)
   }
@@ -477,17 +482,44 @@ export function LeadsContent({
           </PageTabPanel>
         </StaggerItem>
 
-        <div className={fill ? "flex shrink-0 justify-center gap-4" : "flex justify-center gap-4"}>
-          <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
-            <ChevronLeft className="h-4 w-4" />Previous
-          </Button>
-          <span className="text-sm font-medium text-pd-body py-2">
-            Page {currentPage} of {metaData?.total_pages || 1}
-          </span>
-          <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>
-            Next<ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        {/* The same pager as every other table (ui/table-container): Previous, the page numbers, Next.
+            The pages are the server's, so a number fetches that page. */}
+        {totalPages > 1 && (
+          <Pagination className={fill ? "shrink-0" : undefined}>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); handlePreviousPage() }}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              {pageNumbers(currentPage, totalPages).map((page, idx) => (
+                <PaginationItem key={`${page}-${idx}`}>
+                  {typeof page === "string" ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); if (page !== currentPage) fetchContacts(page) }}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); handleNextPage() }}
+                  className={!metaData?.has_next ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </Stagger>
     </div>
   )

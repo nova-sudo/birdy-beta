@@ -19,6 +19,7 @@ vi.mock("@/lib/proposals-api", async (orig) => ({
 }))
 vi.mock("@/lib/sub-agents", async (orig) => ({ ...(await orig()), useSubAgents: () => ({ subAgents: [{ id: "s5", name: "Budget guard" }] }) }))
 vi.mock("@/lib/section-chats", () => ({ rememberSectionChat: vi.fn() }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), prefetch: vi.fn() }), usePathname: () => "/", useSearchParams: () => new URLSearchParams() }))
 
 const P = (o) => ({ id: "p1", agent: "media_buyer", title: "Put the old lead form back", detail: "", kind: "lead_form", payload: {}, status: "pending", can_undo: true, proposed_by: "media_buyer", client_group_id: "g0", origin: "chat", session_id: "c1", sub_agent_id: null, ...o })
 const mutate = vi.fn()

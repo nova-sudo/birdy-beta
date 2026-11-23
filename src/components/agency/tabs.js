@@ -4,7 +4,8 @@
 // have four tabs; Birdy has three, its first view being the old Portfolio
 // Dashboard. The addresses come from their config.
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useSuggestionCount } from "@/components/agency/use-suggestions";
 import { OPS_SECTION } from "@/components/agency/sections";
 import { usePendingProposals } from "@/lib/proposals-api";
@@ -44,6 +45,12 @@ export const morePagesOf = (section = OPS_SECTION) => MORE_PAGES.filter((p) => s
  * @param {import("./sections").SectionConfig} [section] Birdy when left out
  */
 export function useSectionTabs(section = OPS_SECTION) {
+  // Each tab is its own page. Fetching them all as soon as one is open makes a switch feel like a
+  // tab change, not a page load.
+  const router = useRouter();
+  useEffect(() => {
+    for (const path of Object.values(section.paths)) router.prefetch?.(path);
+  }, [router, section]);
   const ops = section === OPS_SECTION;
   // Birdy counts every suggestion, as it always has; the others count their own.
   const suggestions = useSuggestionCount(ops ? undefined : section.ownsSuggestion);

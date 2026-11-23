@@ -84,6 +84,9 @@ const BRIEFING_WAITING = [
   },
 ]
 
+/** A campaign, ad set or ad that is switched on. Module-level so the table's sort is not redone every render. */
+const isOn = (row) => String(row?.status ?? "").toLowerCase() === "active"
+
 // The page's sections, with the tab bar's 14px leading glyph.
 const SECTION_TABS = [
   { key: "campaigns", label: "Campaigns", icon: LayoutGrid },
@@ -1556,6 +1559,8 @@ export function MarketingContent({
               <StyledTable
                 columns={tableColumns}
                 data={getFilteredDataForTab()}
+                // What is switched on comes first, for the whole agency as inside one client.
+                pinFirst={activeTab === "leads" ? null : isOn}
                 columnVisibility={columnVisibility}
                 isLoading={isLoading}
                 emptyMessage={

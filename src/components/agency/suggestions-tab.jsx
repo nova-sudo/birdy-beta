@@ -116,7 +116,8 @@ export function SuggestionsTab({ section: which }) {
                 )}
               </section>
 
-              {section.ownsHistory && <Card aria-labelledby="hist-heading" role="complementary" className="px-4 py-4">
+              {/* Starts level with the first suggestion card, under the heading row. */}
+              {section.ownsHistory && <Card aria-labelledby="hist-heading" role="complementary" className="px-4 py-4 lg:mt-9">
                 <div className="flex items-baseline">
                   <h3 id="hist-heading" className="font-by-display text-by-body-lg font-semibold">History</h3>
                   {history.length > 1 && <span className="ml-auto text-by-caption text-by-muted">Newest first</span>}

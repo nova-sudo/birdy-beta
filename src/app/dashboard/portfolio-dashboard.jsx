@@ -88,9 +88,10 @@ function EmptyState({ title, body }) {
 /**
  * @param {string|null} [props.clientId] narrows every figure, and the suggestions and activity, to one client
  * @param {(name: string|null) => void} [props.onClientName] told the client's name once it is known
+ * @param {boolean} [props.footSpace] leaves room at the foot for an ask bar floating over the page
  * @param {boolean} [props.showRail] the Suggestions / Activity column beside the page; Agency Ops leaves it out (it has a Suggestions tab)
  */
-export function PortfolioDashboard({ clientId = null, onClientName, showRail = true } = {}) {
+export function PortfolioDashboard({ clientId = null, onClientName, showRail = true, footSpace = false } = {}) {
   // The date preset picks the window every figure covers; granularity only
   // changes how finely the chart buckets that same window.
   // The date range and granularity chips live in the global top bar, so their
@@ -320,7 +321,7 @@ export function PortfolioDashboard({ clientId = null, onClientName, showRail = t
             body="Once a client group is connected and has Meta or GoHighLevel data, its figures roll up here."
           />
         ) : (
-          <Stagger className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
+          <Stagger className={`pd-scrolly min-w-0 flex-1 px-6 pt-[22px] ${footSpace ? "pb-28" : "pb-[22px]"}`}>
             <StaggerItem><StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" /></StaggerItem>
 
             {/* The Calls tab stays in the strip rather than being hidden: the
