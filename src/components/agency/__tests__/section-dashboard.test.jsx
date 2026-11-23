@@ -1,36 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
 import { SectionDashboard } from "../section-dashboard"
 
+// The Dashboard tab draws the old hubs' tables: what is checked here is what the section hands them.
+
 const push = vi.fn()
 const replace = vi.fn()
-const route = { search: "" }
-const swr = { keys: [] }
-const client = { props: null }
+const route = { search: "", path: "/media-buyer/table" }
+const seen = { marketing: null, calls: null }
+const setDatePreset = vi.fn()
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => "/media-buyer/table", useSearchParams: () => new URLSearchParams(route.search) }))
-vi.mock("@/components/agency/use-suggestions", () => ({
-  useSuggestionCount: () => 1,
-  useOpenSuggestions: () => [{ id: "s1", client: "Aura", title: "Pause it" }],
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => route.path, useSearchParams: () => new URLSearchParams(route.search) }))
+vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 1, useOpenSuggestions: () => [] }))
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/components/campaigns/MarketingContent", () => ({
+  MarketingContent: (p) => { seen.marketing = p; return <p>the Marketing Hub table</p> },
 }))
-vi.mock("swr", () => ({ default: (key) => { swr.keys.push(key); return { data: undefined, error: null, isLoading: false, mutate: vi.fn() } } }))
-vi.mock("@/components/agency/client-dashboard", () => ({
-  BUYER_CLIENT_VIEWS: [{ value: "ads" }], COACH_CLIENT_VIEWS: [{ value: "calls" }],
-  ClientDashboard: (p) => { client.props = p; return <p>the client dashboard</p> },
+vi.mock("@/components/callcenter/CallCentreContent", () => ({
+  CallCentreContent: (p) => {
+    seen.calls = p
+    return (
+      <>
+        <button type="button" onClick={() => p.onSelectClientGroup("b")}>Drill into Beaulea</button>
+        <button type="button" onClick={() => p.onSelectClientGroup("all")}>Show all clients</button>
+      </>
+    )
+  },
 }))
-const group = (id, name, spend, leads, cpl, funnel) => ({
-  id, name, client_status: "Active", targets: cpl ? { cpl } : {}, call_log_provider: "hotprospector",
-  facebook: { metrics: { insights: { spend, results: leads } } },
-  gohighlevel: { metrics: { opportunity_stats: { won: 1 }, funnel } },
-  hotprospector: { call_stats: { total_calls: 10, answered_calls: 5 }, daily_calls: [] },
-})
 const GROUPS = [
-  group("a", "Aura", 120, 10, 6, { leads: 10, in_crm: 8, called: 2, closes: 1 }),
-  group("b", "Beaulea Clinic", 30, 10, 6, { leads: 10, in_crm: 9, called: 8, closes: 2 }),
+  { id: "a", name: "Aura", client_status: "Active", health: "Healthy" },
+  { id: "b", name: "Beaulea Clinic", client_status: "Active", health: "Critical" },
 ]
-const groups = () => ({ clientGroups: GROUPS, loading: false, error: null, datePreset: "last_7d", setDatePreset: vi.fn(), refresh: vi.fn() })
+const groups = () => ({ clientGroups: GROUPS, loading: false, error: null, datePreset: "last_7d", setDatePreset, refresh: vi.fn(), invalidate: vi.fn() })
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => groups() }))
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: () => groups() }))
 vi.mock("@/lib/chat-store", () => ({ useChat: () => ({ messages: [], loading: false, sessionId: null, submittedUIs: [] }), sendChatMessage: vi.fn(), markUISubmitted: vi.fn() }))
@@ -40,60 +43,57 @@ vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refr
 beforeEach(() => {
   vi.clearAllMocks()
   route.search = ""
-  swr.keys = []
-  client.props = null
+  route.path = "/media-buyer/table"
+  seen.marketing = null
+  seen.calls = null
 })
 
 describe("Media Buyer's Dashboard tab", () => {
-  it("puts the client over its limit and with a suggestion waiting first", () => {
+  it("is the Marketing Hub's table, for every client, filling the page", () => {
     render(<SectionDashboard section="buyer" />)
-    const rows = screen.getAllByRole("row").slice(1)
-    expect(rows[0]).toHaveTextContent("Aura")
-    expect(rows[0]).toHaveTextContent("£12.00")
-    expect(rows[0]).toHaveTextContent("1 suggestion")
-    expect(rows[1]).toHaveTextContent("Beaulea Clinic")
+    expect(screen.getByText("the Marketing Hub table")).toBeInTheDocument()
+    expect(seen.marketing).toMatchObject({
+      part: "table", fill: true, showHeader: false, showGroupFilter: false,
+      selectedClientGroup: null, datePreset: "last_7d", groupsLoading: false, clientGroups: GROUPS,
+    })
+    // The section's ask bar sits under it.
+    expect(screen.getByPlaceholderText(/Ask Media Buyer about your ads/)).toBeInTheDocument()
   })
 
-  it("asks for the closes behind every client's campaigns in the range", () => {
+  it("takes the client from the rail's switcher and the range from the header", () => {
+    route.search = "client=a&range=last_30d"
     render(<SectionDashboard section="buyer" />)
-    expect(swr.keys.find((k) => k?.startsWith("/api/campaigns/opp-rollup"))).toMatch(/groups=a%2Cb/)
+    expect(seen.marketing).toMatchObject({ selectedClientGroup: "a", datePreset: "last_30d", groupsLoading: true })
+    expect(setDatePreset).toHaveBeenCalledWith("last_30d")
+    expect(screen.getByText("Aura")).toBeInTheDocument()
   })
 
-  it("narrows the table to a client's campaigns when its row is clicked", async () => {
+  it("has the one date range, in the header, and no chart granularity", () => {
     render(<SectionDashboard section="buyer" />)
-    await userEvent.click(screen.getByText("Beaulea Clinic"))
-    expect(push).toHaveBeenCalledWith("/media-buyer/table?level=campaigns&group=b")
-  })
-
-  it("still opens a client's own dashboard, from its filter chip", async () => {
-    route.search = "level=campaigns&group=b"
-    render(<SectionDashboard section="buyer" />)
-    await userEvent.click(screen.getByRole("button", { name: "Open Beaulea Clinic's own dashboard" }))
-    expect(push).toHaveBeenCalledWith("/media-buyer/table?client=b")
-  })
-
-  it("hands a client to the client dashboard with Media Buyer's tables", () => {
-    route.search = "client=a"
-    render(<SectionDashboard section="buyer" />)
-    expect(client.props).toMatchObject({ clientId: "a", views: [{ value: "ads" }] })
-    expect(client.props.section.key).toBe("buyer")
+    expect(screen.getAllByRole("button", { name: /Date range/ })).toHaveLength(1)
+    expect(screen.queryByRole("button", { name: /Chart granularity/ })).toBeNull()
   })
 })
 
 describe("Sales Coach's Dashboard tab", () => {
-  it("lists every call centre with the clients behind on calling first", () => {
+  it("is the Sales Hub's table, without its stat cards", () => {
+    route.path = "/sales-coach/table"
     render(<SectionDashboard section="coach" />)
-    const rows = screen.getAllByRole("row").slice(1)
-    expect(rows[0]).toHaveTextContent("Aura")
-    expect(rows[0]).toHaveTextContent("Under half called")
-    expect(within(screen.getByRole("tablist", { name: "Show" })).getByRole("tab", { name: /Behind/ })).toHaveTextContent("1")
+    expect(seen.calls).toMatchObject({ showGroupFilter: true, showStatCards: false, fill: true, selectedClientGroup: "all", datePreset: "last_7d" })
+    expect(seen.marketing).toBeNull()
   })
 
-  it("only fetches the agency's calls once the Calls table is opened", () => {
+  it("narrows the whole section to the client a row drills into, and back out", async () => {
+    route.path = "/sales-coach/table"
+    route.search = "range=last_30d"
     render(<SectionDashboard section="coach" />)
-    expect(swr.keys.filter(Boolean).some((k) => k.startsWith("/api/hotprospector/call-center"))).toBe(false)
-    route.search = "view=calls"
+    await userEvent.click(screen.getByRole("button", { name: "Drill into Beaulea" }))
+    expect(replace).toHaveBeenLastCalledWith("/sales-coach/table?range=last_30d&client=b")
+
+    route.search = "client=b"
     render(<SectionDashboard section="coach" />)
-    expect(swr.keys.filter(Boolean).find((k) => k.startsWith("/api/hotprospector/call-center"))).toMatch(/has_calls=true/)
+    expect(seen.calls.selectedClientGroup).toBe("b")
+    await userEvent.click(screen.getAllByRole("button", { name: "Show all clients" }).at(-1))
+    expect(replace).toHaveBeenLastCalledWith("/sales-coach/table")
   })
 })

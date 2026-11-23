@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { SectionHeader, cn } from "@/components/by";
+import { SectionHeader } from "@/components/by";
 import { AskDock, PAGE, scopedSubtitle, useSectionChat } from "@/components/agency/section-parts";
 import { SectionMore } from "@/components/agency/section-more";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
@@ -12,15 +12,14 @@ import { useClientGroups } from "@/lib/useClientGroups";
 
 /**
  * A "More" page of a section (Reports, Projections): the section's header with the tab pill and More,
- * the page in a centred column, and the ask bar at its foot, as on Context.
+ * the page across the full width, and the ask bar at its foot, as on Context.
  *
  * @param {import("./sections").SectionConfig} props.section
  * @param {string} props.tab the More page open ("reports", "projections")
  * @param {string} props.placeholder the ask bar's prompt
  * @param {(group: object|null) => React.ReactNode} props.children the page, given the client the address narrows it to
- * @param {string} [props.width] the column's max width class
  */
-export function SectionPage({ section, tab, placeholder, width = "max-w-[820px]", children }) {
+export function SectionPage({ section, tab, placeholder, children }) {
   const router = useRouter();
   const search = useSearchParams();
   const tabs = useSectionTabs(section);
@@ -40,7 +39,7 @@ export function SectionPage({ section, tab, placeholder, width = "max-w-[820px]"
       />
       <AskDock section={section} chat={chat} placeholder={placeholder}>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-28 sm:px-7">
-          <div className={cn("mx-auto flex flex-col gap-[18px]", width)}>{children(group)}</div>
+          <div className="flex flex-col gap-[18px]">{children(group)}</div>
         </div>
       </AskDock>
     </div>

@@ -74,9 +74,8 @@ function useCurrencySymbol() {
  *   replaces the "Clients" header; it is handed the date range and a ready-made date menu
  * @param {React.ReactNode} [props.footer] sits under the table and stays in place, e.g. an ask bar
  * @param {string} [props.viewKey] which saved column view this table reads and writes
- * @param {boolean} [props.column] keep the tabs, toolbar and table to the 1040px centred column the Birdy pages use
  */
-export function ClientsList({ header, footer, viewKey = "clients", column = false } = {}) {
+export function ClientsList({ header, footer, viewKey = "clients" } = {}) {
   const router = useRouter();
   const { openAddClient, openImport } = useClientActions();
   const { clientGroups, loading, error, refresh, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false });
@@ -187,8 +186,7 @@ export function ClientsList({ header, footer, viewKey = "clients", column = fals
       )}
 
       {/* Nothing here scrolls: the tabs and toolbar stay put and only the table scrolls, inside its card. */}
-      {/* 1040px of content plus the 28px gutters, the same column as Bird's Eye. */}
-      <div className={`flex min-h-0 flex-1 flex-col px-7 pt-4.5 ${footer ? "pb-3" : "pb-6"} ${column ? "mx-auto w-full max-w-[calc(1040px+3.5rem)]" : ""}`}>
+      <div className={`flex min-h-0 flex-1 flex-col px-7 pt-4.5 ${footer ? "pb-3" : "pb-6"}`}>
         <TabPill
           items={tabs}
           value={tab}

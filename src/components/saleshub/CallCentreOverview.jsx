@@ -43,6 +43,8 @@ const UNAVAILABLE_TABS = KPI_PRESENTATION.map((tile) => ({
  * @param {string} [granularity] Daily | Weekly | Monthly, from the hub's
  *   granularity chip. Omitted — as it is on /clients/[id], which carries no
  *   chip — the date window picks for itself. See useSalesHubSeries.
+ * @param {(prompt: string) => void} [onAsk] where "Ask Birdy about this" goes;
+ *   omitted, the global Ask Birdy modal. Sales Coach passes its own chat.
  */
 export function CallCentreOverview({
   clientGroups,
@@ -52,6 +54,7 @@ export function CallCentreOverview({
   granularity,
   groupsError,
   onRetry,
+  onAsk,
 }) {
   // Keyed by figure (presentation key), not by series: the tab is what the
   // reader clicked, and presentation.js says which curve that opens.
@@ -162,7 +165,7 @@ export function CallCentreOverview({
         redrawKey={`${activeTab}-${datePreset}-${granularity}-${selectedClientGroup}`}
         layoutId="sales-hub-hero"
       />
-      <BirdyBriefing parts={insight} findings={findings} prompt={insightPrompt(insight)} />
+      <BirdyBriefing parts={insight} findings={findings} prompt={insightPrompt(insight)} onAsk={onAsk} />
     </div>
   )
 }

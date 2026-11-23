@@ -63,6 +63,7 @@ export function AppShell({ children }) {
         className="font-by-body"
         activeId={activeId}
         onSelect={(id) => router.push(DESTINATIONS[id])}
+        onHome={() => router.push(DESTINATIONS.ops)}
         counts={{ buyer: openWork ?? 0 }}
         locks={lockedSections(team)}
         credits={hasCredits ? { left: credits.balance, percent: (credits.remainingAllowance / credits.allowance) * 100 } : undefined}

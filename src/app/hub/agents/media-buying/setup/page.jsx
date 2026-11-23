@@ -57,7 +57,7 @@ function ModesStep({ agent, clients, actions, onBack, onNext }) {
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <ModesTable settings={{ ...settings, add_writes_enabled: agent.add_writes_enabled === true, modes: next.modes, clients: Object.fromEntries(Object.entries(next.clientModes).map(([gid, modes]) => [gid, { modes }])) }} clients={watched} onChange={setNext} />
       <ErrorNotice>{error}</ErrorNotice>
       <SetupFooter onBack={onBack} onNext={save} saving={saving} />
@@ -128,7 +128,7 @@ function SetupWizard() {
           }
         />
       ) : !ready ? (
-        <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
+        <Skeleton className="h-96 w-full rounded-frame" />
       ) : step === 1 ? (
         <SetupSchedule key={agent.id} agent={agent} actions={actions} onNext={() => go(2)} />
       ) : step === 2 ? (

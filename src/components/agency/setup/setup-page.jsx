@@ -123,7 +123,7 @@ export function SetupPage() {
   })();
 
   const loading = (
-    <div aria-busy="true" aria-label="Loading your setup" className="mx-auto flex w-full max-w-[800px] flex-col gap-4 px-4 py-6 sm:px-7">
+    <div aria-busy="true" aria-label="Loading your setup" className="flex w-full flex-col gap-4 px-4 py-6 sm:px-7">
       <Skeleton className="h-64 w-full rounded-by-lg" />
       <Skeleton className="w-40" /><Skeleton className="w-full" /><Skeleton className="w-3/4" />
     </div>
@@ -138,7 +138,7 @@ export function SetupPage() {
           {waitingForTeam ? loading : open === "ops" ? (
             <>
               <div ref={scroller} aria-live="polite" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                <div className="mx-auto flex w-full max-w-[800px] flex-col gap-5 px-4 py-6 sm:px-7">
+                <div className="flex w-full flex-col gap-5 px-4 py-6 sm:px-7">
                   {setup.failed ? (
                     <Notice tone="danger" action={<Button size="sm" onClick={() => setup.refresh()}>Try again</Button>}>Couldn’t load your setup. Check your connection and try again.</Notice>
                   ) : !ready ? loading : (

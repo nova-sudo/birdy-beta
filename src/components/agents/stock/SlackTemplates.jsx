@@ -162,7 +162,7 @@ export function SlackTemplates({ agentId, actions }) {
     )
   }
   return (
-    <Frame title="Slack messages" description="Change how each message looks in Slack. Every template can go back to the default." className="max-w-3xl">
+    <Frame title="Slack messages" description="Change how each message looks in Slack. Every template can go back to the default.">
       {TEMPLATES.map((template) => (
         <TemplateRow
           key={template.kind}

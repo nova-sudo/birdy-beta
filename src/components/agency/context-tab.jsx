@@ -308,7 +308,7 @@ export function ContextTab({ section: which }) {
       />
       <AskDock section={section} chat={chat} placeholder={`Tell ${name} something new about ${client ? client.name : "your agency"}`}>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-8 pb-28">
-          <div className="mx-auto flex max-w-[1180px] flex-col gap-[18px]">
+          <div className="flex flex-col gap-[18px]">
             <div>
               <h2 className="font-by-display text-[length:1.1875rem] leading-[1.25] font-bold">What {name} knows</h2>
               <p className="mt-1 text-by-body text-by-text-2 text-pretty">Birdy uses this in every answer and suggestion. Keep it up to date, or tell {name} below and it updates it for you.</p>

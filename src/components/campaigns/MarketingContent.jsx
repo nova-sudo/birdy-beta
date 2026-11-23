@@ -111,6 +111,25 @@ export const DEFAULT_VISIBLE_COLUMNS = {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+/**
+ * The Marketing Hub: the hero row (metric tabs over the chart, Birdy's read)
+ * and the Campaigns / Ad Sets / Ads / Leads / Creatives table under it.
+ *
+ * `/campaigns` draws all of it and owns its own client pick. The agent
+ * sections draw it in two halves, one per tab, with the pick, the chart
+ * granularity and "Ask Birdy about this" coming from the section:
+ *
+ * @param {"all"|"hero"|"table"} [part] which half to draw: "hero" is the hero
+ *   row (with the client notices and the landing-page funnel) and fetches
+ *   nothing the table alone needs; "table" is the tabs and the table
+ * @param {string|null} [selectedClientGroup] controls the client pick when
+ *   passed (null is every client); left out, the page keeps its own
+ * @param {string} [granularity] controls the chart's buckets when passed
+ * @param {(prompt: string) => void} [onAskBirdy] where Birdy's read's link
+ *   goes; left out, the global Ask Birdy modal
+ * @param {boolean} [fill] the table half in a height-bounded column: the
+ *   table scrolls inside its card under the fixed tab row
+ */
 export function MarketingContent({
   clientGroups,
   groupsLoading,
@@ -120,11 +139,19 @@ export function MarketingContent({
   showGroupFilter = true,
   showHeader = true,
   onCacheInvalidate,
+  part = "all",
+  selectedClientGroup: controlledClientGroup,
+  granularity: controlledGranularity,
+  onAskBirdy,
+  fill = false,
 }) {
   const { currency: userCurrency, currencySymbol } = useCurrency()
+  const showHero = part !== "table"
+  const showTable = part !== "hero"
 
   const [customMetrics, setCustomMetrics] = useState([])
-  const [selectedClientGroup, setSelectedClientGroup] = useState(null)
+  const [ownClientGroup, setSelectedClientGroup] = useState(null)
+  const selectedClientGroup = controlledClientGroup !== undefined ? controlledClientGroup : ownClientGroup
   const [campaigns, setCampaigns] = useState([])
   const [allAdSets, setAllAdSets] = useState([])
   const [allAds, setAllAds] = useState([])
@@ -135,8 +162,11 @@ export function MarketingContent({
   // ?tab=creatives (or a ?creative= deep link) lands on the Creatives section.
   const urlParams = useSearchParams()
   useEffect(() => {
+    if (!showTable) return
     if (urlParams?.get("tab") === "creatives" || urlParams?.get("creative")) setActiveTab("creatives")
-  }, [urlParams])
+    // A lead's "back to this client's leads" link (lib/lead-view clientLeadsHref) lands on the Leads tab.
+    else if (urlParams?.get("view") === "leads") setActiveTab("leads")
+  }, [urlParams, showTable])
   // Ads-tab-only layout switch: the same rows and column order drawn either as
   // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
   const [adsView, setAdsView] = useState("table")
@@ -295,7 +325,7 @@ export function MarketingContent({
   const [availableTags, setAvailableTags] = useState([])
 
   useEffect(() => {
-    if (!clientGroups?.length) return
+    if (!showTable || !clientGroups?.length) return
     const groupIds = clientGroups.map(g => g.id).join(",")
     apiRequest(`/api/campaigns/tag-rollup?groups=${groupIds}`).then(async res => {
       if (!res.ok) return
@@ -308,7 +338,7 @@ export function MarketingContent({
       for (const tags of Object.values(data.by_ad || {})) for (const t of Object.keys(tags)) allTags.add(t)
       setAvailableTags([...allTags].sort())
     }).catch(() => {})
-  }, [clientGroups])
+  }, [clientGroups, showTable])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -328,7 +358,7 @@ export function MarketingContent({
   const [oppRollup, setOppRollup] = useState({ by_campaign: {}, by_adset: {}, by_ad: {} })
 
   useEffect(() => {
-    if (!clientGroups?.length) {
+    if (!showTable || !clientGroups?.length) {
       setOppRollup({ by_campaign: {}, by_adset: {}, by_ad: {} })
       return
     }
@@ -345,7 +375,7 @@ export function MarketingContent({
         by_ad: data.by_ad || {},
       })
     }).catch(() => {})
-  }, [clientGroups, datePreset])
+  }, [clientGroups, datePreset, showTable])
 
   // ── Append custom metric IDs only for tabs that have NOT been hydrated ────
   // If a tab was loaded from the DB, the user's saved columns already include
@@ -578,7 +608,9 @@ export function MarketingContent({
   const [chartMetric, setChartMetric] = useState("spend")
   // How finely the trend chart buckets — the window's own choice until the
   // header's chip is used. See useGranularity.
-  const { granularity, setGranularity } = useGranularity(datePreset)
+  const ownGranularity = useGranularity(datePreset)
+  const granularity = controlledGranularity ?? ownGranularity.granularity
+  const setGranularity = ownGranularity.setGranularity
 
   const dateRangeLabel = useMemo(
     () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
@@ -630,13 +662,14 @@ export function MarketingContent({
     selectedClientGroup,
     granularity,
     currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
+    withSeries: showHero,
   })
 
   // ── Leads fetch ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (groupsLoading || !clientGroups.length) {
+    if (!showTable || groupsLoading || !clientGroups.length) {
       setLeads([])
-      if (!groupsLoading) setIsLoading(false)
+      if (!groupsLoading || !showTable) setIsLoading(false)
       return
     }
 
@@ -665,7 +698,7 @@ export function MarketingContent({
 
     fetchLeads()
     return () => ctrl.abort()
-  }, [clientGroups, groupsLoading, datePreset])
+  }, [clientGroups, groupsLoading, datePreset, showTable])
 
   // ── Drill-down row-click handler ──────────────────────────────────────────
   // Clicking a campaign row selects it, clears downstream, and advances the tab.
@@ -1204,8 +1237,8 @@ export function MarketingContent({
     // ~82px of width thrown away and, being mx-auto, split into gutters far
     // wider than the neighbouring hubs'. It went wrong in the embedded case
     // too — /clients/[id]'s Marketing tab measures a viewport it doesn't own.
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
+    <div className={fill ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0"}>
+      <Stagger className={fill ? "flex min-h-0 flex-1 flex-col gap-6" : "flex flex-col gap-6"}>
 
         {/* The title block and the date/group filters now live in the global
             top bar beside the bell and the profile menu — published by
@@ -1310,7 +1343,11 @@ export function MarketingContent({
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <StaggerItem className={`${pdFontClass} min-w-0 ${activeTab === "creatives" ? "" : "grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
+        {/* The agent sections draw the two halves on separate tabs: the hero
+            row on Bird's Eye, the tabs and table (and the Creatives tab's own
+            hero) on Dashboard. */}
+        {(activeTab === "creatives" ? showTable : showHero) && (
+        <StaggerItem className={`${pdFontClass} min-w-0 ${fill ? "shrink-0 " : ""}${activeTab === "creatives" ? "" : "grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
           {activeTab === "creatives" ? (
             <CreativesHero clientGroupId={creativesGroup} />
           ) : (<>
@@ -1336,12 +1373,14 @@ export function MarketingContent({
               parts={insight.segments}
               findings={findings}
               prompt={briefingPrompt}
+              onAsk={onAskBirdy}
             />
           ) : (
             <BirdyBriefing parts={BRIEFING_WAITING} />
           )}
           </>)}
         </StaggerItem>
+        )}
 
         {/* ── Landing page funnel ──────────────────────────────────────────
             Between the hero and the tables on purpose: it is the step the
@@ -1350,7 +1389,7 @@ export function MarketingContent({
             produced. What happened on the page in between has never been on
             this screen, and for a client running their own landing page it is
             usually where the money goes. */}
-        {activeTab !== "creatives" && (
+        {showHero && activeTab !== "creatives" && (
         <StaggerItem>
           <LandingFunnel
             funnel={landingFunnel}
@@ -1362,7 +1401,8 @@ export function MarketingContent({
         )}
 
         {/* Tabs */}
-        <StaggerItem className="flex w-full flex-col">
+        {showTable && (
+        <StaggerItem className={fill ? "flex min-h-0 w-full flex-1 flex-col" : "flex w-full flex-col"}>
           {/* The app's page tab bar, same component the Sales, Lead and Client
               hubs use — this page brings only its four sections. It replaced a
               hand-skinned Radix TabsList that had drifted a pixel off the
@@ -1403,7 +1443,15 @@ export function MarketingContent({
             </div>
           </div>
 
-          <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
+          <PageTabPanel
+            id={TABLE_PANEL_ID}
+            label="Marketing Hub table"
+            // Filled, the panel takes what the column has left: the table
+            // shrinks into it and scrolls inside its card, and a taller tab
+            // (Creatives) scrolls the panel instead.
+            className={fill ? "mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto" : "mt-4"}
+            key={activeTab}
+          >
 
             {/* Drill-down breadcrumb */}
             {activeTab !== "creatives" && (
@@ -1474,7 +1522,7 @@ export function MarketingContent({
               </div>
             )}
 
-            <div className="flex justify-end items-center gap-3 flex-1">
+            <div className={`flex justify-end items-center gap-3 ${fill ? "" : "flex-1"}`}>
               {activeTab !== "creatives" && (filterConditions.length > 0 || searchTerm) && (
                 <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
                   <X className="h-4 w-4" /> Clear
@@ -1537,6 +1585,7 @@ export function MarketingContent({
                   // initial order, and any drag updates the same slot.
                 initialColumnOrder={visibleColumns[activeTab] || []}
                 onColumnOrderChange={handleColumnOrderChange}
+                fill={fill}
               />
             )}
 
@@ -1550,11 +1599,12 @@ export function MarketingContent({
               <p className="mt-3 text-[11.5px] text-pd-faint">
                 {unlistedSpend.formatted} of this period&apos;s spend sits on campaigns Meta
                 no longer lists — deleted or archived — so it counts towards the
-                total above but has no row here.
+                {part === "table" ? " account's total" : " total above"} but has no row here.
               </p>
             )}
           </PageTabPanel>
         </StaggerItem>
+        )}
       </Stagger>
     </div>
   )

@@ -68,7 +68,7 @@ export function SubAgentsStep({ team, onApply, onDone }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div aria-live="polite" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 py-6 sm:px-7">
+        <div className="flex w-full flex-col gap-5 px-4 py-6 sm:px-7">
           <div className="flex flex-col gap-1.5">
             <ChatSender name="Sub-agents" avatar={face} />
             <div className="flex flex-col gap-3 text-by-body-lg text-by-text sm:pl-10 [&_p]:leading-relaxed">

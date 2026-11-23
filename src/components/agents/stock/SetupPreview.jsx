@@ -119,7 +119,7 @@ export function SetupPreview({ agent, clients, actions, flagOnly, setFlagOnly, o
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex max-w-3xl flex-col gap-6">
+      <div className="flex flex-col gap-6">
       <HistoryProgress history={history} />
 
       <Frame title="Preview your first report" description="Runs on your real data with Birdy writing the cards. It changes nothing in Meta and posts nothing to Slack." padded contentClassName="flex flex-col gap-3">

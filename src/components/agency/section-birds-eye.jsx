@@ -1,26 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Check, Link2, Phone, Users } from "lucide-react";
-import { Button, Card, Delta, EmptyState, Funnel, Notice, RankList, SectionHeader } from "@/components/by";
+import { Card, Delta, EmptyState, Funnel, RankList, SectionHeader, Skeleton } from "@/components/by";
 import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
+import { MarketingContent } from "@/components/campaigns/MarketingContent";
+import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview";
 import { resolveSection } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { SectionMore } from "@/components/agency/section-more";
 import { clientDetailHref } from "@/components/shell/nav";
-import { CHART_COPY, buildTiles, rankCampaigns } from "@/lib/birds-eye";
-import { LINK_SALES_TOOL_HREF, groupHasCallCentre } from "@/lib/call-centre-availability";
+import { rankCampaigns } from "@/lib/birds-eye";
+import { groupHasCallCentre } from "@/lib/call-centre-availability";
 import { isActive } from "@/lib/client-status";
+import { pdFontClass } from "@/lib/pd-fonts";
 import { buildFunnel } from "@/lib/portfolio-aggregate";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 import {
-  COACH_CHART_COPY, COACH_CHART_KEYS, buyerChartKeys, buyerClientRows, buyerFinding, buyerTiles, callFunnel, callSeries, callTotals, calledByClient,
-  cheapestClients, coachClientRows, coachFinding, coachTiles, cplBands, cplChanges, previousByClient,
+  buyerClientRows, callFunnel, calledByClient, cheapestClients, coachClientRows, cplBands, cplChanges, previousByClient,
 } from "@/lib/section-birds-eye";
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
+import { useGranularity } from "@/lib/useGranularity";
 import {
-  AskDock, CardHead, ChartCard, Diagnosis, LoadingBody, PAGE, RangeMenu, Tiles, scopedSubtitle, useAddressRange, useMoney, useSectionChat,
+  AskDock, CardHead, Diagnosis, GranularityMenu, PAGE, RangeMenu, scopedSubtitle, useAddressRange, useMoney, useRangeGroups, useSectionChat,
 } from "./section-parts";
 
 const FUNNEL_PARTS = {
@@ -33,8 +37,14 @@ const FUNNEL_PARTS = {
 const BAND_FILL = { success: "bg-by-success", danger: "bg-by-danger-solid", accent: "bg-by-accent", neutral: "bg-by-line-strong" };
 
 /**
- * Bird's Eye for Media Buyer or Sales Coach: the section's tiles, its per-day chart, two cards, and the ask bar.
- * With `?client=<id>` it is the same page fed that client's numbers.
+ * Bird's Eye for Media Buyer or Sales Coach.
+ *
+ * The top is the old hub's first section, drawn by the old components on the same data: Media Buyer gets the Marketing
+ * Hub's metric tabs over the chart with Birdy's read beside it (MarketingContent's hero), Sales Coach the Sales Hub's
+ * (CallCentreOverview). Under it, the two cards the old hubs had no equivalent of.
+ *
+ * The client comes from the rail's switcher (`?client=`), the range from the header (`?range=`), and the chart's
+ * granularity from the header's menu beside it. "Ask Birdy about this" opens this section's conversation.
  *
  * @param {import("./sections").SectionConfig} props.section
  */
@@ -46,15 +56,15 @@ export function SectionBirdsEye({ section: which }) {
   const clientId = search.get("client") || null;
   const scoped = clientId != null;
   const range = useAddressRange();
+  const { granularity, setGranularity } = useGranularity(range.preset);
   const coach = section.key === "coach";
 
-  // Sales Coach draws its calls from each client's own per-day series, so the portfolio hook never fetches call logs here.
+  // What the old hubs were handed: every client group with its per-day series, for the address's range.
+  const { clientGroups, loading: groupsLoading, error: groupsError, refresh, invalidate } = useRangeGroups(useClientGroupsWithSeries, range.preset);
+  // The cards under the old section.
   const data = usePortfolioData({ preset: range.preset, granularity: "Daily", chartMetric: "leads", clientId });
-  const { client, chartMetrics, loading, error, hasClients } = data;
-  const { money, format } = useMoney(chartMetrics.spend?.valuePrefix ?? "");
+  const { client } = data;
   const chat = useSectionChat(section, "ask", client);
-
-  const caption = scoped ? client?.name ?? "Client" : coach ? `${data.groups.filter((g) => isActive(g) && groupHasCallCentre(g)).length} clients with a call centre` : `${data.clientCount} client${data.clientCount === 1 ? "" : "s"}`;
   const dashboardHref = sectionTabHref(section, "dashboard", search);
 
   return (
@@ -66,7 +76,12 @@ export function SectionBirdsEye({ section: which }) {
         tab="birdseye"
         more={<SectionMore section={section} tab="birdseye" />}
         onTabChange={(value) => value !== "birdseye" && router.push(sectionTabHref(section, value, search))}
-        dateRange={<RangeMenu preset={range.preset} label={range.label} onPick={range.setPreset} />}
+        dateRange={
+          <div className="flex items-center gap-2">
+            <GranularityMenu value={granularity} onPick={setGranularity} />
+            <RangeMenu preset={range.preset} label={range.label} onPick={range.setPreset} />
+          </div>
+        }
       />
       <AskDock
         section={section}
@@ -74,37 +89,79 @@ export function SectionBirdsEye({ section: which }) {
         title={scoped && client ? `${section.kit.name} · ${client.name}` : undefined}
         placeholder={scoped && client ? `Ask ${section.kit.name} about ${client.name}` : `Ask ${section.kit.name}, or tell it what to change on this dashboard`}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
-          <div className="mx-auto flex max-w-[1040px] flex-col gap-3.5">
-            <div className="flex items-center gap-3 text-by-body-sm font-medium text-by-text-2">
-              <span>{range.label} · {caption}</span>
+        {(ask) => (
+          <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-6 pb-28">
+            <div className="flex flex-col gap-[18px]">
               {scoped && client && (
-                <Link href={clientDetailHref(client.id)} className="ml-auto inline-flex items-center gap-1 rounded-by-sm font-semibold text-by-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">
+                <Link href={clientDetailHref(client.id)} className="-mb-2 inline-flex items-center gap-1 self-end rounded-by-sm text-by-body-sm font-semibold text-by-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">
                   Open client page<ArrowRight aria-hidden="true" className="size-3.5" />
                 </Link>
               )}
-            </div>
 
-            {error ? (
-              <Notice tone="danger">Couldn’t load these figures. Check your connection and refresh the page.</Notice>
-            ) : loading ? (
-              <LoadingBody tiles={coach || scoped ? 4 : 3} />
-            ) : scoped && !client ? (
-              <Card><EmptyState icon={<Users />} title="This client isn’t in your account">It may have been removed. Pick another from the switcher at the top of the rail.</EmptyState></Card>
-            ) : scoped && !isActive(client) ? (
-              <Card><EmptyState icon={<Users />} title={`${client.name} is inactive`}>Inactive clients are left out of the figures. Set the client active on its page to see them here.</EmptyState></Card>
-            ) : !hasClients ? (
-              <Card><EmptyState icon={<Users />} title="No active clients yet">Add or import a client from the Clients page and its figures appear here.</EmptyState></Card>
-            ) : coach ? (
-              <CoachBody data={data} preset={range.preset} rangeLabel={range.label} format={format} scoped={scoped} dashboardHref={dashboardHref} />
-            ) : (
-              <BuyerBody data={data} preset={range.preset} rangeLabel={range.label} money={money} format={format} scoped={scoped} dashboardHref={dashboardHref} />
-            )}
+              <div className={`${pdFontClass} min-w-0`}>
+                {coach ? (
+                  <CallCentreOverview
+                    clientGroups={clientGroups}
+                    groupsLoading={groupsLoading}
+                    datePreset={range.preset}
+                    selectedClientGroup={clientId ?? "all"}
+                    granularity={granularity}
+                    groupsError={groupsError}
+                    onRetry={refresh}
+                    onAsk={ask}
+                  />
+                ) : (
+                  <MarketingContent
+                    part="hero"
+                    clientGroups={clientGroups}
+                    groupsLoading={groupsLoading}
+                    groupsError={groupsError}
+                    datePreset={range.preset}
+                    showGroupFilter={false}
+                    showHeader={false}
+                    selectedClientGroup={clientId}
+                    granularity={granularity}
+                    onAskBirdy={ask}
+                    onCacheInvalidate={invalidate}
+                  />
+                )}
+              </div>
+
+              <SectionCards data={data} coach={coach} preset={range.preset} rangeLabel={range.label} scoped={scoped} dashboardHref={dashboardHref} />
+            </div>
           </div>
-        </div>
+        )}
       </AskDock>
     </div>
   );
+}
+
+/** The two cards under the old section, when there is something for them to say. */
+function SectionCards({ data, coach, preset, rangeLabel, scoped, dashboardHref }) {
+  const { client, chartMetrics, loading, error, hasClients, hasCallCentre } = data;
+  const { money, format } = useMoney(chartMetrics.spend?.valuePrefix ?? "");
+  // The old section above says what went wrong, or that there is nothing yet; these add nothing to it.
+  if (error) return null;
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="Loading" className="grid gap-3.5 lg:grid-cols-2">
+        {[0, 1].map((i) => <Card key={i} className="px-5 py-4.5"><Skeleton className="w-44" /><Skeleton className="mt-4 h-28 w-full rounded-by-md" /></Card>)}
+      </div>
+    );
+  }
+  if (scoped && !client) {
+    return <Card><EmptyState icon={<Users />} title="This client isn’t in your account">It may have been removed. Pick another from the switcher at the top of the rail.</EmptyState></Card>;
+  }
+  if (scoped && !isActive(client)) return null;
+  if (!hasClients) {
+    return <Card><EmptyState icon={<Users />} title="No active clients yet">Add or import a client from the Clients page and its figures appear here.</EmptyState></Card>;
+  }
+  if (coach) {
+    // Without a call centre the old section already says so, with the way to connect one.
+    if (scoped ? !groupHasCallCentre(client) : !hasCallCentre) return null;
+    return <CoachCards data={data} preset={preset} rangeLabel={rangeLabel} format={format} scoped={scoped} dashboardHref={dashboardHref} />;
+  }
+  return <BuyerCards data={data} preset={preset} money={money} scoped={scoped} dashboardHref={dashboardHref} />;
 }
 
 /** "Open in Dashboard" at the top right of a card. */
@@ -116,36 +173,13 @@ function OpenLink({ href }) {
   );
 }
 
-/** The line under the caption. */
-function Finding({ finding }) {
-  if (!finding) return null;
-  return (
-    <p className="-mt-0.5 mb-1 text-[length:1.0625rem] leading-[1.6] text-by-text-2 text-pretty">
-      <b className="font-semibold text-by-text underline decoration-by-line-strong underline-offset-[3px]">{finding.lead}</b>{finding.rest}
-    </p>
-  );
-}
-
-/** The chart's pick, kept to the figures this view offers. */
-function useMetric(keys) {
-  const [metric, setMetric] = useState(keys[0]);
-  return [keys.includes(metric) ? metric : keys[0], setMetric];
-}
-
 // ── Media Buyer ─────────────────────────────────────────────────────────────
 
-function BuyerBody({ data, preset, rangeLabel, money, format, scoped, dashboardHref }) {
-  const { current, previous, client, chartMetrics, groups, previousGroups, seriesLoading } = data;
-  const keys = buyerChartKeys(scoped);
-  const [metric, setMetric] = useMetric(keys);
+function BuyerCards({ data, preset, money, scoped, dashboardHref }) {
+  const { current, previous, client, groups, previousGroups } = data;
   const cplTarget = client?.targets?.cpl ?? null;
 
   const rows = useMemo(() => buyerClientRows(groups), [groups]);
-  const tiles = useMemo(
-    () => (scoped ? buildTiles({ current, previous, preset, hasCallCentre: true, scoped: true, cplTarget, money }) : buyerTiles({ current, previous, preset, rows })),
-    [scoped, current, previous, preset, cplTarget, money, rows],
-  );
-  const finding = useMemo(() => (scoped ? null : buyerFinding({ current, previous, preset, rows })), [scoped, current, previous, preset, rows]);
   const changes = useMemo(() => (scoped ? [] : cplChanges(rows, previousByClient(previousGroups, groups, preset), { money })), [scoped, rows, previousGroups, groups, preset, money]);
   const cheapest = useMemo(() => (scoped ? [] : cheapestClients(rows, { money })), [scoped, rows, money]);
   const bands = useMemo(() => cplBands(rows), [rows]);
@@ -154,79 +188,60 @@ function BuyerBody({ data, preset, rangeLabel, money, format, scoped, dashboardH
   const diagnosis = useMemo(() => (stages.length ? diagnoseFunnel(stages) : null), [stages]);
   const ads = useMemo(() => rankCampaigns(client?.facebook?.ads, { cplTarget, money }).map((row) => ({ ...row, value: money(row.cpl, 2) })), [client, cplTarget, money]);
 
-  const series = chartMetrics[metric];
-  const tile = tiles.find((t) => t.key === metric);
-
   return (
-    <>
-      <Finding finding={finding} />
-      <Tiles tiles={tiles} format={format} />
-      <ChartCard
-        keys={keys}
-        copy={CHART_COPY}
-        metric={metric}
-        onMetric={setMetric}
-        series={series}
-        delta={tile?.delta}
-        goodWhen={tile?.goodWhen}
-        format={format}
-        rangeLabel={rangeLabel}
-        loading={seriesLoading || series?.loading}
-      />
-      <div className="grid gap-3.5 lg:grid-cols-2">
-        {scoped ? (
-          <>
-            <Card className="px-5 py-4.5">
-              <CardHead title="Performance funnel" />
-              {stages.length ? (
-                <>
-                  <Funnel
-                    className="mt-4"
-                    stages={stages.map((s) => ({
-                      key: s.key,
-                      ...FUNNEL_PARTS[s.key],
-                      value: s.count,
-                      note: Number.isFinite(s.delta) ? <Delta value={s.direction === "down" ? -s.delta : s.delta} goodWhen="up" /> : s.share ? `${s.share} of leads` : null,
-                    }))}
-                  />
-                  <Diagnosis diagnosis={diagnosis} />
-                </>
-              ) : (
-                <EmptyState title="The funnel isn’t ready for this range">It fills in once leads for these dates have been matched to your CRM.</EmptyState>
-              )}
-            </Card>
-            <Card className="px-5 py-4.5">
-              <CardHead title={`${client.name}’s ads, by cost per lead`} sub={cplTarget > 0 ? `Limit ${money(cplTarget, 2)} a lead` : "Cheapest first"} action={<OpenLink href={dashboardHref} />} />
-              {ads.length ? <RankList className="mt-2" numbered={false} items={ads} /> : (
-                <EmptyState title="No ad brought a lead in this range">Ads appear here once they spend and bring in a lead.</EmptyState>
-              )}
-            </Card>
-          </>
-        ) : (
-          <>
-            <Card className="px-5 py-4.5">
-              {changes.length ? (
-                <>
-                  <CardHead title="Cost per lead, against the period before" sub="Biggest rise first" action={<OpenLink href={dashboardHref} />} />
-                  <RankList className="mt-2" numbered={false} items={changes} />
-                </>
-              ) : (
-                <>
-                  <CardHead title="Cheapest leads, by client" sub="Lowest cost per lead first" action={<OpenLink href={dashboardHref} />} />
-                  {cheapest.length ? <RankList className="mt-2" items={cheapest} /> : (
-                    <EmptyState title="No leads in this range">Clients are ranked once they have spend and leads.</EmptyState>
-                  )}
-                </>
-              )}
-            </Card>
-            <Card className="px-5 py-4.5">
-              <CardHead title="Clients by cost per lead" sub="Against each client’s own limit" action={<OpenLink href={dashboardHref} />} />
-              <CplBands bands={bands} />
-            </Card>
-          </>
-        )}
-      </div>
-    </>
+    <div className="grid gap-3.5 lg:grid-cols-2">
+      {scoped ? (
+        <>
+          <Card className="px-5 py-4.5">
+            <CardHead title="Performance funnel" />
+            {stages.length ? (
+              <>
+                <Funnel
+                  className="mt-4"
+                  stages={stages.map((s) => ({
+                    key: s.key,
+                    ...FUNNEL_PARTS[s.key],
+                    value: s.count,
+                    note: Number.isFinite(s.delta) ? <Delta value={s.direction === "down" ? -s.delta : s.delta} goodWhen="up" /> : s.share ? `${s.share} of leads` : null,
+                  }))}
+                />
+                <Diagnosis diagnosis={diagnosis} />
+              </>
+            ) : (
+              <EmptyState title="The funnel isn’t ready for this range">It fills in once leads for these dates have been matched to your CRM.</EmptyState>
+            )}
+          </Card>
+          <Card className="px-5 py-4.5">
+            <CardHead title={`${client.name}’s ads, by cost per lead`} sub={cplTarget > 0 ? `Limit ${money(cplTarget, 2)} a lead` : "Cheapest first"} action={<OpenLink href={dashboardHref} />} />
+            {ads.length ? <RankList className="mt-2" numbered={false} items={ads} /> : (
+              <EmptyState title="No ad brought a lead in this range">Ads appear here once they spend and bring in a lead.</EmptyState>
+            )}
+          </Card>
+        </>
+      ) : (
+        <>
+          <Card className="px-5 py-4.5">
+            {changes.length ? (
+              <>
+                <CardHead title="Cost per lead, against the period before" sub="Biggest rise first" action={<OpenLink href={dashboardHref} />} />
+                <RankList className="mt-2" numbered={false} items={changes} />
+              </>
+            ) : (
+              <>
+                <CardHead title="Cheapest leads, by client" sub="Lowest cost per lead first" action={<OpenLink href={dashboardHref} />} />
+                {cheapest.length ? <RankList className="mt-2" items={cheapest} /> : (
+                  <EmptyState title="No leads in this range">Clients are ranked once they have spend and leads.</EmptyState>
+                )}
+              </>
+            )}
+          </Card>
+          <Card className="px-5 py-4.5">
+            <CardHead title="Clients by cost per lead" sub="Against each client’s own limit" action={<OpenLink href={dashboardHref} />} />
+            <CplBands bands={bands} />
+          </Card>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -256,87 +271,45 @@ function CplBands({ bands }) {
 
 // ── Sales Coach ─────────────────────────────────────────────────────────────
 
-function CoachBody({ data, preset, rangeLabel, format, scoped, dashboardHref }) {
-  const router = useRouter();
-  const { current, previous, client, chartMetrics, groups, seriesLoading, hasCallCentre } = data;
-  const [metric, setMetric] = useMetric(COACH_CHART_KEYS);
-  const calls = useMemo(() => callTotals(groups, preset), [groups, preset]);
-  const tiles = useMemo(() => coachTiles({ current, previous, preset, calls }), [current, previous, preset, calls]);
-  const finding = useMemo(() => (scoped ? null : coachFinding({ current, previous, preset })), [scoped, current, previous, preset]);
-  const days = useMemo(() => callSeries(calls.days, preset), [calls.days, preset]);
+function CoachCards({ data, preset, rangeLabel, format, scoped, dashboardHref }) {
+  const { current, client, groups } = data;
   const rows = useMemo(() => coachClientRows(groups, preset), [groups, preset]);
   const ranked = useMemo(() => calledByClient(rows), [rows]);
   const funnel = useMemo(() => callFunnel(current), [current]);
-
-  if (scoped ? !groupHasCallCentre(client) : !hasCallCentre) {
-    return (
-      <Card>
-        <EmptyState
-          icon={<Phone />}
-          title={scoped ? `${client.name} has no call centre connected` : "No call centre connected"}
-          action={<Button size="sm" onClick={() => router.push(LINK_SALES_TOOL_HREF)}>Connect a call centre</Button>}
-        >
-          {scoped ? "Sales Coach reads calls only, so there is nothing to show for this client yet." : "Sales Coach reads calls only. Connect Hot Prospector in Settings and its calls appear here."}
-        </EmptyState>
-      </Card>
-    );
-  }
-
-  const own = days[metric];
-  const series = metric === "closes"
-    ? chartMetrics.closes
-    : own && { ...own, total: format[COACH_CHART_COPY[metric].kind](own.sum) };
-  const tile = tiles.find((t) => t.key === metric);
   const row = scoped ? rows.find((r) => r.id === client.id) : null;
 
   return (
-    <>
-      <Finding finding={finding} />
-      <Tiles tiles={tiles} format={format} />
-      <ChartCard
-        keys={COACH_CHART_KEYS}
-        copy={COACH_CHART_COPY}
-        metric={metric}
-        onMetric={setMetric}
-        series={series}
-        delta={tile?.delta}
-        goodWhen={tile?.goodWhen}
-        format={format}
-        rangeLabel={rangeLabel}
-        loading={metric === "closes" && seriesLoading}
-      />
-      <div className="grid gap-3.5 lg:grid-cols-2">
-        <Card className="px-5 py-4.5">
-          <CardHead title="New lead to close" />
-          {funnel ? (
-            <>
-              <Funnel
-                className="mt-4"
-                stages={funnel.stages.map((s) => ({ key: s.key, ...FUNNEL_PARTS[s.key], value: s.count.toLocaleString("en-GB"), note: s.share ? `${s.share} of new in CRM` : rangeLabel.toLowerCase() }))}
-              />
-              <Diagnosis diagnosis={funnel.diagnosis} />
-            </>
-          ) : (
-            <EmptyState title="The funnel isn’t ready for this range">It fills in once leads for these dates have been matched to your CRM.</EmptyState>
-          )}
-        </Card>
-        <Card className="px-5 py-4.5">
-          {scoped ? (
-            <>
-              <CardHead title={`${client.name}’s call centre`} sub={rangeLabel} action={<OpenLink href={dashboardHref} />} />
-              <CallCentreFacts row={row} format={format} />
-            </>
-          ) : (
-            <>
-              <CardHead title="New leads called, by client" sub="Lowest share first" action={<OpenLink href={dashboardHref} />} />
-              {ranked.length ? <RankList className="mt-2" numbered={false} items={ranked} /> : (
-                <EmptyState title="Nothing to rank for this range">Clients are ranked once their new leads have been matched to your CRM.</EmptyState>
-              )}
-            </>
-          )}
-        </Card>
-      </div>
-    </>
+    <div className="grid gap-3.5 lg:grid-cols-2">
+      <Card className="px-5 py-4.5">
+        <CardHead title="New lead to close" />
+        {funnel ? (
+          <>
+            <Funnel
+              className="mt-4"
+              stages={funnel.stages.map((s) => ({ key: s.key, ...FUNNEL_PARTS[s.key], value: s.count.toLocaleString("en-GB"), note: s.share ? `${s.share} of new in CRM` : rangeLabel.toLowerCase() }))}
+            />
+            <Diagnosis diagnosis={funnel.diagnosis} />
+          </>
+        ) : (
+          <EmptyState title="The funnel isn’t ready for this range">It fills in once leads for these dates have been matched to your CRM.</EmptyState>
+        )}
+      </Card>
+      <Card className="px-5 py-4.5">
+        {scoped ? (
+          <>
+            <CardHead title={`${client.name}’s call centre`} sub={rangeLabel} action={<OpenLink href={dashboardHref} />} />
+            <CallCentreFacts row={row} format={format} />
+          </>
+        ) : (
+          <>
+            <CardHead title="New leads called, by client" sub="Lowest share first" action={<OpenLink href={dashboardHref} />} />
+            {ranked.length ? <RankList className="mt-2" numbered={false} items={ranked} /> : (
+              <EmptyState title="Nothing to rank for this range">Clients are ranked once their new leads have been matched to your CRM.</EmptyState>
+            )}
+          </>
+        )}
+      </Card>
+    </div>
   );
 }
 

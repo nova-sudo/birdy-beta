@@ -2,7 +2,6 @@
 
 import "./globals.css";
 import { fontVariables } from "@/lib/pd-fonts";
-import { poppins } from "@/lib/by-fonts";
 import { MotionConfig } from "framer-motion";
 import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
@@ -79,7 +78,7 @@ export default function RootLayout({ children }) {
   }, []);
 
   return (
-    <html suppressHydrationWarning className={`${fontVariables} ${poppins.variable}`}>
+    <html suppressHydrationWarning className={fontVariables}>
       <head />
       <body suppressHydrationWarning className="antialiased">
         <BirdyDefs />

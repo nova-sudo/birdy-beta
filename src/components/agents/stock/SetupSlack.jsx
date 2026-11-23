@@ -41,7 +41,7 @@ export function SetupSlack({ agent, actions, onBack, onNext, saveLabel, inPlace 
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {isLoading ? (
         <Skeleton className="h-40 w-full rounded-frame" />
       ) : !connected ? (

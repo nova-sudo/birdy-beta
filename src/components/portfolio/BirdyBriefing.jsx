@@ -45,8 +45,11 @@ function Parts({ parts }) {
  * @param {string} [prompt] seeds the assistant from the footer link; omit to
  *   render no link
  * @param {string} [title] defaults to "Birdy's read"
+ * @param {(prompt: string) => void} [onAsk] where the footer link sends the
+ *   prompt; omitted, it opens the global Ask Birdy modal. An agent section
+ *   passes its own chat here.
  */
-export function BirdyBriefing({ parts, findings = [], prompt, title = "Birdy's read", className }) {
+export function BirdyBriefing({ parts, findings = [], prompt, title = "Birdy's read", onAsk, className }) {
   return (
     <Pop
       as="section"
@@ -104,7 +107,7 @@ export function BirdyBriefing({ parts, findings = [], prompt, title = "Birdy's r
       {prompt && (
         <button
           type="button"
-          onClick={() => askBirdy(prompt)}
+          onClick={() => (onAsk ? onAsk(prompt) : askBirdy(prompt))}
           className="mt-auto flex w-fit cursor-pointer items-center gap-1 pt-1 text-[12.5px] font-semibold text-pd-primary transition-colors hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
         >
           Ask Birdy about this

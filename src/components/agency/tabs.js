@@ -1,18 +1,29 @@
 "use client";
 
-// A section's views and where each one lives. Birdy, Media Buyer and
-// Sales Coach have the same four tabs; the addresses come from their config.
+// A section's views and where each one lives. Media Buyer and Sales Coach
+// have four tabs; Birdy has three, its first view being the old Portfolio
+// Dashboard. The addresses come from their config.
 
 import { useMemo } from "react";
 import { useSuggestionCount } from "@/components/agency/use-suggestions";
 import { OPS_SECTION } from "@/components/agency/sections";
 import { usePendingProposals } from "@/lib/proposals-api";
 
-/** The section's tab pill. */
-export const OPS_TABS = [
+/** Media Buyer's and Sales Coach's tab pill. */
+export const SECTION_TABS = [
   { value: "chat", label: "Chat" },
   { value: "birdseye", label: "Bird's Eye" },
   { value: "dashboard", label: "Dashboard" },
+  { value: "suggestions", label: "Suggestions" },
+];
+
+/**
+ * Birdy's tab pill. Its first view (the "birdseye" address, /dashboard) is the old Portfolio
+ * Dashboard, so it is called Dashboard, and there is no separate Dashboard tab.
+ */
+export const OPS_TABS = [
+  { value: "chat", label: "Chat" },
+  { value: "birdseye", label: "Dashboard" },
   { value: "suggestions", label: "Suggestions" },
 ];
 
@@ -43,7 +54,7 @@ export function useSectionTabs(section = OPS_SECTION) {
   const { proposals } = usePendingProposals(ops ? null : section.chat.agent);
   const waiting = proposals.length;
   const count = (Number(suggestions) || 0) + waiting;
-  return useMemo(() => OPS_TABS.map((t) => (t.value === "suggestions" ? { ...t, count } : t)), [count]);
+  return useMemo(() => (ops ? OPS_TABS : SECTION_TABS).map((t) => (t.value === "suggestions" ? { ...t, count } : t)), [ops, count]);
 }
 
 /** Birdy's tabs. */

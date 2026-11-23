@@ -150,7 +150,7 @@ export default function KitTokensPage() {
           ))}
         </div>
         <p className="mt-2 text-by-caption text-by-muted">
-          Poppins for display, title and heading. Inter for the rest. Weights 400, 500 and 600.
+          Bricolage Grotesque for display, title and heading. Inter for the rest. Weights 400, 500 and 600.
         </p>
       </Section>
 

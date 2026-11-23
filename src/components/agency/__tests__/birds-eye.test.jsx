@@ -77,13 +77,11 @@ describe("Bird's Eye for the agency", () => {
   it("opens the other tabs, and shows how many suggestions are open", async () => {
     render(<BirdsEye />)
     const views = screen.getByRole("tablist", { name: "Birdy views" })
-    expect(within(views).getByRole("tab", { name: "Bird's Eye" })).toHaveAttribute("aria-selected", "true")
-    expect(within(views).getByRole("tab", { name: "Dashboard" })).toBeEnabled()
-    expect(within(views).getByRole("tab", { name: /^Suggestions/ })).toHaveTextContent("Suggestions5")
+    // Birdy's first view is its Dashboard (the old Portfolio Dashboard); it has no separate Dashboard tab.
+    expect(within(views).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Dashboard", "Suggestions5"])
+    expect(within(views).getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true")
     await userEvent.click(within(views).getByRole("tab", { name: "Chat" }))
     expect(push).toHaveBeenCalledWith("/dashboard/chat")
-    await userEvent.click(within(views).getByRole("tab", { name: "Dashboard" }))
-    expect(push).toHaveBeenCalledWith("/dashboard/table")
     await userEvent.click(within(views).getByRole("tab", { name: /^Suggestions/ }))
     expect(push).toHaveBeenCalledWith("/dashboard/suggestions")
   })

@@ -76,7 +76,7 @@ describe("LeadView", () => {
     // A call was made, so the lead sits at Called, as its row in the Leads table does.
     expect(screen.getByText("Called")).toBeInTheDocument()
     expect(screen.getByText("Spicy Leads")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /North Clinic leads/ })).toHaveAttribute("href", "/dashboard/table?client=g1")
+    expect(screen.getByRole("link", { name: /North Clinic leads/ })).toHaveAttribute("href", "/media-buyer/table?client=g1&view=leads")
     expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:07000 000001")
     const figures = screen.getByRole("group", { name: "Lead figures" })
     expect(within(figures).getByText("Open for")).toBeInTheDocument()

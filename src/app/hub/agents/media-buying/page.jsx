@@ -306,7 +306,7 @@ function StockAgentPage() {
                 focusClient={tab === "settings" ? (searchParams?.get("client") ?? undefined) : undefined}
               />
             ) : (
-              <Skeleton className="h-96 w-full max-w-3xl rounded-frame" />
+              <Skeleton className="h-96 w-full rounded-frame" />
             )}
           </div>
         </>

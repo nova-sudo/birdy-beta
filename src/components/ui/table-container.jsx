@@ -91,6 +91,10 @@ const StyledTable = ({
   initialPageSize = 15,
   // Off for tables whose rows belong together (a parent and its expanded children).
   paginate = true,
+  // In a height-bounded flex column (the agent sections' Dashboard tab): the
+  // card shrinks to the space it is given, its rows scroll inside it under a
+  // header that stays put, and the pagination stays below it.
+  fill = false,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -402,7 +406,7 @@ const StyledTable = ({
   const isEmptyState = !isLoading && paginatedData.length === 0;
 
   return (
-    <div className="space-y-4">
+    <div className={fill ? "flex min-h-0 flex-col gap-4" : "space-y-4"}>
       {/* Zebra rows are painted here rather than with Tailwind classes because
           the name column is `position: sticky` — it scrolls over its
           neighbours, so it needs an opaque background of its own that matches
@@ -477,7 +481,7 @@ const StyledTable = ({
 
       {/* Table */}
       <div
-        className="table-container rounded-2xl border border-pd-border bg-pd-surface"
+        className={`table-container rounded-2xl border border-pd-border bg-pd-surface${fill ? " min-h-0" : ""}`}
         style={{
           "--name-sticky-left": `${nameStickyLeft}px`,
           overflowX: isEmptyState ? "hidden" : "auto",
@@ -486,7 +490,7 @@ const StyledTable = ({
         <table className="w-full text-sm" style={isEmptyState ? { width: "100%" } : undefined}>
           {/* Uppercase, letter-spaced and a shade off white — the header reads
               as a label strip rather than a first row of data. */}
-          <thead className="top-0 z-40 border-b border-pd-border bg-pd-table-head text-[12.5px] font-bold tracking-[.03em] text-pd-faint uppercase">
+          <thead className={`${fill ? "sticky " : ""}top-0 z-40 border-b border-pd-border bg-pd-table-head text-[12.5px] font-bold tracking-[.03em] text-pd-faint uppercase`}>
             <tr className="h-12 bg-pd-table-head transition-colors">
 
               {/* Checkbox header — sticky at left: 0 */}

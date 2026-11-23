@@ -1,11 +1,14 @@
-import { Suspense } from "react";
-import { DashboardTab } from "@/components/agency/dashboard-tab";
+import { redirect } from "next/navigation";
 
-// Birdy's Dashboard tab: the Clients table with the ask bar.
-export default function AgencyDashboardPage() {
-  return (
-    <Suspense fallback={null}>
-      <DashboardTab />
-    </Suspense>
-  );
+// Birdy no longer has a separate Dashboard tab: /dashboard is its dashboard
+// now. Old links land there, keeping the client and the date range.
+export default async function AgencyDashboardRedirect({ searchParams }) {
+  const params = await searchParams;
+  const keep = new URLSearchParams();
+  for (const key of ["client", "range"]) {
+    const value = params?.[key];
+    if (typeof value === "string" && value) keep.set(key, value);
+  }
+  const query = keep.toString();
+  redirect(query ? `/dashboard?${query}` : "/dashboard");
 }

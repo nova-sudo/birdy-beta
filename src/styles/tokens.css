@@ -208,9 +208,10 @@
   --color-by-primary-from-hover: var(--by-primary-from-hover);
   --color-by-primary-to-hover: var(--by-primary-to-hover);
 
-  /* Type. Poppins is only defined where src/lib/by-fonts.js is applied; Inter
-     is on <html> already. Sizes are rem, so they follow the app's base size. */
-  --font-by-display: var(--font-poppins), var(--font-inter), system-ui, sans-serif;
+  /* Type: the app's own fonts from src/lib/pd-fonts.js, both on <html>.
+     Bricolage Grotesque (variable, 200 to 800) for headings and figures, Inter
+     for the rest. Sizes are rem, so they follow the app's base size. */
+  --font-by-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
   --font-by-body: var(--font-inter), system-ui, sans-serif;
 
   --text-by-label: 0.6875rem;

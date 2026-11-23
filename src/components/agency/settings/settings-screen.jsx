@@ -18,8 +18,8 @@ import { useIntegrations } from "./use-integrations";
 import { ConnectionsSection } from "./connections-section";
 import { PlanSection } from "./plan-section";
 import { AccountSection } from "./account-section";
-import { MetricsSection } from "./metrics/metrics-section";
-import { AlertsSection } from "./alerts/alerts-section";
+import MetricsPage from "@/components/metrics/MetricsPage";
+import AlertsPage from "@/components/alerts/AlertsPage";
 
 /** The section's heading line: its name and what it holds. */
 function SectionTitle({ section, id }) {
@@ -82,18 +82,18 @@ export function SettingsScreen() {
               forceMount={s.key === "connections" ? true : undefined}
               aria-labelledby={`settings-h-${s.key}`}
               className={
-                s.key === "metrics"
+                s.key === "metrics" || s.key === "alerts"
                   ? "flex min-h-0 flex-1 flex-col gap-3.5 px-4 pt-4.5 pb-5 data-[state=inactive]:hidden sm:px-7"
                   : "min-h-0 flex-1 overflow-y-auto px-4 pt-4.5 pb-10 data-[state=inactive]:hidden sm:px-7"
               }
             >
-              <div className={s.key === "metrics" ? "contents" : "flex flex-col gap-3.5"}>
+              <div className={s.key === "metrics" || s.key === "alerts" ? "contents" : "flex flex-col gap-3.5"}>
                 <SectionTitle section={s} id={`settings-h-${s.key}`} />
                 {s.key === "connections" && <ConnectionsSection integrations={integrations} />}
                 {s.key === "plan" && <PlanSection />}
                 {s.key === "account" && <AccountSection />}
-                {s.key === "alerts" && <AlertsSection />}
-                {s.key === "metrics" && <MetricsSection />}
+                {s.key === "alerts" && <AlertsPage />}
+                {s.key === "metrics" && <MetricsPage />}
               </div>
             </TabPanel>
           ))}

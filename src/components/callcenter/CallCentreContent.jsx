@@ -1162,6 +1162,9 @@ export function CallCentreContent({
   // Called after a client is switched to a call centre from the "not
   // available" panel, so the page can refetch; reloads the page if omitted.
   onCallCentreChanged,
+  // In a height-bounded column (Sales Coach's Dashboard tab): the tab row
+  // stays put and each table scrolls inside its own card.
+  fill = false,
 }) {
   const [activeTab, setActiveTab] = useState(showGroupFilter ? "overview" : "leads")
   const [searchQuery, setSearchQuery] = useState("")
@@ -1660,8 +1663,8 @@ export function CallCentreContent({
     // viewport minus the rail (100dvw-130px), which is the sort of measurement
     // that goes wrong the moment anything else changes width — and did, inside
     // the Sales Hub's own scroll region.
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
+    <div className={fill ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0"}>
+      <Stagger className={fill ? "flex min-h-0 flex-1 flex-col gap-6" : "flex flex-col gap-6"}>
         {/* Stat cards (windowed). The Sales Hub draws its own six-tile KPI grid
             from the same figures and turns these off; /clients/[id] has no call
             KPIs of its own on this tab, so they stay its default. */}
@@ -1677,8 +1680,8 @@ export function CallCentreContent({
         {/* Section tabs, and the controls that act on whichever table is under
             them. The design puts view switches above the content they filter
             and the window filter up in the header — see the shell. */}
-        <StaggerItem>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <StaggerItem className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
+          <div className="flex shrink-0 flex-col gap-3 md:flex-row md:items-center">
             <PageTabs
               label="Sales Hub section"
               panelId={TABLE_PANEL_ID}
@@ -1745,10 +1748,11 @@ export function CallCentreContent({
           {/* One panel, whichever section is selected. Radix's Tabs mounted all
               four and hid three; each of these carries its own fetch, so the
               hidden ones were work nobody asked for. */}
-          <PageTabPanel id={TABLE_PANEL_ID} label="Sales Hub table" className="mt-4">
+          <PageTabPanel id={TABLE_PANEL_ID} label="Sales Hub table" className={fill ? "mt-4 flex min-h-0 flex-1 flex-col" : "mt-4"}>
             {activeTab === "overview" && showGroupFilter && (
               // One row per client, windowed KPIs — click to drill into Leads.
               <StyledTable
+                fill={fill}
                 columns={OVERVIEW_COLUMNS}
                 data={filteredOverview}
                 columnVisibility={colVis.overview}
@@ -1761,7 +1765,7 @@ export function CallCentreContent({
             {activeTab === "leads" && (
               <>
                 {selectedClientGroup !== "all" && (
-                  <div className="mb-3 flex items-center gap-2">
+                  <div className="mb-3 flex shrink-0 items-center gap-2">
                     <span className="flex items-center gap-2 rounded-full bg-pd-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-pd-primary">
                       Client: {selectedClientLabel}
                       <button
@@ -1778,7 +1782,7 @@ export function CallCentreContent({
                 )}
 
                 {leadsBackgroundLoading && (
-                  <div className="mb-3 flex items-center gap-2 text-[11.5px] text-pd-faint">
+                  <div className="mb-3 flex shrink-0 items-center gap-2 text-[11.5px] text-pd-faint">
                     <Loader2 className="size-3.5 animate-spin" />
                     <span>
                       Loaded {leads.length} of {leadsTotal} leads — loading the rest in the
@@ -1788,6 +1792,7 @@ export function CallCentreContent({
                 )}
 
                 <StyledTable
+                  fill={fill}
                   columns={LEAD_COLUMNS}
                   data={leads}
                   columnVisibility={colVis.leads}
@@ -1800,6 +1805,7 @@ export function CallCentreContent({
             {activeTab === "members" && showGroupFilter && (
               // Account-wide HotProspector team.
               <StyledTable
+                fill={fill}
                 columns={MEMBER_COLUMNS}
                 data={members}
                 columnVisibility={colVis.members}
@@ -1811,6 +1817,7 @@ export function CallCentreContent({
             {activeTab === "calls" && (
               // Most recent calls across leads; the count is user-configurable.
               <StyledTable
+                fill={fill}
                 columns={CALL_COLUMNS}
                 data={filteredCalls}
                 columnVisibility={colVis.calls}

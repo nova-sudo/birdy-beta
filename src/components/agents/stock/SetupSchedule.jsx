@@ -83,7 +83,7 @@ export function SetupSchedule({ agent, actions, onNext, saveLabel, inPlace = fal
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Frame title="When should it check?" description="The morning run starts at the first check after this time." padded contentClassName="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">
