@@ -21,8 +21,16 @@ const DASHBOARD_ROUTE = "/dashboard";
 
 const DashboardControlsContext = createContext(null);
 
-export function DashboardControlsProvider({ children }) {
-  const [preset, setPreset] = useState(DEFAULT_DATE_PRESET);
+/**
+ * @param {string} [props.preset] the date range, when the caller keeps it (Birdy's section keeps it in the
+ *   address as `?range=`, so it survives switching tabs); left out, the provider keeps it itself
+ * @param {(preset: string) => void} [props.onPresetChange] called with a new range when `preset` is given
+ */
+export function DashboardControlsProvider({ children, preset: controlledPreset, onPresetChange }) {
+  const [ownPreset, setOwnPreset] = useState(DEFAULT_DATE_PRESET);
+  const controlled = controlledPreset !== undefined;
+  const preset = controlled ? controlledPreset : ownPreset;
+  const setPreset = controlled ? onPresetChange : setOwnPreset;
   const [granularity, setGranularity] = useState("Daily");
   // Published upwards by the page: the header shows the client count, but only
   // the page knows it, and it should not fetch the portfolio a second time to
@@ -31,7 +39,7 @@ export function DashboardControlsProvider({ children }) {
 
   const value = useMemo(
     () => ({ preset, setPreset, granularity, setGranularity, clientCount, setClientCount }),
-    [preset, granularity, clientCount]
+    [preset, setPreset, granularity, clientCount]
   );
 
   return (

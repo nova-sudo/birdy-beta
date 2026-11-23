@@ -112,14 +112,14 @@ describe("Birdy chat", () => {
     await waitFor(() => expect(screen.queryByText("Best creatives this month")).not.toBeInTheDocument())
   })
 
-  it("starts over with New chat, and goes back to Bird's Eye keeping the client", async () => {
+  it("starts over with New chat, and goes back to the Dashboard keeping the client", async () => {
     route.search = "client=a"
     render(<AgencyChat />)
     expect(screen.getByText("Aura", { selector: "b" }).parentElement).toHaveTextContent("Scoped to Aura · At risk")
     resetChat.mockClear()
     await userEvent.click(screen.getByRole("button", { name: "New chat" }))
     expect(resetChat).toHaveBeenCalledWith("by_ops_chat_a")
-    await userEvent.click(screen.getByRole("tab", { name: "Bird's Eye" }))
+    await userEvent.click(screen.getByRole("tab", { name: "Dashboard" }))
     expect(push).toHaveBeenCalledWith("/dashboard?client=a")
   })
 
