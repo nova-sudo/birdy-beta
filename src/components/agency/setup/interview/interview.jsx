@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { AgentAvatar, AskBar, Button, ChatSender, Dialog, DialogBody, DialogContent, Notice } from "@/components/by";
-import { ChatThread } from "@/components/agency/chat/thread";
+import { AGENT_BUBBLE, ChatThread } from "@/components/agency/chat/thread";
 import { useAgentChat } from "@/components/agency/chat/use-agent-chat";
 import { apiRequest } from "@/lib/api";
 import { hydrateChat } from "@/lib/chat-store";
-import { agentInfo } from "@/lib/agent-route";
+import { AGENTS, agentInfo } from "@/lib/agent-route";
+import { celebrateOnce, celebrationLines } from "@/lib/setup-celebrations";
 import { AGENT_NAMES, answerMessage, answered, knownLines, normalizeTeam, replyBlock, saveStep, TEAM_KEY } from "@/lib/team-setup";
 import { KnowsPanel } from "./knows-panel";
 import { StepForm, hasForm } from "./step-form";
+import { SetupCelebration } from "../celebration";
 
 const INTROS = {
   media_buyer: "I watch your clients’ ads every day and propose changes for you to approve.",
@@ -21,6 +24,12 @@ const INTROS = {
 // Forms that aren't a step: shown only when the owner asked the agent for one.
 const OPTIONAL_FORMS = ["practice"];
 const NEXT = { media_buyer: "Sales Coach", sales_coach: "sub-agents" };
+// What each agent does from now on, said in its celebration.
+const READY = {
+  media_buyer: "It now checks your clients’ ads on your schedule and brings you the changes worth making, for you to approve.",
+  sales_coach: "It now watches how fast new leads get called and how many of them close, and tells you where the calls slip.",
+};
+const COMPOSER = (name) => `Answer ${name}`;
 
 /** The session key of an agent's setup chat. */
 export const interviewKey = (agent) => `team_setup_${agent}`;
@@ -54,7 +63,28 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   const chat = useAgentChat({ sessionKey: interviewKey(agent), page: "team_setup", agent, onSettled: () => mutate(TEAM_KEY) });
   const [answeredAt, setAnsweredAt] = useState([]);
   const [editing, setEditing] = useState(null);
+  const router = useRouter();
   const lines = knownLines(team, agent);
+
+  // "Change something" on a form sends nothing: it puts the cursor in the message box and says what to type.
+  const composer = useRef(null);
+  const [placeholder, setPlaceholder] = useState(null);
+  const onChangeRequest = useCallback(({ placeholder: hint } = {}) => {
+    setPlaceholder(hint ?? null);
+    composer.current?.querySelector("input")?.focus();
+  }, []);
+  const send = useCallback((text) => {
+    setPlaceholder(null);
+    return chat.send(text);
+  }, [chat.send]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The moment the last answer is saved, once per account and agent: not on a reload or a later visit.
+  const [celebrating, setCelebrating] = useState(false);
+  const wasDone = useRef(a.status === "done");
+  useEffect(() => {
+    if (a.status === "done" && !wasDone.current && celebrateOnce(agent)) setCelebrating(true);
+    wasDone.current = a.status === "done";
+  }, [a.status, agent]);
   const count = answered(team, agent);
 
   // The clients this agent works on: the ones Media Buyer was given, or every active one.
@@ -62,8 +92,9 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   const formCtx = useMemo(() => ({
     ...ctx,
     watched: Array.isArray(watchedIds) ? ctx.clients.filter((g) => watchedIds.includes(g.id)) : ctx.clients,
-    onSend: chat.send,
-  }), [ctx, watchedIds, chat.send]);
+    onSend: send,
+    onChangeRequest,
+  }), [ctx, watchedIds, send, onChangeRequest]);
 
   const save = async (step, body) => {
     const next = await saveStep(agent, step, body);
@@ -74,7 +105,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   const answerFrom = (index, step) => async (body) => {
     const after = await save(step, body);
     setAnsweredAt((list) => [...list, index]);
-    chat.send(answerMessage(after, agent, step));
+    send(answerMessage(after, agent, step));
   };
 
   const renderAfter = (message, index, { last }) => {
@@ -114,6 +145,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   const lastReply = [...chat.messages].reverse().find((m) => m.role === "assistant");
   const waiting = started && !chat.loading && a.status !== "done" && !(lastReply && replyBlock(lastReply) && !answeredAt.includes(chat.messages.indexOf(lastReply)));
   const activation = agent === "media_buyer" && a.status === "done" ? a.activation : null;
+  const tile = <AgentAvatar info={agentInfo(agent)} size={32} className="size-16 rounded-by-xl [&>svg]:size-8" />;
   const editLine = lines.find((l) => l.step === editing);
 
   return (
@@ -125,7 +157,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
             <div className="flex flex-col gap-1.5">
               <ChatSender name={name} avatar={avatar} />
               <div className="flex flex-col gap-3 text-by-body-lg text-by-text sm:pl-10 [&_p]:leading-relaxed">
-                <p>
+                <p className={AGENT_BUBBLE}>
                   I’m {name}. {INTROS[agent]}{" "}
                   {a.status === "done"
                     ? "I’m set up. You can change any answer on the right."
@@ -135,24 +167,25 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
                 </p>
                 {!started && a.status !== "done" && (
                   <div>
-                    <Button kind="primary" loading={chat.loading} onClick={() => chat.send(count.done ? "Let’s carry on." : "Hi, let’s get you set up.")}>
+                    <Button kind="primary" loading={chat.loading} onClick={() => send(count.done ? "Let’s carry on." : "Hi, let’s get you set up.")}>
                       {count.done ? "Carry on" : "Start"}<ArrowRight aria-hidden="true" />
                     </Button>
                   </div>
                 )}
               </div>
             </div>
-            <ChatThread chat={chat} name={name} avatar={avatar} renderAfter={renderAfter} partPlacement="inline" />
+            {/* A reply is the agent's text and then its form: no "who looked at what" map in the interview. */}
+            <ChatThread chat={{ ...chat, send }} name={name} avatar={avatar} renderAfter={renderAfter} partPlacement="inline" routeMap={false} bubbles continues />
             {waiting && chat.messages[chat.messages.length - 1]?.role === "assistant" && (
               <div className="sm:pl-10">
-                <Button onClick={() => chat.send("Let’s carry on.")}>Carry on<ArrowRight aria-hidden="true" /></Button>
+                <Button onClick={() => send("Let’s carry on.")}>Carry on<ArrowRight aria-hidden="true" /></Button>
               </div>
             )}
             {a.status === "done" && !chat.loading && (
               <div className="flex flex-col gap-1.5">
                 <ChatSender name={name} avatar={avatar} />
                 <div className="flex flex-col gap-3 text-by-body-lg text-by-text sm:pl-10">
-                  <p><b className="font-semibold">{name} is ready.</b> {NEXT[agent] === "sub-agents" ? "One last step: sub-agents." : `${NEXT[agent]} is unlocked next.`}</p>
+                  <p className={AGENT_BUBBLE}><b className="font-semibold">{name} is ready.</b> {NEXT[agent] === "sub-agents" ? "One last step: sub-agents." : `${NEXT[agent]} is unlocked next.`}</p>
                   {activation?.status === "not_ready" && (
                     <Notice tone="warning">
                       <p className="font-semibold">It can’t switch on yet. Still missing:</p>
@@ -168,11 +201,24 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
           </div>
         </div>
         <div className="shrink-0 px-4 pb-5 sm:px-7">
-          <div className="w-full">
-            <AskBar placeholder={`Answer ${name}`} busy={chat.loading} onSubmit={chat.send} />
+          <div ref={composer} className="w-full">
+            <AskBar placeholder={placeholder ?? COMPOSER(name)} busy={chat.loading} onSubmit={send} />
           </div>
         </div>
       </div>
+
+      <SetupCelebration
+        open={celebrating}
+        onOpenChange={setCelebrating}
+        icon={tile}
+        title={`${name} is ready`}
+        done={celebrationLines(team, agent)}
+        primary={{ label: <>Set up {NEXT[agent]}<ArrowRight aria-hidden="true" /></>, onClick: () => { setCelebrating(false); onNext(); } }}
+        secondary={{ label: `Open ${name}`, onClick: () => { setCelebrating(false); router.push(AGENTS[agent].chat); } }}
+      >
+        <p>{READY[agent]}</p>
+        {activation?.status === "not_ready" && <p className="mt-1 text-by-body text-by-muted">It switches on once the missing pieces are in place.</p>}
+      </SetupCelebration>
 
       <Dialog open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)}>
         {editing && (

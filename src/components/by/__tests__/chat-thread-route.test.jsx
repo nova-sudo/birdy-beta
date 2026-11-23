@@ -100,4 +100,20 @@ describe("ChatThread with route maps", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
     expect(onDock).toHaveBeenLastCalledWith(null)
   })
+
+  it("leaves the map out when asked, and shows one thinking line while it works", () => {
+    const messages = [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }]
+    const view = render(<ChatThread name="Media Buyer" routeMap={false} bubbles chat={chatWith({ messages })} />)
+    expect(screen.getByText("The leads changed.")).toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
+    view.rerender(<ChatThread name="Media Buyer" routeMap={false} bubbles chat={chatWith({ messages: messages.slice(0, 1), loading: true, route: ROUTE })} />)
+    expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
+    expect(screen.getByRole("status", { name: "Media Buyer is replying" })).toBeInTheDocument()
+    expect(screen.getByText("Thinking")).toBeInTheDocument()
+  })
+
+  it("keeps the map by default", () => {
+    render(<ChatThread name="Media Buyer" chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />)
+    expect(screen.getByRole("group", { name: "Agents in this reply" })).toBeInTheDocument()
+  })
 })

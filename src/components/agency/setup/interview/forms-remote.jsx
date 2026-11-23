@@ -16,14 +16,20 @@ export const PRACTICE_POLL_MS = 2000;
 const CHIP = "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-by-md border px-3 font-by-body text-by-body-sm font-medium transition-colors duration-(--by-dur-fast) ease-by-out disabled:cursor-default disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent [&>svg]:size-3.5";
 const chipTone = (on) => (on ? "border-by-accent bg-by-accent-soft text-by-accent" : "border-by-line-strong bg-by-surface text-by-text hover:bg-by-canvas");
 
+/** What the owner can type to change the playbook, as a real example. */
+export const PLAYBOOK_EXAMPLE = "judge ads after 10 days, keep 6 ads live, or pause losers on your own";
+
 /**
  * The rules the agent drafted, to confirm. The reply's block carries them
- * (`playbook`); changing one happens in the chat, where the agent has the tools.
+ * (`playbook`); changing one happens in the chat, where the agent has the tools:
+ * "Change something" sends nothing, it puts the cursor in the message box and
+ * says what can be typed there. The agent then shows the form again with the new rules.
  */
 export function PlaybookForm({ data, ctx, onSubmit, saveLabel = "Yes, that’s it" }) {
   const rules = playbookRules(data?.playbook);
   const lines = playbookLines(data);
   const { busy, error, run } = useSave(onSubmit);
+  const [changing, setChanging] = useState(false);
   const sym = getSymbolFromCurrency(ctx.currency || "GBP") || "£";
   return (
     <FormShell
@@ -33,7 +39,9 @@ export function PlaybookForm({ data, ctx, onSubmit, saveLabel = "Yes, that’s i
       actions={
         <>
           <Button kind="primary" loading={busy} onClick={() => run({ confirmed: true })}>{saveLabel}</Button>
-          {ctx.onSend && <Button disabled={busy} onClick={() => ctx.onSend("I have a question about the playbook")}>Ask about it</Button>}
+          {ctx.onChangeRequest && (
+            <Button disabled={busy} onClick={() => { setChanging(true); ctx.onChangeRequest({ placeholder: `For example: ${PLAYBOOK_EXAMPLE}` }); }}>Change something</Button>
+          )}
         </>
       }
     >
@@ -52,6 +60,11 @@ export function PlaybookForm({ data, ctx, onSubmit, saveLabel = "Yes, that’s i
         </ol>
       ) : (
         <p className="text-by-body-sm text-by-muted">The playbook isn’t listed here. Ask in the chat to see it before you confirm.</p>
+      )}
+      {ctx.onChangeRequest && (
+        <p className={cn("text-by-body-sm", changing ? "font-medium text-by-accent" : "text-by-muted")}>
+          {changing ? "Type your change in the message box below" : "Want something different? Tell me in the chat"}, for example: {PLAYBOOK_EXAMPLE}.
+        </p>
       )}
     </FormShell>
   );

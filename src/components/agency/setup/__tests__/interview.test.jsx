@@ -30,8 +30,11 @@ vi.mock("@/lib/use-setup", () => ({
 vi.mock("@/lib/oauth-handoff", () => ({ setOAuthHandoff: vi.fn(), takeOAuthHandoff: () => null }))
 vi.mock("@/components/shell/client-actions", () => ({ useClientActions: () => ({ openAddClient: vi.fn(), openImport: vi.fn() }) }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ clientGroups: [], loading: false, error: null, invalidate: vi.fn(), refresh: vi.fn() }) }))
+// A conversation of its own per session key, when a test gives one; the shared `chat` otherwise.
+const sessions = {}
+const updateProposal = vi.fn()
 vi.mock("@/components/agency/chat/use-agent-chat", () => ({
-  useAgentChat: () => ({ ...chat, send, submitUI: vi.fn(), submittedUIs: [], updateProposal: vi.fn(), configured: true, outOfCredits: false, locked: null, route: null }),
+  useAgentChat: ({ sessionKey }) => ({ ...(sessions[sessionKey] ?? chat), send, submitUI: vi.fn(), submittedUIs: [], updateProposal, configured: true, outOfCredits: false, locked: null, route: null }),
 }))
 vi.mock("@/lib/api", () => ({
   apiRequest: async (url, opts = {}) => {
@@ -77,6 +80,7 @@ beforeEach(() => {
   Object.assign(chat, { messages: [], loading: false })
   route.search = "s=buyer"
   localStorage.clear()
+  for (const k of Object.keys(sessions)) delete sessions[k]
 })
 
 describe("The agent interview", () => {
@@ -229,40 +233,238 @@ describe("The agent interview", () => {
   })
 })
 
+describe("The interview chat", () => {
+  const ROUTE = { status: "done", seconds: 9, credits: 3.9, steps: [
+    { id: "a", agent: "media_buyer", name: "Media Buyer", kind: "main", status: "done", summary: "Looked at show setup step", tools: [{ name: "show_setup_step", label: "show setup step" }], credits: 3.9, seconds: 9 },
+  ] }
+
+  it("shows a reply as the agent's text and then its form, with no route card", async () => {
+    replies["GET /api/team/setup"] = [200, team()]
+    chat.messages = [{ role: "user", content: "Hi" }, { role: "assistant", content: "When should I check the accounts?", route: ROUTE, agent_changes: [{ ui_block: { type: "schedule" } }] }]
+    page()
+    const form = await screen.findByRole("form", { name: "Schedule" })
+    const question = screen.getByText("When should I check the accounts?")
+    expect(question.className).toMatch(/font-medium/)
+    expect(question.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Looked at show setup step/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/credits/)).not.toBeInTheDocument()
+  })
+
+  it("shows one light thinking line while the agent works", async () => {
+    replies["GET /api/team/setup"] = [200, team()]
+    chat.messages = [{ role: "user", content: "Hi" }]
+    chat.loading = true
+    page()
+    expect(await screen.findByRole("status", { name: "Media Buyer is replying" })).toBeInTheDocument()
+    expect(screen.getByText("Thinking")).toBeInTheDocument()
+  })
+
+  it("puts the cursor in the message box to change the playbook, and sends nothing", async () => {
+    replies["GET /api/team/setup"] = [200, team({ mb: { steps: { clients: true, cpl: true }, current: "playbook" } })]
+    chat.messages = [{ role: "assistant", content: "Here is how I’ll work.", agent_changes: [{ ui_block: { type: "playbook", modes: { remove: "ask" }, scoring: { min_days: 7 } } }] }]
+    page()
+    const form = await screen.findByRole("form", { name: "Playbook" })
+    expect(within(form).queryByRole("button", { name: "Ask about it" })).not.toBeInTheDocument()
+    await userEvent.click(within(form).getByRole("button", { name: "Change something" }))
+    expect(send).not.toHaveBeenCalled()
+    const box = screen.getByRole("textbox", { name: /For example: judge ads after 10 days/ })
+    expect(box).toHaveFocus()
+    expect(form).toHaveTextContent("Type your change in the message box below, for example: judge ads after 10 days, keep 6 ads live, or pause losers on your own.")
+    await userEvent.type(box, "judge ads after 10 days{Enter}")
+    expect(send).toHaveBeenCalledWith("judge ads after 10 days")
+    expect(screen.getByRole("textbox", { name: "Answer Media Buyer" })).toBeInTheDocument()
+  })
+})
+
+describe("Finishing an agent", () => {
+  const ALL_STEPS = { clients: true, cpl: true, playbook: true, permissions: true, schedule: true }
+  const before = () => team({ mb: { steps: ALL_STEPS, current: "slack", known: known({ schedule: "Every day at 07:00" }) } })
+  const after = () => team({
+    mb: { status: "done", steps: { ...ALL_STEPS, slack: true }, current: null, known: [...known({ schedule: "Every day at 07:00" }).slice(0, 5), { step: "slack", label: "Slack", value: "#ads-team" }] },
+    sc: { status: "open", waits_on: null },
+  })
+  const answerSlack = async () => {
+    const form = await screen.findByRole("form", { name: "Slack" })
+    await userEvent.click(within(form).getByRole("button", { name: "Not in Slack" }))
+  }
+
+  it("celebrates the moment Media Buyer's last answer is saved, with what it learned", async () => {
+    replies["GET /api/team/setup"] = [200, before()]
+    replies["GET /api/integrations/slack/channels"] = [200, { channels: [] }]
+    replies["PUT /api/team/setup/media_buyer/slack"] = [200, after()]
+    chat.messages = ask("slack", "Where should I post?")
+    page()
+    await answerSlack()
+    const dialog = await screen.findByRole("dialog", { name: "Media Buyer is ready" })
+    expect(dialog).toHaveTextContent("It now checks your clients’ ads")
+    for (const line of ["Clients: All active clients", "CPL limits: £6 for every client", "Schedule: Every day at 07:00", "Slack: #ads-team"]) {
+      expect(within(dialog).getByText(line)).toBeInTheDocument()
+    }
+    // Its own tile, not the mascot.
+    expect(dialog.querySelector("svg.lucide-megaphone")).toBeTruthy()
+    expect(within(dialog).getByRole("button", { name: "Open Media Buyer" })).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole("button", { name: /Set up Sales Coach/ }))
+    expect(push).toHaveBeenCalledWith("/welcome?s=coach")
+  })
+
+  it("closing it leaves the end message and its buttons", async () => {
+    replies["GET /api/team/setup"] = [200, before()]
+    replies["GET /api/integrations/slack/channels"] = [200, { channels: [] }]
+    replies["PUT /api/team/setup/media_buyer/slack"] = [200, after()]
+    chat.messages = ask("slack", "Where should I post?")
+    page()
+    await answerSlack()
+    await screen.findByRole("dialog", { name: "Media Buyer is ready" })
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    expect(screen.getByRole("button", { name: /Set up Sales Coach/ })).toBeInTheDocument()
+  })
+
+  it("doesn't celebrate on a reload or a later visit", async () => {
+    replies["GET /api/team/setup"] = [200, after()]
+    page()
+    expect(await screen.findByText(/Media Buyer is ready\./)).toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("celebrates once per account, even if it completes again", async () => {
+    localStorage.setItem("user", JSON.stringify({ email: "sam@northside.test" }))
+    localStorage.setItem("birdy_setup_celebrated:sam@northside.test:media_buyer", "1")
+    replies["GET /api/team/setup"] = [200, before()]
+    replies["GET /api/integrations/slack/channels"] = [200, { channels: [] }]
+    replies["PUT /api/team/setup/media_buyer/slack"] = [200, after()]
+    chat.messages = ask("slack", "Where should I post?")
+    page()
+    await answerSlack()
+    expect(await screen.findByText(/Media Buyer is ready\./)).toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+})
+
 describe("The sub-agents step", () => {
   const ALL_DONE = () => team({ mb: { status: "done" }, sc: { status: "done", waits_on: null }, subs: { status: "open", waits_on: null } })
-  const proposed = { id: "s1", parent: "media_buyer", name: "Lead watcher", purpose: "Checks new leads every hour", status: "proposed", tools: [{ name: "get_leads", label: "Read leads" }], clients: "all", schedule: null }
-
-  it("shows each agent's proposals with their card, and finishes the step", async () => {
-    route.search = "s=subs"
-    replies["GET /api/team/setup"] = [200, ALL_DONE()]
-    replies["GET /api/agents/sub?parent=media_buyer"] = [200, [proposed]]
-    replies["GET /api/agents/sub?parent=sales_coach"] = [200, []]
-    replies["POST /api/team/setup/sub_agents/finish"] = [200, team({ mb: { status: "done" }, sc: { status: "done" }, subs: { status: "done" } })]
-    page()
-    expect(await screen.findByRole("group", { name: "Setting up a sub-agent: Lead watcher" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: /Waiting for you · 1/ })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: /Finish/ }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"))
-    expect(calls.find((c) => c.url === "/api/team/setup/sub_agents/finish").body).toEqual({ skipped: false })
+  const FINISHED = () => team({ mb: { status: "done" }, sc: { status: "done", waits_on: null }, subs: { status: "done", waits_on: null } })
+  const idea = (over = {}) => ({
+    id: "s1", parent: "media_buyer", name: "Ad Performance Monitor", purpose: "Checks every ad each morning and flags the ones over your cost per lead",
+    status: "proposed", created_at: "2026-11-20T10:00:00Z",
+    tools: [{ name: "get_ad_insights", label: "get_ad_insights" }, { name: "get_meta_insights_live", label: "get_meta_insights_live" }],
+    clients: "all", schedule: { time: "14:10", timezone: "Europe/London", days: [] }, ...over,
   })
-
-  it("can be skipped for now", async () => {
+  const second = () => idea({ id: "s2", name: "Lead Watcher", purpose: "Checks new leads every hour", tools: [{ name: "get_facebook_leads" }], clients: [{ id: "a", name: "Aura" }], schedule: null, created_at: "2026-11-20T10:01:00Z" })
+  const open = (mb = [], sc = []) => {
     route.search = "s=subs"
     replies["GET /api/team/setup"] = [200, ALL_DONE()]
-    replies["POST /api/team/setup/sub_agents/finish"] = [200, ALL_DONE()]
+    replies["GET /api/agents/sub?parent=media_buyer"] = [200, mb]
+    replies["GET /api/agents/sub?parent=sales_coach"] = [200, sc]
     page()
-    await userEvent.click(await screen.findByRole("button", { name: "Skip for now" }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"))
-    expect(calls.find((c) => c.url === "/api/team/setup/sub_agents/finish").body).toEqual({ skipped: true })
-  })
+  }
 
-  it("asks the chosen agent for ideas", async () => {
-    route.search = "s=subs"
-    replies["GET /api/team/setup"] = [200, ALL_DONE()]
-    page()
-    await userEvent.click(await screen.findByRole("button", { name: "Sales Coach" }))
-    await userEvent.click(screen.getByRole("button", { name: "Ask Sales Coach for ideas" }))
+  it("opens with a short intro and two ways to start, not an empty list", async () => {
+    open()
+    const ask = await screen.findByRole("button", { name: "Ask Media Buyer for ideas" })
+    expect(screen.getByRole("button", { name: "Ask Sales Coach for ideas" })).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing proposed yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Waiting for you/)).not.toBeInTheDocument()
+    await userEvent.click(ask)
     expect(send).toHaveBeenCalledWith(expect.stringMatching(/Which sub-agents would help/))
+  })
+
+  it("asks Sales Coach for ideas", async () => {
+    open()
+    await userEvent.click(await screen.findByRole("button", { name: "Ask Sales Coach for ideas" }))
+    expect(send).toHaveBeenCalledWith(expect.stringMatching(/Which sub-agents would help/))
+  })
+
+  it("shows one idea at a time as a card in plain words, and says what the owner chose", async () => {
+    replies["POST /api/agents/sub/s1/approve"] = [200, { ...idea(), status: "active" }]
+    replies["POST /api/agents/sub/s2/reject"] = [200, { ok: true }]
+    open([idea(), second()])
+    const card = await screen.findByRole("group", { name: "Sub-agent idea: Ad Performance Monitor" })
+    expect(within(card).getByText("1 of 2")).toBeInTheDocument()
+    expect(within(card).getByText("Checks every ad each morning and flags the ones over your cost per lead")).toBeInTheDocument()
+    expect(within(card).getByText("All your clients")).toBeInTheDocument()
+    expect(within(card).getByText("Every day at 14:10")).toBeInTheDocument()
+    expect(within(card).getByText("Ad results")).toBeInTheDocument()
+    expect(within(card).getByText("Reports to").nextSibling).toHaveTextContent("Media Buyer")
+    // Only one card, and no tool's raw name anywhere.
+    expect(screen.queryByRole("group", { name: "Sub-agent idea: Lead Watcher" })).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/get_ad_insights|get_meta_insights_live/)
+
+    await userEvent.click(within(card).getByRole("button", { name: "Add it" }))
+    expect(await screen.findByText("Added Ad Performance Monitor")).toBeInTheDocument()
+    expect(calls.some((c) => c.method === "POST" && c.url === "/api/agents/sub/s1/approve")).toBe(true)
+    const next = await screen.findByRole("group", { name: "Sub-agent idea: Lead Watcher" })
+    expect(within(next).getByText("2 of 2")).toBeInTheDocument()
+    expect(within(next).getByText("Leads")).toBeInTheDocument()
+    expect(within(next).getByText("When Media Buyer asks")).toBeInTheDocument()
+
+    await userEvent.click(within(next).getByRole("button", { name: "Not now" }))
+    expect(await screen.findByText("Not now: Lead Watcher")).toBeInTheDocument()
+    expect(calls.some((c) => c.method === "POST" && c.url === "/api/agents/sub/s2/reject")).toBe(true)
+    expect(await screen.findByRole("button", { name: /Suggest another/ })).toBeInTheDocument()
+  })
+
+  it("changes an idea's details before adding it", async () => {
+    replies["PATCH /api/agents/sub/s1"] = [200, { ...idea(), name: "Morning ad check" }]
+    open([idea()])
+    const card = await screen.findByRole("group", { name: "Sub-agent idea: Ad Performance Monitor" })
+    await userEvent.click(within(card).getByRole("button", { name: /Change details/ }))
+    const dialog = await screen.findByRole("dialog", { name: "Change Ad Performance Monitor" })
+    const name = within(dialog).getByLabelText("Name")
+    await userEvent.clear(name)
+    await userEvent.type(name, "Morning ad check")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save changes" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    expect(calls.find((c) => c.method === "PATCH")).toEqual({ url: "/api/agents/sub/s1", method: "PATCH", body: { name: "Morning ad check" } })
+    // Saving details doesn't add it.
+    expect(calls.some((c) => c.url.endsWith("/approve"))).toBe(false)
+  })
+
+  it("keeps a reply short when its ideas come as cards, without tool names", async () => {
+    sessions.team_setup_subs_media_buyer = {
+      messages: [
+        { role: "user", content: "Which sub-agents would help my agency?" },
+        {
+          role: "assistant",
+          content: "Here are two that would help. They watch the work you do by hand.\n\n- **Ad Performance Monitor**\n  - Purpose: flags ads\n  - Tools: `get_ad_insights`, `get_meta_insights_live`",
+          proposals: [{ id: "p1", kind: "sub_agent", status: "pending", payload: { sub_agent: idea() } }],
+        },
+      ],
+      loading: false,
+    }
+    open([idea()])
+    expect(await screen.findByText("Here are two that would help. They watch the work you do by hand.")).toBeInTheDocument()
+    expect(screen.queryByText(/Purpose/)).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/get_ad_insights|get_meta_insights_live/)
+    // One card, drawn by the step: the reply's own wizard isn't shown.
+    expect(await screen.findByRole("group", { name: "Sub-agent idea: Ad Performance Monitor" })).toBeInTheDocument()
+    expect(screen.queryByText("What should it be called?")).not.toBeInTheDocument()
+  })
+
+  it("finishes the step with a celebration, once, then opens the app", async () => {
+    replies["POST /api/team/setup/sub_agents/finish"] = [200, FINISHED()]
+    sessions.team_setup_subs_media_buyer = { messages: [{ role: "user", content: "Ideas?" }, { role: "assistant", content: "I have nothing to add right now." }], loading: false }
+    open([], [])
+    await userEvent.click(await screen.findByRole("button", { name: /^Finish/ }))
+    const dialog = await screen.findByRole("dialog", { name: "Your team is set up" })
+    expect(calls.find((c) => c.url === "/api/team/setup/sub_agents/finish").body).toEqual({ skipped: false })
+    expect(within(dialog).getByText("Media Buyer is set up")).toBeInTheDocument()
+    expect(push).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole("button", { name: /Open Birdy/ }))
+    expect(push).toHaveBeenCalledWith("/dashboard")
+  })
+
+  it("can be skipped for now, celebrating only the first time", async () => {
+    replies["POST /api/team/setup/sub_agents/finish"] = [200, ALL_DONE()]
+    open()
+    await userEvent.click(await screen.findByRole("button", { name: "Skip for now" }))
+    expect(await screen.findByRole("dialog", { name: "Your team is set up" })).toBeInTheDocument()
+    expect(calls.find((c) => c.url === "/api/team/setup/sub_agents/finish").body).toEqual({ skipped: true })
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    await userEvent.click(screen.getByRole("button", { name: "Skip for now" }))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"))
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })
