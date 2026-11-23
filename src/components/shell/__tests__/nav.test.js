@@ -122,3 +122,18 @@ describe("agent sections and clients", () => {
     expect(clientHrefFrom("/campaigns", "a")).toBe("/dashboard?client=a")
   })
 })
+
+describe("railHref", () => {
+  it("carries the client and the date range between the agent sections", async () => {
+    const { railHref } = await import("../nav");
+    expect(railHref("coach", "?client=a%40b.com_1&range=last_30d&view=leads")).toBe("/sales-coach?client=a%40b.com_1&range=last_30d");
+    expect(railHref("ops", "?client=c1")).toBe("/dashboard?client=c1");
+    expect(railHref("buyer", "")).toBe("/media-buyer");
+  });
+
+  it("opens Clients and Settings plain", async () => {
+    const { railHref } = await import("../nav");
+    expect(railHref("clients", "?client=c1")).toBe("/clients");
+    expect(railHref("settings", "?client=c1")).toBe("/settings");
+  });
+});
