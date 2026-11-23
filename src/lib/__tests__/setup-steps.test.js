@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
-  STEPS, allDone, basicsOf, buildTargetsPayload, callingTool, deriveSteps, hasAnyTarget, nextStep, pctDone, sectionParam, stepsLeft,
+  STEPS, allDone, basicsOf, buildTargetsPayload, callingTool, clientsToFit, deriveSteps, hasAnyTarget, nextStep, pctDone, planIsCurrent,
+  sectionParam, setupHolds, stepsLeft,
 } from "../setup-steps"
 
 const onboarding = (extra = {}, data = {}) => ({ completed: false, name: "Sam", agency_name: "Acme", default_currency: "GBP", data, ...extra })
@@ -11,6 +12,7 @@ const FULL = {
   hp: { connected: false },
   slack: { installed: true, notify_channel_id: "C1" },
   clients: [client("a", { targets: { cpa: 40, cpl: 6 } }), client("b", { targets: { cpl: 7 } })],
+  billing: { subscribed: true, needs_plan: false, sandbox: false },
 }
 const empty = { onboarding: onboarding({ name: null, agency_name: null, default_currency: null }), status: null, hp: null, slack: null, clients: [] }
 
@@ -62,6 +64,59 @@ describe("deriveSteps", () => {
     expect(deriveSteps({ ...empty, clients: [client("a"), client("b")] }).import).toBe("done")
     expect(deriveSteps({ ...empty, onboarding: onboarding({}, { wants_sync: false }) }).import).toBe("done")
     expect(deriveSteps({ ...empty, onboarding: onboarding({ completed: true }) }).import).toBe("done")
+  })
+})
+
+describe("the plan step", () => {
+  const tools = { ...empty, onboarding: onboarding({}, { sales_tool: "ghl" }), status: FULL.status }
+
+  it("sits after calling and before the first client", () => {
+    expect(STEPS.map((s) => s.id)).toEqual(["basics", "meta", "ghl", "calling", "plan", "client", "targets", "slack", "import"])
+    expect(STEPS.find((s) => s.id === "plan").label).toBe("Pick your plan")
+  })
+
+  it("is done with an active subscription or when no plan is needed", () => {
+    expect(deriveSteps({ ...tools, billing: { subscribed: false, needs_plan: true } }).plan).toBe("todo")
+    expect(deriveSteps({ ...tools, billing: { subscribed: true, needs_plan: false } }).plan).toBe("done")
+    // An admin-granted client limit: never asked.
+    expect(deriveSteps({ ...tools, billing: { subscribed: false, needs_plan: false } }).plan).toBe("done")
+    // Billing unread: onboarding's answer stands in.
+    expect(deriveSteps({ ...tools, onboarding: onboarding({ needs_plan: false }) }).plan).toBe("done")
+    expect(deriveSteps({ ...tools, onboarding: onboarding({ completed: true, needs_plan: true }) }).plan).toBe("todo")
+    // Nobody says: an unfinished account is asked, a finished one is left alone.
+    expect(deriveSteps(tools).plan).toBe("todo")
+    expect(deriveSteps({ ...tools, onboarding: onboarding({ completed: true }) }).plan).toBe("done")
+  })
+
+  it("counts in the progress", () => {
+    const steps = deriveSteps({ ...tools, billing: { subscribed: false, needs_plan: true } })
+    expect(steps).toMatchObject({ basics: "done", meta: "done", ghl: "done", calling: "done", plan: "todo" })
+    expect(pctDone(steps)).toBe(44)
+    expect(stepsLeft(steps)).toBe(5)
+    expect(nextStep(steps)).toBe("plan")
+  })
+
+  it("is the step on screen once the tools are in, or at once for a finished account", () => {
+    const steps = deriveSteps({ ...tools, billing: { needs_plan: true } })
+    expect(planIsCurrent(steps)).toBe(true)
+    expect(planIsCurrent({ ...steps, calling: "todo" })).toBe(false)
+    expect(planIsCurrent({ ...steps, calling: "todo" }, true)).toBe(true)
+    expect(planIsCurrent({ ...steps, plan: "done" }, true)).toBe(false)
+  })
+
+  it("holds unfinished setup and a finished account without a plan", () => {
+    expect(setupHolds(null)).toBe(false)
+    expect(setupHolds(onboarding())).toBe(true)
+    expect(setupHolds(onboarding({ completed: true }))).toBe(false)
+    expect(setupHolds(onboarding({ completed: true, needs_plan: true }))).toBe(true)
+    expect(setupHolds(onboarding({ completed: true, needs_plan: true }), { plan: "done" })).toBe(false)
+  })
+
+  it("knows how many clients to fit from the sub-accounts or the clients", () => {
+    expect(clientsToFit(empty)).toBeNull()
+    const subs = { gohighlevel: { subaccounts: { l1: {}, l2: {}, l3: {}, l4: {} } } }
+    expect(clientsToFit({ ...empty, status: subs })).toEqual({ count: 4, source: "ghl" })
+    expect(clientsToFit({ ...empty, clients: [client("a"), client("b")] })).toEqual({ count: 2, source: "clients" })
   })
 })
 

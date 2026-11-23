@@ -132,7 +132,9 @@ export function ImportDialog({ open, onOpenChange, onImported }) {
       const res = await apiRequest("/api/onboarding/import-subaccounts", { method: "POST", body: JSON.stringify({ accounts: payload }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setFailure(data?.detail || "The import didn’t go through. Nothing was added.");
+        // A plan error (402) comes back as {code, message}: show its words, never the object.
+        const detail = data?.detail;
+        setFailure((typeof detail === "string" ? detail : detail?.message) || "The import didn’t go through. Nothing was added.");
         return;
       }
       const added = data?.imported?.length ?? 0;

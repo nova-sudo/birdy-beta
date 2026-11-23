@@ -8,12 +8,14 @@ import { toast } from "sonner";
 import { AskBar, Button, Notice, SECTIONS, SectionHeader, Skeleton } from "@/components/by";
 import { isActive } from "@/lib/client-status";
 import { takeOAuthHandoff } from "@/lib/oauth-handoff";
-import { basicsOf, nextStep, pctDone, sectionParam } from "@/lib/setup-steps";
+import { setSetupLock } from "@/lib/session";
+import { basicsOf, nextStep, pctDone, planIsCurrent, sectionParam, setupHolds } from "@/lib/setup-steps";
 import { AGENT_OF_SECTION, answered, nextSection, useTeamSetup } from "@/lib/team-setup";
 import { useSetup } from "@/lib/use-setup";
 import { Checklist } from "./checklist";
 import { AgentInterview } from "./interview/interview";
 import { OpsSetup } from "./ops-setup";
+import { PlanStep } from "./plan-step";
 import { SubAgentsStep } from "./sub-agents-step";
 import { TeamRail } from "./team-rail";
 import { useSetupActions } from "./use-setup-actions";
@@ -37,7 +39,9 @@ const writeJson = (key, value) => {
  * each as done, current or locked; the server's team state decides which is
  * open. `?s=` picks one (a locked one opens the next one to do), `?checklist=1`
  * unfolds Birdy's checklist (the rail's ring links here). Without the team
- * state (the request failed) only Birdy's setup shows.
+ * state (the request failed) only Birdy's setup shows. While the plan is the
+ * step to do, Birdy's chat steps aside for the plan screen (plan-step); an
+ * account that finished setup before plans were required sees only that.
  */
 export function SetupPage() {
   const router = useRouter();
@@ -49,8 +53,10 @@ export function SetupPage() {
   const { facts, steps, ready } = setup;
 
   const requested = sectionParam(search.get("s"));
-  const open = !team ? "ops" : team.agents[AGENT_OF_SECTION[requested]].status === "locked" ? nextSection(team) : requested;
-  const waitingForTeam = requested !== "ops" && !teamSetup.ready;
+  // A finished account without a plan has only the plan to do: Birdy's section shows it, whatever `?s=` asks for.
+  const planFirst = ready && setup.completed && steps.plan !== "done";
+  const open = planFirst || !team ? "ops" : team.agents[AGENT_OF_SECTION[requested]].status === "locked" ? nextSection(team) : requested;
+  const waitingForTeam = requested !== "ops" && !teamSetup.ready && !planFirst;
   const section = kit(open);
   const [folded, setFolded] = useState(false);
   const [finishing, setFinishing] = useState(null);
@@ -61,14 +67,11 @@ export function SetupPage() {
   useEffect(() => {
     setFolded(unfold ? false : readJson(FOLD_KEY, false));
   }, [unfold]);
-  // Keep the app's own gate in step with the account: unfinished setup holds the app here.
+  // Keep the app's own gate in step with the account: unfinished setup, or no plan, holds the app here.
+  const holds = ready ? setupHolds(facts.onboarding, steps) : null;
   useEffect(() => {
-    if (!facts.onboarding) return;
-    try {
-      if (facts.onboarding.completed) localStorage.removeItem("onboarding_incomplete");
-      else localStorage.setItem("onboarding_incomplete", "1");
-    } catch { /* the server copy still decides at next login */ }
-  }, [facts.onboarding]);
+    if (holds !== null && facts.onboarding) setSetupLock(holds);
+  }, [holds, facts.onboarding]);
 
   const fold = (value) => { setFolded(value); writeJson(FOLD_KEY, value); };
   const go = (to) => router.push(`/welcome?s=${to}`);
@@ -95,6 +98,17 @@ export function SetupPage() {
       setFinishing(null);
     }
   };
+
+  // The plan is on: setup carries on in the chat, or, for an account that had
+  // finished setup already, the app opens where finished setup goes.
+  const planActive = async () => {
+    await Promise.all([setup.refresh("billing"), setup.refresh("onboarding")]);
+    if (setup.completed) {
+      setSetupLock(false);
+      router.push("/dashboard");
+    }
+  };
+  const planNow = open === "ops" && !waitingForTeam && ready && !setup.failed && planIsCurrent(steps, setup.completed);
 
   // A checklist row scrolls to its step in Birdy's chat.
   const jump = (id) => {
@@ -135,7 +149,9 @@ export function SetupPage() {
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {team && <TeamRail team={team} open={open} onOpen={go} />}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {waitingForTeam ? loading : open === "ops" ? (
+          {waitingForTeam ? loading : planNow ? (
+            <PlanStep facts={facts} steps={steps} completed={setup.completed} onActive={planActive} />
+          ) : open === "ops" ? (
             <>
               <div ref={scroller} aria-live="polite" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div className="flex w-full flex-col gap-5 px-4 py-6 sm:px-7">

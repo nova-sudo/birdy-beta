@@ -7,19 +7,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
 import { Dialog, DialogBody, DialogContent, Notice, Skeleton } from "@/components/by";
-
-// "sandbox" runs Whop's test mode, "production" takes real payments.
-const WHOP_ENVIRONMENT = (process.env.NEXT_PUBLIC_WHOP_ENVIRONMENT ?? "production") === "sandbox" ? "sandbox" : "production";
-
-// Best-effort: the signed-in email prefills the form. The account id is the
-// email, which is also how the backend's webhook matches the purchase.
-function storedEmail() {
-  try {
-    return JSON.parse(localStorage.getItem("user"))?.email ?? "";
-  } catch {
-    return "";
-  }
-}
+import { WHOP_ENVIRONMENT, storedEmail } from "@/components/billing/whop";
 
 /**
  * @param {string} props.title

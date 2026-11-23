@@ -1,14 +1,16 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ClientSwitcher, MenuItem, Rail, RailMenuTile, SetupRing } from "@/components/by";
 import { useCredits } from "@/hooks/useCredits";
 import { useAgentWorkCount } from "@/lib/agents-api";
 import { isActive } from "@/lib/client-status";
-import { DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { fetchMe } from "@/lib/admin-api";
+import { DEFAULT_DATE_PRESET, SETUP_PATH, isSetupPath } from "@/lib/constants";
+import { SETUP_FLAG, setSetupLock } from "@/lib/session";
 import { useClientGroups } from "@/lib/useClientGroups";
-import { STEPS, allDone } from "@/lib/setup-steps";
+import { STEPS, allDone, setupHolds } from "@/lib/setup-steps";
 import { lockedSections, nextSection, setupPercent, teamDone, useTeamSetup } from "@/lib/team-setup";
 import { useSetup } from "@/lib/use-setup";
 import { AccountMenu } from "./account-menu";
@@ -53,7 +55,8 @@ export function AppShell({ children }) {
   const { team } = useTeamSetup();
   const birdyLeft = (onSetup || !setup.completed) && !allDone(setup.steps);
   const showSetup = setup.ready && !setup.failed && (birdyLeft || (team !== null && !teamDone(team)));
-  const setupPct = setupPercent(setup.steps, team, { completed: setup.completed, total: STEPS.length });
+  const setupPct = setupPercent(setup.steps, team, { completed: setup.completed && setup.steps.plan === "done", total: STEPS.length });
+  useSetupLock(setup, pathname, router);
   const hasCredits = credits.status != null && credits.allowance > 0;
 
   return (
@@ -104,6 +107,32 @@ export function AppShell({ children }) {
     </div>
     </ClientActionsProvider>
   );
+}
+
+/**
+ * An account that belongs in setup (unfinished, or finished without a plan)
+ * and isn't held there yet, say a session from before plans were required, is
+ * held now: the flag and the session cookie go up, and the page goes to setup.
+ * From then on ProtectedLayout and the proxy keep it there. An admin, or an
+ * admin impersonating an agency, is never held.
+ */
+function useSetupLock(setup, pathname, router) {
+  const holds = setup.ready && !setup.failed && setupHolds(setup.facts.onboarding, setup.steps);
+  useEffect(() => {
+    if (!holds) return undefined;
+    let gone = false;
+    (async () => {
+      try {
+        if (localStorage.getItem(SETUP_FLAG) === "1") return;
+        if (JSON.parse(localStorage.getItem("user") || "null")?.role === "admin") return;
+      } catch { return; }
+      const me = await fetchMe();
+      if (gone || me?.impersonating) return;
+      setSetupLock(true);
+      if (!isSetupPath(pathname)) router.push(SETUP_PATH);
+    })();
+    return () => { gone = true; };
+  }, [holds, pathname, router]);
 }
 
 /** The switcher, showing whichever client the current address is narrowed to. */

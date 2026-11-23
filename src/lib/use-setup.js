@@ -12,6 +12,7 @@ export const SETUP_KEYS = {
   status: "/api/status",
   hp: "/api/hotprospector/status",
   slack: queryKeys.slackStatus(),
+  billing: "/api/billing/status",
 }
 
 /** A request that has answered, either way. A failed one reads as "not known", which offers the step again. */
@@ -28,13 +29,15 @@ const settled = (swr) => swr.data !== undefined || swr.error !== undefined
 export function useSetup({ full = true } = {}) {
   const { mutate } = useSWRConfig()
   const onboarding = useSWR(SETUP_KEYS.onboarding)
-  const wanted = full || (onboarding.data !== undefined && !onboarding.data?.completed)
+  // Off /welcome a finished account is read in full only while it still needs a plan.
+  const wanted = full || (onboarding.data !== undefined && (!onboarding.data?.completed || onboarding.data?.needs_plan === true))
   const status = useSWR(wanted ? SETUP_KEYS.status : null)
   const hp = useSWR(wanted ? SETUP_KEYS.hp : null)
   const slack = useSWR(wanted ? SETUP_KEYS.slack : null)
+  const billing = useSWR(wanted ? SETUP_KEYS.billing : null)
   const groups = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
 
-  const ready = settled(onboarding) && (!wanted || (settled(status) && settled(hp) && settled(slack) && (!groups.loading || groups.error)))
+  const ready = settled(onboarding) && (!wanted || (settled(status) && settled(hp) && settled(slack) && settled(billing) && (!groups.loading || groups.error)))
 
   const facts = useMemo(
     () => ({
@@ -43,18 +46,21 @@ export function useSetup({ full = true } = {}) {
       hp: hp.data ?? null,
       slack: slack.data ?? null,
       clients: groups.clientGroups,
+      billing: billing.data ?? null,
     }),
-    [onboarding.data, status.data, hp.data, slack.data, groups.clientGroups],
+    [onboarding.data, status.data, hp.data, slack.data, groups.clientGroups, billing.data],
   )
   const steps = useMemo(() => deriveSteps(facts), [facts])
 
-  /** Ask again for one fact ("onboarding", "status", "hp", "slack", "clients"), or all of them. */
+  /** Ask again for one fact ("onboarding", "status", "hp", "slack", "billing", "clients"), or all of them. Settles once they're back. */
   const refresh = useCallback(
     (which) => {
-      if (!which || which === "clients") groups.invalidate()
+      const waits = []
+      if (!which || which === "clients") waits.push(groups.invalidate())
       for (const [name, key] of Object.entries(SETUP_KEYS)) {
-        if (!which || which === name) mutate(key)
+        if (!which || which === name) waits.push(mutate(key))
       }
+      return Promise.allSettled(waits)
     },
     [mutate, groups],
   )
