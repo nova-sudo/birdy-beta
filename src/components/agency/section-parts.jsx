@@ -5,9 +5,9 @@
 // the conversation column it opens, the chart card and the loading shape.
 // Page-level: they wire the kit to the app's data and routes.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, MessageSquare } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import {
   AskBar, AskPanel, Button, Card, Delta, DropdownTrigger, EmptyState, KpiTile, LineChart, Menu, MenuContent, MenuItem, MenuTrigger, Notice, Skeleton, TabPill,
 } from "@/components/by";
@@ -17,6 +17,7 @@ import { sectionTabHref } from "@/components/agency/tabs";
 import { isActive } from "@/lib/client-status";
 import { statusOf } from "@/lib/clients-list";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { GRANULARITIES } from "@/lib/portfolio-series";
 import { rememberSectionChat } from "@/lib/section-chats";
 
 export const STATUS_WORDS = { danger: "At risk", warning: "At risk", ok: "On track", off: "Inactive" };
@@ -68,6 +69,41 @@ export function RangeMenu({ preset, label, onPick }) {
   );
 }
 
+/**
+ * The header's chart granularity menu, beside the date range. It drives the old hubs' hero chart (see useGranularity:
+ * the range picks until this is used).
+ */
+export function GranularityMenu({ value, onPick }) {
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <DropdownTrigger leading={<Clock aria-hidden="true" />} aria-label={`Chart granularity: ${value}`}>
+          <span className="font-semibold">{value}</span>
+        </DropdownTrigger>
+      </MenuTrigger>
+      <MenuContent align="end">
+        {GRANULARITIES.map((g) => (
+          <MenuItem key={g} selected={g === value} onSelect={() => onPick(g)}>{g}</MenuItem>
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+/**
+ * The client groups for the address's date range. The hooks hold the range in their own state, so it is pushed in,
+ * and they read as loading until they have caught up with it.
+ * @param {(preset: string, options?: object) => object} hook useClientGroups or useClientGroupsWithSeries
+ */
+export function useRangeGroups(hook, preset, options) {
+  const groups = hook(preset, options);
+  const { datePreset, setDatePreset } = groups;
+  useEffect(() => {
+    if (datePreset !== preset) setDatePreset(preset);
+  }, [preset, datePreset, setDatePreset]);
+  return { ...groups, loading: groups.loading || datePreset !== preset };
+}
+
 /** Money in the account's currency, whole or to the penny. */
 export function useMoney(symbol = "") {
   return useMemo(() => {
@@ -105,6 +141,8 @@ export function useSectionChat(section, place, client) {
  * The ask bar and, once a question is sent, the conversation column beside the page.
  * `children` is the page body; with `floating` it scrolls under a bar that floats over its foot,
  * otherwise the bar sits under it (for pages whose table scrolls inside itself).
+ * `children` may be a function, given `ask(text)`, for a page with its own way into the conversation
+ * (the old hubs' "Ask Birdy about this").
  */
 export function AskDock({ section, chat, placeholder, title, floating = true, children }) {
   const router = useRouter();
@@ -118,7 +156,7 @@ export function AskDock({ section, chat, placeholder, title, floating = true, ch
   return (
     <div className="flex min-h-0 flex-1">
       <div className="relative flex min-w-0 flex-1 flex-col">
-        {children}
+        {typeof children === "function" ? children(ask) : children}
         <div className={floating ? "pointer-events-none absolute inset-x-0 bottom-0 px-7 pb-5" : "shrink-0 px-7 pb-5"}>{bar}</div>
       </div>
       {asking && (

@@ -58,6 +58,9 @@ import {
  * @param {string|null} selectedClientGroup group id, "all", or null
  * @param {string} granularity Daily | Weekly | Monthly
  * @param {string} currencySymbol
+ * @param {boolean} [withSeries] false skips the two fetches only the hero
+ *   needs (the previous period and the per-day leads), for a screen that draws
+ *   the table alone
  */
 export function useMarketingHubData({
   clientGroups,
@@ -66,6 +69,7 @@ export function useMarketingHubData({
   selectedClientGroup,
   granularity = "Daily",
   currencySymbol = "£",
+  withSeries = true,
 }) {
   const [previousGroups, setPreviousGroups] = useState(null);
   const [leadDays, setLeadDays] = useState([]);
@@ -87,7 +91,7 @@ export function useMarketingHubData({
 
   // ── The preceding period, for the delta pills ───────────────────────────
   useEffect(() => {
-    const comparison = PREVIOUS_PERIOD[datePreset];
+    const comparison = withSeries ? PREVIOUS_PERIOD[datePreset] : null;
     if (!comparison) {
       setPreviousGroups(null);
       return;
@@ -109,11 +113,11 @@ export function useMarketingHubData({
     return () => {
       cancelled = true;
     };
-  }, [datePreset]);
+  }, [datePreset, withSeries]);
 
   // ── Per-day lead counts, for the leads and CPL curves ───────────────────
   useEffect(() => {
-    if (!groupIds) {
+    if (!groupIds || !withSeries) {
       setLeadDays([]);
       setSeriesLoading(false);
       return;
@@ -148,7 +152,7 @@ export function useMarketingHubData({
       cancelled = true;
       controller.abort();
     };
-  }, [groupIds, datePreset]);
+  }, [groupIds, datePreset, withSeries]);
 
   // ── Shaping ─────────────────────────────────────────────────────────────
 

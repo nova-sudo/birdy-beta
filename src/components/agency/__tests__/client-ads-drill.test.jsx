@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@/components/by/__tests__/jsdom"
-import { SectionDashboard } from "../section-dashboard"
+import { BUYER_CLIENT_VIEWS, ClientDashboard } from "../client-dashboard"
+import { DashboardTab } from "../dashboard-tab"
+import { BUYER_SECTION } from "../sections"
 
 // A client's own Ads table: the agency table's levels and drill-down, without Clients, limited to that client.
+// Media Buyer's Dashboard tab now draws the old Marketing Hub table (section-dashboard.test.jsx); the client
+// dashboard is still Birdy's, and is drawn here with Media Buyer's views as well.
 
 const push = vi.fn()
 const replace = vi.fn()
@@ -61,7 +65,8 @@ vi.mock("@/hooks/useCredits", () => ({ useCredits: () => ({ blocked: false, refr
 const levelTabs = () => within(screen.getByRole("tablist", { name: "Show by" }))
 const bodyRows = () => screen.getAllByRole("row").slice(1)
 let mounted = null
-const show = (search, Page = () => <SectionDashboard section="buyer" />, path = "/media-buyer/table") => {
+const BuyerClient = () => <ClientDashboard clientId={new URLSearchParams(route.search).get("client")} section={BUYER_SECTION} views={BUYER_CLIENT_VIEWS} />
+const show = (search, Page = BuyerClient, path = "/media-buyer/table") => {
   mounted?.unmount()
   route.search = search
   route.path = path
@@ -144,30 +149,12 @@ describe("Media Buyer inside a client", () => {
   })
 })
 
-describe("from the agency table into a client", () => {
-  it("carries the campaign, ad set and ad the drill reached", async () => {
-    show("level=leads&group=a&campaign=c1&adset=s1&ad=1")
-    await userEvent.click(screen.getByRole("button", { name: "Open Aura's own dashboard" }))
-    expect(push).toHaveBeenLastCalledWith("/media-buyer/table?client=a&level=leads&campaign=c1&adset=s1&ad=1")
-  })
-})
-
-describe("what the Leads level took over from the old Leads hub", () => {
-  it("searches email, phone and tags, and offers them as columns", async () => {
-    swr.data = { "/api/facebook-leads/filtered": { leads: [
-      { ...LEADS[0], email: "leanne@example.com", phone_number: "+44 7700 900111", ghl_tags: ["hot lead"] },
-      { ...LEADS[1], email: "priya@example.com", phone_number: "+44 7700 900222" },
-    ] } }
-    show("level=leads")
-    expect(screen.queryByRole("columnheader", { name: /Email/ })).toBeNull()
-    await userEvent.type(screen.getByRole("searchbox", { name: /Search leads/ }), "priya@")
-    expect(bodyRows().map((r) => r.textContent)).toEqual([expect.stringContaining("Priya Shah")])
-    await userEvent.clear(screen.getByRole("searchbox", { name: /Search leads/ }))
-    await userEvent.type(screen.getByRole("searchbox", { name: /Search leads/ }), "hot lead")
-    expect(bodyRows().map((r) => r.textContent)).toEqual([expect.stringContaining("Leanne Turner")])
-    await userEvent.click(screen.getByRole("button", { name: /Columns/ }))
-    await userEvent.click(await screen.findByRole("checkbox", { name: "Email" }))
-    expect(screen.getByRole("columnheader", { name: /Email/ })).toBeInTheDocument()
-    expect(screen.getByRole("row", { name: /Leanne Turner/ })).toHaveTextContent("leanne@example.com")
+describe("Birdy inside a client", () => {
+  it("opens its Ads table on the ads, with the same drill", async () => {
+    show("client=a&view=ads", DashboardTab, "/dashboard/table")
+    expect(levelTabs().getByRole("tab", { selected: true })).toHaveTextContent("Ads")
+    expect(levelTabs().getAllByRole("tab").map((t) => t.textContent.replace(/\d+/g, ""))).toEqual(["Campaigns", "Ad sets", "Ads", "Leads"])
+    await userEvent.click(screen.getByText("Timelapse"))
+    expect(push).toHaveBeenLastCalledWith("/dashboard/table?client=a&view=ads&level=leads&campaign=c1&adset=s1&ad=1")
   })
 })
