@@ -30,6 +30,7 @@ export function PlanSection() {
       {billing.success && <Notice tone="success" icon={<Check aria-hidden="true" />} action={<Dismiss onClick={billing.clearSuccess} />}>{billing.success}</Notice>}
       {credits.success && <Notice tone="success" icon={<Check aria-hidden="true" />} action={<Dismiss onClick={credits.clearSuccess} />}>{credits.success}</Notice>}
       {billing.error && <Notice tone="danger" icon={<AlertCircle aria-hidden="true" />} action={<Dismiss onClick={billing.clearError} />}>{billing.error}</Notice>}
+      {credits.error && <Notice tone="danger" icon={<AlertCircle aria-hidden="true" />} action={<Dismiss onClick={credits.clearError} />}>{credits.error}</Notice>}
 
       <div className="grid grid-cols-1 items-start gap-3.5 lg:grid-cols-2">
         <YourPlanCard billing={billing} onCompare={() => setComparing(true)} />

@@ -107,9 +107,9 @@ export const offeredPacks = (packs = []) => packs.filter((p) => p.credits < 10_0
  * The address without one of its query flags (a Whop return flag once read),
  * keeping the rest, Settings' ?section= included.
  */
-export function withoutParam(href, key) {
+export function withoutParam(href, ...keys) {
   const url = new URL(href, "http://x");
-  url.searchParams.delete(key);
+  for (const key of keys) url.searchParams.delete(key);
   const query = url.searchParams.toString();
   return `${url.pathname}${query ? `?${query}` : ""}`;
 }
