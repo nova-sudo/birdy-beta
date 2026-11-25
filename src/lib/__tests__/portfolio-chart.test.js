@@ -8,11 +8,12 @@ import {
 } from "@/lib/portfolio-chart";
 
 describe("pointXPercent", () => {
-  it("centres each point over its axis column rather than spanning edge to edge", () => {
-    // With 12 points each owns 1/12 of the width, so the first sits half a
-    // column in (100/24 ≈ 4.17%) and the last half a column from the right.
-    expect(pointXPercent(0, 12)).toBeCloseTo(100 / 24, 5);
-    expect(pointXPercent(11, 12)).toBeCloseTo(100 - 100 / 24, 5);
+  it("runs edge to edge, with a small inset so the end dots are not cut", () => {
+    expect(pointXPercent(0, 12)).toBeCloseTo(0.6, 5);
+    expect(pointXPercent(11, 12)).toBeCloseTo(99.4, 5);
+    // A short range no longer leaves a wide empty band either side.
+    expect(pointXPercent(0, 4)).toBeLessThan(1);
+    expect(pointXPercent(3, 4)).toBeGreaterThan(99);
   });
 
   it("spaces points evenly between those insets", () => {

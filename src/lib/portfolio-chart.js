@@ -8,14 +8,17 @@
 // Two details from the handoff that are easy to get wrong, and that the dots
 // visibly punish:
 //
-//   1. Points are centred over their axis label, not spread edge to edge. With
-//      n points each owns a 100/n column and sits at its midpoint, so the first
-//      and last dots are inset by half a column rather than touching the frame.
+//   1. Points run edge to edge: the first sits at the left of the plot and the
+//      last at the right, with only a small inset so the end dots are not cut.
+//      (They used to sit at the middle of an equal column each, which left a
+//      wide empty band either side whenever a range had only a few points.)
 //   2. The area fill closes down to the baseline at the first and last *data
 //      points*, not at the frame edges — otherwise it splays out past the line.
 
 export const VIEWBOX_WIDTH = 1000;
 export const VIEWBOX_HEIGHT = 200;
+/** How far, in percent of the plot width, the first and last points sit from its edges. */
+export const EDGE_INSET = 0.6;
 /** Vertical breathing room, in viewBox units, kept above and below the series. */
 export const VERTICAL_PADDING = 14;
 
@@ -26,8 +29,7 @@ export const VERTICAL_PADDING = 14;
  */
 export function pointXPercent(i, n) {
   if (n <= 1) return 50;
-  const halfColumn = 100 / (2 * n);
-  return halfColumn + (i * (100 - 2 * halfColumn)) / (n - 1);
+  return EDGE_INSET + (i * (100 - 2 * EDGE_INSET)) / (n - 1);
 }
 
 /**
