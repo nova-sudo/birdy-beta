@@ -17,8 +17,12 @@ const openAddClient = vi.fn()
 const openImport = vi.fn()
 
 const whop = []
-vi.mock("@whop/checkout/react", () => ({
-  WhopCheckoutEmbed: (props) => { whop.push(props); return <div data-testid="whop-checkout" data-plan={props.planId} /> },
+// What Whop's two packages render, as the app's own wrapper uses them.
+vi.mock("@whop/elements", () => ({ loadWhop: () => Object.assign(Promise.resolve(null), { retry: () => Promise.resolve(null) }) }))
+vi.mock("@whop/elements-react", () => ({
+  WhopElements: ({ children }) => children,
+  Checkout: (props) => { whop.push(props); return <div data-testid="whop-checkout" data-plan={props.plan} /> },
+  CheckoutElement: () => null,
 }))
 vi.mock("@/components/billing/plans", async (importOriginal) => {
   const real = await importOriginal()
@@ -307,6 +311,23 @@ describe("SetupPage: the plan step", () => {
     replies["GET /api/billing/status"] = [200, { ...PAID }]
     page()
     await waitFor(() => expect(refresh).toHaveBeenCalledWith("billing"))
+  })
+
+  it("waits for a plan paid on the bank's page instead of selling it again", async () => {
+    state.facts = TOOLS_IN()
+    route.search = "checkout=plan&payment=pay_1&status=succeeded"
+    replies["GET /api/billing/status"] = [200, { ...NO_PLAN }]
+    page()
+    expect(await screen.findByText("Waiting for the payment to show up")).toBeInTheDocument()
+    expect(screen.queryByTestId("whop-checkout")).not.toBeInTheDocument()
+  })
+
+  it("says so when the bank's page didn't take the payment", async () => {
+    state.facts = TOOLS_IN()
+    route.search = "checkout=plan&payment=pay_1&status=failed"
+    page()
+    expect(await screen.findByText(/payment didn’t go through/)).toBeInTheDocument()
+    expect(await screen.findByTestId("whop-checkout")).toBeInTheDocument()
   })
 
   it("starts a sandbox account's plan without a checkout", async () => {

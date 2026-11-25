@@ -4,6 +4,7 @@
 // Whop top-up checkout. The balance itself comes from the shared useCredits.
 
 import { useCallback, useEffect, useState } from "react";
+import { WHOP_RETURN_PARAMS, checkoutOutcome, checkoutProblem } from "@/components/billing/whop";
 import { apiRequest } from "@/lib/api";
 import { useCredits } from "@/hooks/useCredits";
 import { offeredPacks, withoutParam } from "@/lib/plan-billing";
@@ -18,6 +19,7 @@ export function useCreditUsage() {
   const [packsLoading, setPacksLoading] = useState(true);
   const [pack, setPack] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -45,8 +47,10 @@ export function useCreditUsage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("topup") === "success") {
-      window.history.replaceState(null, "", withoutParam(window.location.pathname + window.location.search, "topup"));
-      pollAfterTopup();
+      window.history.replaceState(null, "", withoutParam(window.location.pathname + window.location.search, "topup", ...WHOP_RETURN_PARAMS));
+      const problem = checkoutProblem(checkoutOutcome(params));
+      if (problem) setError(problem);
+      else pollAfterTopup();
     }
   }, [pollAfterTopup]);
 
@@ -60,5 +64,6 @@ export function useCreditUsage() {
     packs: offeredPacks(packs), packsLoading,
     pack, pickPack: setPack, closePack: () => setPack(null), topupDone,
     success, clearSuccess: () => setSuccess(null),
+    error, clearError: () => setError(null),
   };
 }

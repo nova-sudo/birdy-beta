@@ -4,8 +4,12 @@ import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
-vi.mock("@whop/checkout/react", () => ({
-  WhopCheckoutEmbed: ({ planId, returnUrl }) => <div data-testid="whop" data-plan={planId} data-return={returnUrl} />,
+// What Whop's two packages render, as the app's own wrapper uses them.
+vi.mock("@whop/elements", () => ({ loadWhop: () => Object.assign(Promise.resolve(null), { retry: () => Promise.resolve(null) }) }))
+vi.mock("@whop/elements-react", () => ({
+  WhopElements: ({ children }) => children,
+  Checkout: ({ plan, returnUrl, children }) => <div data-testid="whop" data-plan={plan} data-return={returnUrl}>{children}</div>,
+  CheckoutElement: () => null,
 }))
 vi.mock("@/components/billing/plans", () => ({
   PLAN_ORDER: ["starter", "growth", "scale"],
@@ -104,10 +108,34 @@ describe("PlanSection", () => {
     expect(whop.dataset.return).toMatch(/topup=success$/)
   })
 
+  it("leaves what Whop opens on the page body clickable", async () => {
+    renderSection()
+    await userEvent.click(await screen.findByRole("button", { name: "Top up" }))
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Top up credits" })).getByRole("button", { name: /1,000 credits/ }))
+    await screen.findByTestId("whop")
+    await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"))
+    await userEvent.click(screen.getByTestId("checkout-scrim"))
+    expect(screen.getByTestId("whop")).toBeInTheDocument()
+    await userEvent.keyboard("{Escape}")
+    expect(screen.queryByTestId("whop")).toBeNull()
+  })
+
   it("reads Whop's return flag and drops it from the address", async () => {
     window.history.replaceState(null, "", "/settings?section=plan&topup=success")
     renderSection()
     expect(await screen.findByText(/Credits added/)).toBeInTheDocument()
+    expect(window.location.search).toBe("?section=plan")
+  })
+
+  it.each([
+    ["checkout", "failed", /payment didn’t go through/],
+    ["checkout", "canceled", /payment was canceled/],
+    ["topup", "failed", /payment didn’t go through/],
+  ])("doesn't call an unpaid %s a success (%s)", async (flag, status, line) => {
+    window.history.replaceState(null, "", `/settings?section=plan&${flag}=success&payment=pay_1&status=${status}`)
+    renderSection()
+    expect(await screen.findByText(line)).toBeInTheDocument()
+    expect(screen.queryByText(/Credits added|Subscription activated/)).toBeNull()
     expect(window.location.search).toBe("?section=plan")
   })
 })

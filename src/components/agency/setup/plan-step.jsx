@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { Button, Notice, OptionCard, Pill, Skeleton } from "@/components/by";
 import { PLANS } from "@/components/billing/plans";
-import { WHOP_ENVIRONMENT, storedEmail } from "@/components/billing/whop";
+import { checkoutOutcome, checkoutProblem } from "@/components/billing/whop";
 import { apiRequest } from "@/lib/api";
 import { EXTRA_CLIENT_PRICE } from "@/lib/plan-billing";
 import { clientsToFit } from "@/lib/setup-steps";
@@ -23,7 +23,7 @@ function CheckoutSkeleton() {
   );
 }
 
-// Whop's script failed to load at all (offline, blocked): say so instead of a blank box.
+// The checkout's code failed to load at all (offline, blocked): say so instead of a blank box.
 function CheckoutUnavailable() {
   return (
     <Notice tone="danger" action={<Button size="sm" onClick={() => window.location.reload()}>Reload</Button>}>
@@ -32,12 +32,12 @@ function CheckoutUnavailable() {
   );
 }
 
-const WhopCheckoutEmbed = dynamic(
-  () => import("@whop/checkout/react").then((m) => m.WhopCheckoutEmbed).catch(() => CheckoutUnavailable),
+const WhopCheckout = dynamic(
+  () => import("@/components/billing/whop-checkout").then((m) => m.WhopCheckout).catch(() => CheckoutUnavailable),
   { ssr: false, loading: CheckoutSkeleton },
 );
 
-/** How long the embed may take to say it's ready before we offer to load it again. */
+/** How long the checkout may take to say it's ready before we offer to load it again. */
 const LOAD_TIMEOUT = 20000;
 /** Whop's activation takes seconds; keep checking, more slowly, until it lands. */
 const POLL_DELAYS = [1500, 3000, 5000, 8000, 12000];
@@ -140,8 +140,6 @@ function PlanPicker({ facts, fit, onActive }) {
   const plan = PLANS.find((p) => p.id === planId) ?? null;
   const [phase, setPhase] = useState("picking"); // picking | waiting
   const [slow, setSlow] = useState(false);
-  const [email, setEmail] = useState("");
-  const [stateId, setStateId] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [stuck, setStuck] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -157,7 +155,6 @@ function PlanPicker({ facts, fit, onActive }) {
     void onActive();
   }, [onActive]);
 
-  useEffect(() => setEmail(storedEmail()), []);
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const waitForIt = useCallback(() => {
@@ -173,16 +170,23 @@ function PlanPicker({ facts, fit, onActive }) {
   }, [finish]);
 
   // Back from Whop's return URL (a payment that needed the bank's confirmation):
-  // the same plan's checkout picks up where it was, and if the plan is already
-  // on, setup carries on at once.
-  const returned = search?.get(RETURN_FLAG) === "plan" || Boolean(search?.get("state_id"));
+  // a paid plan is waited for (and if it's already on, setup carries on at
+  // once); an unpaid one says so, with the same plan's checkout open again.
+  const returned = search?.get(RETURN_FLAG) === "plan";
   useEffect(() => {
     if (!returned) return;
-    const back = search.get("state_id");
+    const outcome = checkoutOutcome(search);
     const picked = PLANS.find((p) => p.id === readPick());
     if (picked) setPlanId(picked.id);
-    if (back) setStateId(back);
-    void fetchBilling().then((status) => { if (status?.subscribed) finish(); });
+    if (checkoutProblem(outcome)) {
+      setProblem(checkoutProblem(outcome));
+      return;
+    }
+    if (outcome) setPhase("waiting");
+    void fetchBilling().then((status) => {
+      if (status?.subscribed) finish();
+      else if (outcome) waitForIt();
+    });
   }, [returned]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A checkout that never says it's ready gets an offer to load it again.
@@ -252,22 +256,18 @@ function PlanPicker({ facts, fit, onActive }) {
     }
     return (
       <div className="flex flex-col gap-3">
+        {problem && <Notice tone="danger">{problem}</Notice>}
         {stuck && !loaded && (
           <Notice tone="warning" action={<Button size="sm" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>}>
             The checkout is taking a while to load. Check your connection and try again.
           </Notice>
         )}
         <div className="min-h-72 rounded-by-lg border border-by-line bg-by-surface p-3 shadow-by-card">
-          <WhopCheckoutEmbed
+          <WhopCheckout
             key={`${plan.id}:${attempt}`}
             planId={plan.planId}
-            environment={WHOP_ENVIRONMENT}
-            theme="light"
-            skipRedirect
             returnUrl={`${window.location.origin}/welcome?${RETURN_FLAG}=plan`}
-            stateId={stateId ?? undefined}
-            prefill={email ? { email } : undefined}
-            onStateChange={(state) => { if (state !== "loading") setLoaded(true); }}
+            onReady={() => setLoaded(true)}
             onComplete={waitForIt}
             fallback={<CheckoutSkeleton />}
           />

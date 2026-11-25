@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { WHOP_RETURN_PARAMS, checkoutOutcome, checkoutProblem } from "@/components/billing/whop";
 import { apiRequest } from "@/lib/api";
 import { EXTRA_CLIENT_PRICE, withoutParam } from "@/lib/plan-billing";
 
@@ -49,8 +50,10 @@ export function useBilling() {
     // Whop's returnUrl, for payment methods that leave the page (3DS, pay later).
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      window.history.replaceState(null, "", withoutParam(window.location.pathname + window.location.search, "checkout"));
-      pollAfterCheckout();
+      window.history.replaceState(null, "", withoutParam(window.location.pathname + window.location.search, "checkout", ...WHOP_RETURN_PARAMS));
+      const problem = checkoutProblem(checkoutOutcome(params));
+      if (problem) setError(problem);
+      else pollAfterCheckout();
     }
   }, [load, pollAfterCheckout]);
 
