@@ -295,3 +295,26 @@ describe("bucketSeries with repeated dates", () => {
     expect(out.values).toEqual([3])
   })
 })
+
+describe("fillDays", () => {
+  it("adds a zero row for each day in the range that has none, and keeps the rest", async () => {
+    const { fillDays } = await import("../portfolio-series")
+    const rows = [{ date: "2020-03-02", leads: 4 }, { date: "2020-03-05", leads: 1 }]
+    const out = fillDays(rows, "2020-03-01", "2020-03-06", (date) => ({ date, leads: 0 }))
+    expect(out.map((r) => r.date)).toEqual(["2020-03-01", "2020-03-02", "2020-03-03", "2020-03-04", "2020-03-05", "2020-03-06"])
+    expect(out.map((r) => r.leads)).toEqual([0, 4, 0, 0, 1, 0])
+  })
+
+  it("never adds days after today, and leaves the rows alone without a start", async () => {
+    const { fillDays } = await import("../portfolio-series")
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, "0")
+    const day = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+    const nextWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)
+    const out = fillDays([], day(yesterday), day(nextWeek), (date) => ({ date, leads: 0 }))
+    expect(out.map((r) => r.date)).toEqual([day(yesterday), day(now)])
+    const rows = [{ date: "2020-03-02", leads: 4 }]
+    expect(fillDays(rows, null, null, (date) => ({ date }))).toBe(rows)
+  })
+})

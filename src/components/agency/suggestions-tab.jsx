@@ -150,7 +150,7 @@ export function SuggestionsTab({ section: which }) {
           </div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 px-7 pb-5">
             <AskBar
-              className="pointer-events-auto"
+              className="pointer-events-auto mx-auto w-full max-w-[820px]"
               placeholder={`Ask ${OPS.name} about these suggestions`}
               busy={chat.loading}
               onSubmit={(text) => {

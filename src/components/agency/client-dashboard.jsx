@@ -151,7 +151,7 @@ export function ClientDashboard({ clientId, section = OPS_SECTION, views = CLIEN
 
         <div className="shrink-0 px-7 pb-5">
           <AskBar
-            className="w-full"
+            className="mx-auto w-full max-w-[820px]"
             placeholder={client ? `Ask ${OPS.name} about ${client.name}'s ${current.ask}` : `Ask ${OPS.name}`}
             busy={chat.loading}
             onSubmit={(text) => {

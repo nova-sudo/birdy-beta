@@ -16,6 +16,7 @@ import {
 import {
   PREVIOUS_PERIOD,
   bucketSeries,
+  fillDays,
   callTimestamps,
   scaleSeriesToTotal,
   subtractPeriods,
@@ -344,7 +345,11 @@ export function usePortfolioData({
     const allLeadDays = leadDaysState;
     const range = presetToDateRange(preset);
     const before = previousWindow(range.start_date, range.end_date);
-    const leadDays = range.start_date ? allLeadDays.filter((d) => d.date >= range.start_date) : allLeadDays;
+    // A day with no leads has no row; it is still a day, at zero, so the line does not jump over it.
+    const leadDays = fillDays(
+      range.start_date ? allLeadDays.filter((d) => d.date >= range.start_date) : allLeadDays,
+      range.start_date, range.end_date, (date) => ({ date, leads: 0, closes: 0 }),
+    );
     // The dashed line only makes sense point for point, so it is offered at daily granularity only.
     const plotted = [...new Set(leadDays.map((d) => d.date))].sort();
     const earlier = (rows, valueOf) =>
