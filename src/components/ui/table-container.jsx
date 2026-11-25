@@ -458,6 +458,14 @@ const StyledTable = ({
         tr.row-hoverable:hover .fixed-column-odd {
           background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-row-zebra));
         }
+        /* The pinned checkbox and status cells are solid for the same reason,
+           so they need the same mixed tint or the hover stops short of them. */
+        tr.row-hoverable:hover .pinned-cell-plain {
+          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
+        }
+        tr.row-hoverable:hover .pinned-cell-zebra {
+          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-row-zebra));
+        }
 
         @media (min-width: 768px) {
           .fixed-column-even,
@@ -730,7 +738,7 @@ const StyledTable = ({
                 // The sticky cells need that same colour flattened: they scroll
                 // over their neighbours, and a 60%-alpha tint would let the
                 // columns sliding underneath show through.
-                const stickyRowBg = row._isSyncing ? "cell-syncing" : rowBg;
+                const stickyRowBg = row._isSyncing ? "cell-syncing" : `${rowBg} ${rowBg === "bg-pd-row-zebra" ? "pinned-cell-zebra" : rowBg === "bg-pd-surface" ? "pinned-cell-plain" : ""}`;
                 const isToggling = showToggleCol && togglingRows.has(row.id);
                 const isActive = String(row.status).toLowerCase() === "active";
 

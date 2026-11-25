@@ -83,6 +83,30 @@ export function parseDayLocal(value) {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
+/**
+ * Rows for every calendar day from `start` to `end` (yyyy-mm-dd, both included, never past today):
+ * the rows given, plus `blank(date)` for each day that has none. For series where a missing day
+ * means zero (leads and closes are counted across the whole range, so a day with none simply has
+ * no row). Without it the chart skipped those days and joined the days either side.
+ */
+export function fillDays(rows, start, end, blank) {
+  const list = rows ?? [];
+  if (!start || !DAY_ONLY.test(start)) return list;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const last = end && DAY_ONLY.test(end) ? parseDayLocal(end) : today;
+  const stop = last > today ? today : last;
+  const have = new Set(list.map((r) => r.date));
+  const out = [...list];
+  const pad = (n) => String(n).padStart(2, "0");
+  // Bounded: a range is at most a few years of days.
+  for (let d = parseDayLocal(start), i = 0; d <= stop && i < 4000; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), i += 1) {
+    const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if (!have.has(key)) out.push(blank(key));
+  }
+  return out.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
 export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
   const bucket = BUCKET[granularity] ?? BUCKET.Daily;
   const totals = new Map();

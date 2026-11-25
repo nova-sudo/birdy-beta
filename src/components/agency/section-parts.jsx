@@ -152,7 +152,7 @@ export function AskDock({ section, chat, placeholder, title, floating = true, ch
     setAsking(true);
     chat.send(text);
   };
-  const bar = <AskBar className={floating ? "pointer-events-auto" : "w-full"} placeholder={placeholder} busy={chat.loading} onSubmit={ask} />;
+  const bar = <AskBar className={floating ? "pointer-events-auto mx-auto w-full max-w-[820px]" : "mx-auto w-full max-w-[820px]"} placeholder={placeholder} busy={chat.loading} onSubmit={ask} />;
   return (
     <div className="flex min-h-0 flex-1">
       <div className="relative flex min-w-0 flex-1 flex-col">

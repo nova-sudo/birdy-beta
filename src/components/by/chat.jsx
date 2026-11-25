@@ -1,9 +1,13 @@
 import { BirdyAvatar } from "./avatar";
 import { cn } from "./cn";
 
+/** How an agent is titled over its replies: "Birdy | Agency Ops". Birdy itself stays "Birdy". */
+export const agentTitle = (name) => (!name || /^Birdy\b/.test(name) ? name : `Birdy | ${name}`);
+
 /**
  * The line over a reply: Birdy in its frame, who is speaking, and an optional note.
- * @param {string} props.name e.g. "Birdy"
+ * Every agent is Birdy, so the line reads "Birdy | <agent>".
+ * @param {string} props.name the agent, e.g. "Agency Ops"; shown as "Birdy | Agency Ops"
  * @param {React.ReactNode} [props.note] e.g. the time, or the tools used
  * @param {React.ReactNode} [props.avatar] another agent's face (32px); Birdy in its frame when left out
  */
@@ -11,7 +15,7 @@ export function ChatSender({ name, note, avatar, className, ...props }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-2 font-by-body", className)} {...props}>
       {avatar ?? <BirdyAvatar size={32} />}
-      <b className="font-by-display text-by-body-lg font-semibold text-by-text">{name}</b>
+      <b className="font-by-display text-by-body-lg font-semibold text-by-text">{agentTitle(name)}</b>
       {note && <span className="text-by-body-sm text-by-muted">{note}</span>}
     </div>
   );

@@ -61,7 +61,6 @@ describe("AppShell: the rail", () => {
   it.each([
     ["Agency Ops", "/dashboard"],
     ["Sales Coach", "/sales-coach"],
-    ["Clients", "/clients"],
     ["Settings", "/settings"],
   ])("opens %s at %s", async (name, href) => {
     shell()
@@ -73,7 +72,8 @@ describe("AppShell: the rail", () => {
     route.pathname = "/hub/agents/media-buying"
     shell()
     expect(screen.getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("aria-current", "page")
-    expect(screen.getByRole("button", { name: "Clients" })).not.toHaveAttribute("aria-current")
+    // Clients has no tile: Agency Ops' Dashboard tab is the Clients table.
+    expect(screen.queryByRole("button", { name: "Clients" })).toBeNull()
   })
 
   it("flags Media Buyer with the agent’s open work, and no section when there is none", () => {

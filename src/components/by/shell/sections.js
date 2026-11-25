@@ -12,7 +12,8 @@ export const SECTIONS = [
   { id: "coach", name: "Sales Coach", description: "Your entire agency", icon: Phone, tile: "bg-by-coach-bg text-by-coach", solid: "bg-by-coach text-by-on-accent", enabled: true },
   // Hidden for launch. Its colour has not been chosen, so it borrows the neutral tile.
   { id: "creative", name: "Creative Strategist", description: "Your entire agency", icon: Palette, tile: "bg-by-sunken text-by-text-2", solid: "bg-by-text text-by-on-accent", enabled: false },
-  { id: "clients", name: "Clients", description: "Every client you run", icon: Users, tile: "bg-by-clients-bg text-by-clients", solid: "bg-by-clients text-by-on-accent", enabled: true },
+  // Off the rail: Agency Ops' Dashboard tab is the same Clients table. The /clients page still works.
+  { id: "clients", name: "Clients", description: "Every client you run", icon: Users, tile: "bg-by-clients-bg text-by-clients", solid: "bg-by-clients text-by-on-accent", enabled: false },
 ];
 
 /** The sections shown on the rail. */

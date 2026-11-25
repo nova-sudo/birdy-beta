@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
-import { bucketSeries, PREVIOUS_PERIOD } from "@/lib/portfolio-series";
+import { bucketSeries, fillDays, PREVIOUS_PERIOD } from "@/lib/portfolio-series";
 import {
   abbreviate,
   aggregateCampaignRows,
@@ -14,6 +14,7 @@ import {
   campaignRowsFromGroups,
   coverageNote,
   mergeDailyMetrics,
+  scopeGroups,
 } from "@/lib/marketing-aggregate";
 
 // ─── Where the Marketing Hub's figures come from ────────────────────────────
@@ -75,9 +76,12 @@ export function useMarketingHubData({
   const [leadDays, setLeadDays] = useState([]);
   const [seriesLoading, setSeriesLoading] = useState(true);
 
+  // The per-day lead counts must cover the same clients as the spend they are
+  // divided by. With one client picked, asking for every client's leads drew
+  // that client's spend over the whole agency's leads: a CPL of pennies.
   const groupIds = useMemo(
-    () => (clientGroups ?? []).map((g) => g.id).join(","),
-    [clientGroups]
+    () => scopeGroups(clientGroups ?? [], selectedClientGroup).map((g) => g.id).join(","),
+    [clientGroups, selectedClientGroup]
   );
 
   const formatMoney = useCallback(
@@ -324,7 +328,12 @@ export function useMarketingHubData({
     // no row until the first refresh after midnight). Where they disagree, say
     // so on the card rather than letting the two numbers look contradictory.
     const spendSeries = bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend);
-    const leadSeries = bucketSeries(leadRows, (d) => d.date, granularity, (d) => Number(d.leads) || 0);
+    // Leads are counted across the whole range, so a day with no row is a day with none: drawn at zero.
+    const { start_date: seriesStart, end_date: seriesEnd } = presetToDateRange(datePreset);
+    const leadSeries = bucketSeries(
+      fillDays(leadRows, seriesStart, seriesEnd, (date) => ({ date, leads: 0 })),
+      (d) => d.date, granularity, (d) => Number(d.leads) || 0,
+    );
     const sum = (vs) => (vs ?? []).reduce((a, b) => a + b, 0);
 
     return {

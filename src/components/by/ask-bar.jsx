@@ -24,7 +24,8 @@ export function AskBar({ placeholder, onSubmit, busy = false, className, ...prop
         setValue("");
       }}
       className={cn(
-        "flex items-center gap-2.5 rounded-by-xl border border-by-line bg-by-surface py-2 pr-2 pl-4.5 shadow-by-floating",
+        // A pill with a soft purple glow, so it stands off the page it floats over.
+        "flex items-center gap-2.5 rounded-full border border-by-accent-line bg-by-surface py-2 pr-2 pl-5.5 shadow-[0_0_0_4px_color-mix(in_srgb,var(--by-accent)_10%,transparent),0_10px_36px_-8px_color-mix(in_srgb,var(--by-accent)_45%,transparent)]",
         "transition-colors duration-(--by-dur-fast) ease-by-out focus-within:border-by-accent",
         className,
       )}

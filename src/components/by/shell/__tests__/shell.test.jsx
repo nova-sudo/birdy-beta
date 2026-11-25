@@ -18,7 +18,7 @@ const section = (id) => SECTIONS.find((s) => s.id === id)
 
 describe("sections", () => {
   it("keeps Creative Strategist off the rail", () => {
-    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Media Buyer", "Sales Coach", "Clients"])
+    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Media Buyer", "Sales Coach"])
   })
 })
 
@@ -26,7 +26,7 @@ describe("Rail", () => {
   it("lists the sections and marks the open one", () => {
     render(<Rail activeId="buyer" />)
     const nav = screen.getByRole("navigation", { name: "Sections" })
-    expect(within(nav).getAllByRole("button")).toHaveLength(4)
+    expect(within(nav).getAllByRole("button")).toHaveLength(3)
     expect(screen.getByRole("button", { name: "Media Buyer" })).toHaveAttribute("aria-current", "page")
     expect(screen.getByRole("button", { name: "Sales Coach" })).not.toHaveAttribute("aria-current")
     expect(screen.queryByRole("button", { name: /Creative/ })).not.toBeInTheDocument()
@@ -77,9 +77,9 @@ describe("Rail", () => {
   it("reports the section or settings that was chosen", async () => {
     const onSelect = vi.fn()
     render(<Rail activeId="ops" onSelect={onSelect} />)
-    await userEvent.click(screen.getByRole("button", { name: "Clients" }))
+    await userEvent.click(screen.getByRole("button", { name: "Sales Coach" }))
     await userEvent.click(screen.getByRole("button", { name: "Settings" }))
-    expect(onSelect.mock.calls).toEqual([["clients"], ["settings"]])
+    expect(onSelect.mock.calls).toEqual([["coach"], ["settings"]])
   })
 
   it("shows credits and the user when given", () => {
@@ -207,10 +207,11 @@ describe("SectionHeader", () => {
     expect(within(screen.getByRole("tablist")).getByRole("button", { name: "More" })).toBeInTheDocument()
   })
 
-  it("uses an icon tile for Birdy, not the mascot", () => {
+  it("shows the name and its line, with no icon: the section's icon is on the rail", () => {
     const { container } = render(<SectionHeader section={section("ops")} {...base} />)
     expect(container.querySelector(".rounded-full.overflow-hidden")).toBeNull()
-    expect(container.querySelector("header svg")).not.toBeNull()
+    expect(container.querySelector("header h1").previousElementSibling).toBeNull()
+    expect(container.querySelector("header svg")).toBeNull()
   })
 
   it("passes tab changes up", async () => {
