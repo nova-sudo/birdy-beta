@@ -9,21 +9,21 @@ const ROUTE = {
   status: "done", seconds: 34, credits: 18, limit_hit: null,
   steps: [
     step(),
-    step({ id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", summary: "Chose Media Buyer", asked_by: "s1" }),
-    step({ id: "s3", agent: "media_buyer", name: "Media Buyer", summary: "6 campaigns checked", asked_by: "s2", question: "Did leads change?", credits: 9, seconds: 20 }),
+    step({ id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", summary: "Chose Marketing Guru", asked_by: "s1" }),
+    step({ id: "s3", agent: "media_buyer", name: "Marketing Guru", summary: "6 campaigns checked", asked_by: "s2", question: "Did leads change?", credits: 9, seconds: 20 }),
   ],
 }
 
 describe("agentInfo", () => {
   it("knows the main agents, their colour role and icon", () => {
     expect(agentInfo("birdy")).toMatchObject({ name: "Birdy", role: "ops", icon: "mascot", kind: "orchestrator" })
-    expect(agentInfo("media_buyer")).toMatchObject({ name: "Media Buyer", role: "buyer", icon: "megaphone", kind: "main" })
+    expect(agentInfo("media_buyer")).toMatchObject({ name: "Marketing Guru", role: "buyer", icon: "megaphone", kind: "main" })
     expect(agentInfo("sales_coach")).toMatchObject({ name: "Sales Coach", role: "coach", icon: "phone" })
   })
 
   it("gives a sub-agent the neutral treatment and keeps its main agent", () => {
     const info = agentInfo("sub:abc", { name: "Form checker", parent: "media_buyer" })
-    expect(info).toMatchObject({ name: "Form checker", role: "neutral", icon: "bot", kind: "sub", parent: "media_buyer", parentName: "Media Buyer" })
+    expect(info).toMatchObject({ name: "Form checker", role: "neutral", icon: "bot", kind: "sub", parent: "media_buyer", parentName: "Marketing Guru" })
     expect(agentChatHref(info)).toBe("/media-buyer/chat")
   })
 
@@ -44,12 +44,12 @@ describe("normalizeRoute", () => {
     const r = normalizeRoute({ status: "weird", seconds: "abc", credits: -3, limit_hit: "other", steps: [{ agent: "media_buyer", status: "??", tools: [{ label: "Leads by ad" }, null, {}] }] })
     expect(r).toMatchObject({ status: "done", seconds: 0, credits: 0, limit_hit: null })
     expect(r.steps[0]).toMatchObject({ id: "step-0", status: "done", kind: "main", tools: [{ label: "Leads by ad", detail: null }] })
-    expect(r.steps[0].info.name).toBe("Media Buyer")
+    expect(r.steps[0].info.name).toBe("Marketing Guru")
   })
 
   it("finds a sub-agent's main agent from who asked it, or the nearest main agent before it", () => {
     const asked = normalizeRoute({ status: "done", steps: [step({ id: "a", agent: "media_buyer" }), step({ id: "b", agent: "sub:1", kind: "sub", asked_by: "a" })] })
-    expect(asked.steps[1].info.parentName).toBe("Media Buyer")
+    expect(asked.steps[1].info.parentName).toBe("Marketing Guru")
     const nearest = normalizeRoute({ status: "done", steps: [step({ id: "a", agent: "sales_coach" }), step({ id: "b", agent: "birdy" }), step({ id: "c", agent: "sub:2", kind: "sub" })] })
     expect(nearest.steps[2].info.parentName).toBe("Sales Coach")
   })
@@ -57,7 +57,7 @@ describe("normalizeRoute", () => {
   it("draws a one-off helper under the main agent that started it, with no Context row", () => {
     const r = normalizeRoute({ status: "done", steps: [step({ id: "a", agent: "media_buyer" }), step({ id: "b", agent: "sub:helper-1a2b", name: "Ad check", kind: "helper", asked_by: "media_buyer" })] })
     expect(r.steps[1].kind).toBe("helper")
-    expect(r.steps[1].info).toMatchObject({ name: "Ad check", kind: "helper", role: "neutral", icon: "bot", parent: "media_buyer", parentName: "Media Buyer", context: null })
+    expect(r.steps[1].info).toMatchObject({ name: "Ad check", kind: "helper", role: "neutral", icon: "bot", parent: "media_buyer", parentName: "Marketing Guru", context: null })
     expect(agentChatHref(r.steps[1].info)).toBe("/media-buyer/chat")
   })
 
@@ -100,9 +100,9 @@ describe("labels", () => {
     const r = normalizeRoute(ROUTE)
     expect(routeStatusLine(r)).toBe("Answer came back to Sales Coach")
     const working = normalizeRoute({ ...ROUTE, status: "working", steps: [ROUTE.steps[0], ROUTE.steps[1], { ...ROUTE.steps[2], status: "working", summary: "Checking lead forms…" }] })
-    expect(routeStatusLine(working)).toBe("Media Buyer: checking lead forms…")
+    expect(routeStatusLine(working)).toBe("Marketing Guru: checking lead forms…")
     const failed = normalizeRoute({ ...ROUTE, status: "failed", steps: [ROUTE.steps[0], { ...ROUTE.steps[2], status: "failed" }] })
-    expect(routeStatusLine(failed)).toBe("Media Buyer couldn’t finish its part")
+    expect(routeStatusLine(failed)).toBe("Marketing Guru couldn’t finish its part")
   })
 
   it("explains each limit in plain words", () => {
@@ -133,7 +133,7 @@ describe("asked by", () => {
   it("names the asking agent by step id or by agent key", () => {
     const r = normalizeRoute(ROUTE)
     expect(askedByName(r, findStep(r, "s3"))).toBe("Birdy")
-    expect(askedByName(r, { asked_by: "media_buyer" })).toBe("Media Buyer")
+    expect(askedByName(r, { asked_by: "media_buyer" })).toBe("Marketing Guru")
     expect(askedByName(r, findStep(r, "s1"))).toBeNull()
     expect(findStep(r, "nope")).toBeNull()
   })

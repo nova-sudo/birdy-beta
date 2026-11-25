@@ -71,18 +71,18 @@ describe("AppShell: the rail", () => {
   it("marks the section the current page belongs to", () => {
     route.pathname = "/hub/agents/media-buying"
     shell()
-    expect(screen.getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("aria-current", "page")
+    expect(screen.getByRole("button", { name: /Marketing Guru/ })).toHaveAttribute("aria-current", "page")
     // Clients has no tile: Agency Ops' Dashboard tab is the Clients table.
     expect(screen.queryByRole("button", { name: "Clients" })).toBeNull()
   })
 
-  it("flags Media Buyer with the agent’s open work, and no section when there is none", () => {
+  it("flags Marketing Guru with the agent’s open work, and no section when there is none", () => {
     const { unmount } = shell()
-    expect(screen.getByRole("button", { name: "Media Buyer, 8 waiting" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Marketing Guru, 8 waiting" })).toBeInTheDocument()
     unmount()
     work.count = null
     shell()
-    expect(screen.getByRole("button", { name: "Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Marketing Guru" })).toBeInTheDocument()
   })
 
   it("shows the credit balance, or no ring when credits are unavailable", () => {
@@ -101,7 +101,7 @@ describe("AppShell: other pages", () => {
   it("lists the pages with no tile and opens one", async () => {
     shell()
     await userEvent.click(screen.getByRole("button", { name: "Other pages" }))
-    // No Leads: the hub is retired, and leads live in Media Buyer's table.
+    // No Leads: the hub is retired, and leads live in Marketing Guru's table.
     expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["BirdyHub", "Ask Birdy"])
     await userEvent.click(screen.getByRole("menuitem", { name: "Ask Birdy" }))
     expect(push).toHaveBeenCalledWith("/ask-birdy")
@@ -191,7 +191,7 @@ describe("AppShell: agents that aren't set up", () => {
     team.body = { agents: { birdy: { status: "done" }, media_buyer: agent("open", { steps: { clients: true } }), sales_coach: agent("locked", { waits_on: "media_buyer" }), sub_agents: { status: "locked" } } }
     fresh()
     expect(await screen.findByRole("button", { name: "Sales Coach, locked" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Media Buyer, 8 waiting" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Marketing Guru, 8 waiting" })).toBeInTheDocument()
   })
 
   it("puts no locks on the rail when the team state can't be read", async () => {

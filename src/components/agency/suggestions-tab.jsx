@@ -30,7 +30,7 @@ const ICON_TONE = { danger: "bg-by-danger-bg text-by-danger", warning: "bg-by-wa
 /**
  * A section's Suggestions tab: what it suggests doing, most impact first,
  * each with "Do it for me" and Dismiss, and the history of what was done or dismissed.
- * Birdy lists every suggestion; Media Buyer and Sales Coach list their own.
+ * Birdy lists every suggestion; Marketing Guru and Sales Coach list their own.
  * With `?client=<id>` only that client's suggestions and history show.
  *
  * @param {import("./sections").SectionConfig} [props.section] Birdy when left out
@@ -89,7 +89,7 @@ export function SuggestionsTab({ section: which }) {
                 ) : suggestions.length === 0 ? (
                   <p className="mt-2 text-by-body-lg text-by-text-2">
                     {!ops && !section.ownsHistory
-                      ? `${OPS.name} has no suggestions yet. Birdy’s suggestions today come from its ad rules, and those are Media Buyer’s. Suggestions about calls will appear here.`
+                      ? `${OPS.name} has no suggestions yet. Birdy’s suggestions today come from its ad rules, and those are Marketing Guru’s. Suggestions about calls will appear here.`
                       : client ? `${OPS.name} has nothing to suggest for ${client.name} right now.` : `${OPS.name} is watching every client and will suggest the next thing here.`}
                   </p>
                 ) : (

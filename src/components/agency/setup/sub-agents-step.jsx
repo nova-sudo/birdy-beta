@@ -38,7 +38,7 @@ function chatProposals(messages) {
 
 /**
  * The last setup step, chat first like the interviews: a short intro and two
- * ways to start (ask Media Buyer or Sales Coach for ideas), then the ideas
+ * ways to start (ask Marketing Guru or Sales Coach for ideas), then the ideas
  * arrive in the conversation one at a time, each as one card to add, leave
  * out, or change first. What the owner chose shows as their reply. Finish
  * (or Skip for now) tells the server the step is done.

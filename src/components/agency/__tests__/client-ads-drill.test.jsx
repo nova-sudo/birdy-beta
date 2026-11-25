@@ -6,8 +6,8 @@ import { BUYER_CLIENT_VIEWS, ClientDashboard } from "../client-dashboard"
 import { BUYER_SECTION } from "../sections"
 
 // A client's own Ads table: the agency table's levels and drill-down, without Clients, limited to that client.
-// Media Buyer's Dashboard tab now draws the old Marketing Hub table (section-dashboard.test.jsx); the client
-// dashboard is still Birdy's, and is drawn here with Media Buyer's views as well.
+// Marketing Guru's Dashboard tab now draws the old Marketing Hub table (section-dashboard.test.jsx); the client
+// dashboard is still Birdy's, and is drawn here with Marketing Guru's views as well.
 
 const push = vi.fn()
 const replace = vi.fn()
@@ -78,7 +78,7 @@ beforeEach(() => {
   swr.data = { "/api/facebook-leads/filtered": { leads: LEADS } }
 })
 
-describe("Media Buyer inside a client", () => {
+describe("Marketing Guru inside a client", () => {
   it("has Campaigns, Ad sets, Ads and Leads, counted for this client only", () => {
     show("client=a")
     expect(levelTabs().getAllByRole("tab").map((t) => t.textContent)).toEqual(["Campaigns2", "Ad sets3", "Ads3", "Leads2"])

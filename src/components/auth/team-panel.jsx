@@ -26,7 +26,7 @@ export function TeamPanel() {
           question="Why did calls drop this week?"
           lead="Runs the agency view and hands work out"
           branches={BRANCHES}
-          label="An example: a question goes to Birdy, who passes it to Media Buyer or Sales Coach. Each has sub-agents of its own."
+          label="An example: a question goes to Birdy, who passes it to Marketing Guru or Sales Coach. Each has sub-agents of its own."
         />
       </div>
     </aside>

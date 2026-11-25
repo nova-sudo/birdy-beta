@@ -50,7 +50,7 @@ const under = (pathname, base) => pathname === base || pathname.startsWith(`${ba
  */
 export function activeRailId(pathname) {
   if (under(pathname, "/dashboard")) return "ops";
-  // The Media Buying Agent lives under BirdyHub today but belongs to Media Buyer.
+  // The Media Buying Agent lives under BirdyHub today but belongs to Marketing Guru.
   if (under(pathname, "/media-buyer") || under(pathname, "/campaigns") || under(pathname, "/hub/agents/media-buying")) return "buyer";
   if (under(pathname, "/sales-coach") || under(pathname, "/Sales-Hub")) return "coach";
   if (under(pathname, "/clients")) return "clients";
@@ -103,7 +103,7 @@ export const clientHref = (id) => `${DESTINATIONS.ops}?client=${encodeURICompone
 
 /**
  * Where picking a client in the switcher goes from the current page. Inside
- * Media Buyer or Sales Coach it stays in that section, on the same tab, and
+ * Marketing Guru or Sales Coach it stays in that section, on the same tab, and
  * on any section's Context it stays on Context; anywhere else it opens Agency
  * Ops for that client.
  */

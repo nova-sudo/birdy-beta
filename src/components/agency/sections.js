@@ -1,5 +1,5 @@
 // The three agent sections that share one set of screens: Birdy, Media
-// Buyer and Sales Coach. Media Buyer and Sales Coach have the same four tabs
+// Buyer and Sales Coach. Marketing Guru and Sales Coach have the same four tabs
 // (Chat, Bird's Eye, Dashboard, Suggestions); Birdy has Chat, Dashboard (the
 // old Portfolio Dashboard at its "birdseye" address) and Suggestions. What
 // differs lives here, so the screens read it instead of being copied three times.
@@ -59,7 +59,7 @@ export const SECTION_CONFIG = {
     ownsSuggestion: (s) => !aboutCalls(s),
     ownsHistory: true,
     subAgents: "media_buyer",
-    // Media Buyer's lessons, kept on Context.
+    // Marketing Guru's lessons, kept on Context.
     lessons: true,
   },
   coach: {

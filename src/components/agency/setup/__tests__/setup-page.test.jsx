@@ -74,7 +74,7 @@ beforeEach(() => {
 })
 
 describe("SetupPage", () => {
-  it("shows the checklist from the account's state, with Media Buyer locked in the team", async () => {
+  it("shows the checklist from the account's state, with Marketing Guru locked in the team", async () => {
     replies["GET /api/team/setup"] = [200, FRESH_TEAM]
     page()
     const list = screen.getByRole("complementary", { name: "Set up Birdy" })
@@ -82,8 +82,8 @@ describe("SetupPage", () => {
     expect(within(list).getByText("Connect Meta").closest("li")).toHaveTextContent("To do")
     const team = await screen.findByRole("navigation", { name: "Your team" })
     expect(within(team).getByRole("button", { name: /Agency Ops/ })).toHaveAttribute("aria-current", "step")
-    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toBeDisabled()
-    expect(within(team).getByRole("button", { name: /Media Buyer/ })).toHaveAttribute("title", "Unlocks after Agency Ops")
+    expect(within(team).getByRole("button", { name: /Marketing Guru/ })).toBeDisabled()
+    expect(within(team).getByRole("button", { name: /Marketing Guru/ })).toHaveAttribute("title", "Unlocks after Agency Ops")
   })
 
   it("saves the basics to the account", async () => {
@@ -143,14 +143,14 @@ describe("SetupPage", () => {
     expect(refresh).toHaveBeenCalledWith("clients")
   })
 
-  it("finishes Birdy and opens Media Buyer", async () => {
+  it("finishes Birdy and opens Marketing Guru", async () => {
     state.facts = OPS_DONE
     replies["GET /api/team/setup"] = [200, FRESH_TEAM]
     localStorage.setItem("onboarding_incomplete", "1")
     page()
-    await userEvent.click(await screen.findByRole("button", { name: /Set up Media Buyer/ }))
+    await userEvent.click(await screen.findByRole("button", { name: /Set up Marketing Guru/ }))
     expect(sent("POST", "/api/onboarding/complete")).toHaveLength(1)
-    // The server opens Media Buyer once Birdy is done, so its state is read again.
+    // The server opens Marketing Guru once Birdy is done, so its state is read again.
     await waitFor(() => expect(sent("GET", "/api/team/setup").length).toBeGreaterThan(1))
     expect(localStorage.getItem("onboarding_incomplete")).toBeNull()
     expect(push).toHaveBeenCalledWith("/welcome?s=buyer")
@@ -173,7 +173,7 @@ describe("SetupPage", () => {
     await waitFor(() => expect(screen.getByRole("complementary", { name: "Set up Birdy" })).toBeInTheDocument())
     expect(screen.queryByRole("navigation", { name: "Your team" })).not.toBeInTheDocument()
     // No team to hand over to: the last step only opens the app.
-    expect(screen.queryByRole("button", { name: /Set up Media Buyer/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Set up Marketing Guru/ })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
   })
 
@@ -516,7 +516,7 @@ describe("SetupPage: the celebration", () => {
     expect(within(dialog).getByRole("button", { name: "Open Agency Ops" })).toBeInTheDocument()
     expect(localStorage.getItem("birdy_ops_celebrated:sam@northside.test")).toBe("1")
 
-    await userEvent.click(within(dialog).getByRole("button", { name: /Set up Media Buyer/ }))
+    await userEvent.click(within(dialog).getByRole("button", { name: /Set up Marketing Guru/ }))
     expect(sent("POST", "/api/onboarding/complete")).toHaveLength(1)
     await waitFor(() => expect(push).toHaveBeenCalledWith("/welcome?s=buyer"))
   })

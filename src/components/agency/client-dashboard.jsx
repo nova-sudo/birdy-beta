@@ -32,7 +32,7 @@ export const CLIENT_VIEWS = [
   { value: "ads", label: "Ads", ask: "ads" },
   { value: "calls", label: "Calls", ask: "calls" },
 ];
-/** Media Buyer's tables inside a client: its ads first (campaigns, ad sets and ads), then the leads they brought. */
+/** Marketing Guru's tables inside a client: its ads first (campaigns, ad sets and ads), then the leads they brought. */
 export const BUYER_CLIENT_VIEWS = [
   { value: "ads", label: "Ads", ask: "ads" },
   { value: "leads", label: "Leads", ask: "leads" },
@@ -43,7 +43,7 @@ export const COACH_CLIENT_VIEWS = [
   { value: "reps", label: "Callers", ask: "callers" },
 ];
 const sentence = (label) => label.charAt(0) + label.slice(1).toLowerCase();
-// Birdy's Ads table opens on the ads themselves, as it always has; Media Buyer's on the campaigns.
+// Birdy's Ads table opens on the ads themselves, as it always has; Marketing Guru's on the campaigns.
 const OPS_ADS_DRILL = { ...CLIENT_DRILL, first: "ads" };
 
 /**

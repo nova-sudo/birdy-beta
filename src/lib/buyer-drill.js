@@ -1,5 +1,5 @@
 // The drill-down on the Ads tables: Clients → Campaigns → Ad sets → Ads → Leads across the agency
-// (Media Buyer's Dashboard table), and Campaigns → Ad sets → Ads → Leads inside one client.
+// (Marketing Guru's Dashboard table), and Campaigns → Ad sets → Ads → Leads inside one client.
 // Clicking a row narrows the next level to it; the narrowing lives in the address so a refresh
 // and the back button keep it. Plain functions; the page draws them.
 

@@ -58,7 +58,7 @@ export function CplForm({ initial, data, ctx, onSubmit, saveLabel }) {
   const [each, setEach] = useState(start.each);
   const { busy, error, setError, run } = useSave(onSubmit);
   const sym = symbolOf(data?.currency || ctx.currency);
-  // The reply lists the clients Media Buyer watches with their currency and current CPL target.
+  // The reply lists the clients Marketing Guru watches with their currency and current CPL target.
   const watched = Array.isArray(data?.clients)
     ? data.clients.filter((c) => c?.id).map((c) => ({ id: c.id, name: c.name || c.id, ad_account_currency: c.currency, target: c.target }))
     : ctx.watched;

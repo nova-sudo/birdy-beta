@@ -1,4 +1,4 @@
-// Budget pacing for Media Buyer's Projections: how far each client is through
+// Budget pacing for Marketing Guru's Projections: how far each client is through
 // this month's budget against how far through the month we are.
 //
 // This is the same arithmetic as the backend's budget pacing tool

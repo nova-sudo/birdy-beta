@@ -128,7 +128,7 @@ describe("Birdy › Reports", () => {
   })
 })
 
-describe("Media Buyer › Reports", () => {
+describe("Marketing Guru › Reports", () => {
   it("lists the agent's morning and weekly reports", async () => {
     wrap(<AgentReportsList client={null} />)
     const list = await screen.findByRole("list", { name: "The agent's reports" })

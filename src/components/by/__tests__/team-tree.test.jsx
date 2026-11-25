@@ -15,7 +15,7 @@ describe("TeamTree", () => {
   it("is one described picture with the question, Birdy, and each agent with its sub-agents", () => {
     const { container } = render(<TeamTree question="Why did calls drop?" lead="Hands work out" branches={BRANCHES} label="Birdy's team" />)
     expect(screen.getByRole("img", { name: "Birdy's team" })).toBeInTheDocument()
-    for (const text of ["Why did calls drop?", "Birdy", "Hands work out", "Media Buyer", "Sales Coach", "Budget watcher", "Weekly call check", "Deal review"]) {
+    for (const text of ["Why did calls drop?", "Birdy", "Hands work out", "Marketing Guru", "Sales Coach", "Budget watcher", "Weekly call check", "Deal review"]) {
       expect(container).toHaveTextContent(text)
     }
     expect(container).toHaveTextContent("Sub-agents")

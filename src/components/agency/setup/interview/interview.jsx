@@ -87,7 +87,7 @@ export function AgentInterview({ agent, team, onApply, onNext, ctx }) {
   }, [a.status, agent]);
   const count = answered(team, agent);
 
-  // The clients this agent works on: the ones Media Buyer was given, or every active one.
+  // The clients this agent works on: the ones Marketing Guru was given, or every active one.
   const watchedIds = team.agents.media_buyer?.values?.clients?.client_group_ids;
   const formCtx = useMemo(() => ({
     ...ctx,

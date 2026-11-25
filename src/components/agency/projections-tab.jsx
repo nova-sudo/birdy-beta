@@ -225,7 +225,7 @@ export function BuyerProjections({ client }) {
   );
 }
 
-/** Media Buyer › Projections. Only Media Buyer has one: budget pacing is the only projection Birdy computes. */
+/** Marketing Guru › Projections. Only Marketing Guru has one: budget pacing is the only projection Birdy computes. */
 export function ProjectionsTab({ section: which = "buyer" }) {
   const section = resolveSection(which);
   return (

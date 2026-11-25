@@ -8,7 +8,7 @@ import { buttonVariants } from "./button";
 /**
  * The bar for asking a section a question. Floats over the page content.
  *
- * @param {string} props.placeholder also the field's accessible name, e.g. "Ask Media Buyer about your clients"
+ * @param {string} props.placeholder also the field's accessible name, e.g. "Ask Marketing Guru about your clients"
  * @param {(text: string) => void} [props.onSubmit] called with the trimmed text; the bar then clears
  * @param {boolean} [props.busy] a reply is on its way: typing is still possible, sending waits
  */

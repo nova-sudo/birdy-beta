@@ -48,7 +48,7 @@ beforeEach(() => {
   seen.calls = null
 })
 
-describe("Media Buyer's Dashboard tab", () => {
+describe("Marketing Guru's Dashboard tab", () => {
   it("is the Marketing Hub's table, for every client, filling the page", () => {
     render(<SectionDashboard section="buyer" />)
     expect(screen.getByText("the Marketing Hub table")).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe("Media Buyer's Dashboard tab", () => {
       selectedClientGroup: null, datePreset: "last_7d", groupsLoading: false, clientGroups: GROUPS,
     })
     // The section's ask bar sits under it.
-    expect(screen.getByPlaceholderText(/Ask Media Buyer about your ads/)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/Ask Marketing Guru about your ads/)).toBeInTheDocument()
   })
 
   it("takes the client from the rail's switcher and the range from the header", () => {

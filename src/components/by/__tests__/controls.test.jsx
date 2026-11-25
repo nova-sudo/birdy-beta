@@ -82,14 +82,14 @@ describe("SearchField and DropdownTrigger", () => {
 
 describe("AskBar", () => {
   it("cannot send until something is typed", () => {
-    render(<AskBar placeholder="Ask Media Buyer" />)
+    render(<AskBar placeholder="Ask Marketing Guru" />)
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled()
   })
 
   it("sends the trimmed text on Enter and clears", async () => {
     const onSubmit = vi.fn()
-    render(<AskBar placeholder="Ask Media Buyer" onSubmit={onSubmit} />)
-    const input = screen.getByRole("textbox", { name: "Ask Media Buyer" })
+    render(<AskBar placeholder="Ask Marketing Guru" onSubmit={onSubmit} />)
+    const input = screen.getByRole("textbox", { name: "Ask Marketing Guru" })
     await userEvent.type(input, "  Why is Aura flagged?  {Enter}")
     expect(onSubmit).toHaveBeenCalledWith("Why is Aura flagged?")
     expect(input).toHaveValue("")
@@ -97,8 +97,8 @@ describe("AskBar", () => {
 
   it("ignores Enter on only spaces", async () => {
     const onSubmit = vi.fn()
-    render(<AskBar placeholder="Ask Media Buyer" onSubmit={onSubmit} />)
-    await userEvent.type(screen.getByRole("textbox", { name: "Ask Media Buyer" }), "   {Enter}")
+    render(<AskBar placeholder="Ask Marketing Guru" onSubmit={onSubmit} />)
+    await userEvent.type(screen.getByRole("textbox", { name: "Ask Marketing Guru" }), "   {Enter}")
     expect(onSubmit).not.toHaveBeenCalled()
   })
 })

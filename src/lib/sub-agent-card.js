@@ -39,7 +39,7 @@ export function readsLine(tools, parent) {
   return `${words.slice(0, -1).join(", ")} and ${words.at(-1).toLowerCase()}`
 }
 
-/** "Every day at 14:10", "Weekdays at 08:00", or "When Media Buyer asks". The time zone is left to the edit dialog. */
+/** "Every day at 14:10", "Weekdays at 08:00", or "When Marketing Guru asks". The time zone is left to the edit dialog. */
 export function runsLine(schedule, parent) {
   if (!schedule?.time) return `When ${PARENT_NAMES[parent] ?? "its main agent"} asks`
   return `${daysLine(schedule.days)} at ${schedule.time}`

@@ -12,7 +12,7 @@ const group = (id, name, { spend = 0, leads = 0, limit = null, funnel = null, ca
   hotprospector: { call_stats: calls ?? {}, daily_calls: [] },
 })
 
-describe("Media Buyer", () => {
+describe("Marketing Guru", () => {
   it("places a cost per lead against the client's limit", () => {
     expect(cplStanding(7, 6)).toBe("over")
     expect(cplStanding(5, 6)).toBe("under")

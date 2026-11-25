@@ -76,7 +76,7 @@ function NoAgent({ agent }) {
   );
 }
 
-/** Media Buyer › Reports: the Media Buying Agent's morning report, and its weekly one when it is on. */
+/** Marketing Guru › Reports: the Media Buying Agent's morning report, and its weekly one when it is on. */
 export function AgentReportsList({ client }) {
   const { agent, latest, loading, error, retry } = useBuyerAgent();
 

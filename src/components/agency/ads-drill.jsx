@@ -1,7 +1,7 @@
 "use client";
 
 // The Ads table with levels and drill-down. One implementation for both places it appears:
-// Media Buyer's agency table (Clients · Campaigns · Ad sets · Ads · Leads) and inside one client
+// Marketing Guru's agency table (Clients · Campaigns · Ad sets · Ads · Leads) and inside one client
 // (Campaigns · Ad sets · Ads · Leads). Clicking a row narrows the next level to it, down to the
 // leads one ad brought in; the level and filters live in the address (see useDrill).
 

@@ -1,4 +1,4 @@
-// What each Media Buyer rule says, as a title and a sentence with slots for its
+// What each Marketing Guru rule says, as a title and a sentence with slots for its
 // numbers. Shared by the playbook editor (components/agents/PlaybookRule) and
 // the setup interview, which shows the drafted rules as plain sentences.
 //

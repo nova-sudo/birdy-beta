@@ -72,13 +72,13 @@ describe("Birdy chat", () => {
     apiRequest.mockImplementation(() => ok({ conversations: [
       { ...LIST[1], session_id: "old" },
       { session_id: "b1", title: "Birdy's own", scope: "global", agent: "birdy", updated_at: new Date().toISOString() },
-      { session_id: "m1", title: "Media Buyer's chat", scope: "global", agent: "media_buyer", updated_at: new Date().toISOString() },
+      { session_id: "m1", title: "Marketing Guru's chat", scope: "global", agent: "media_buyer", updated_at: new Date().toISOString() },
     ] }))
     render(<AgencyChat />)
     const list = screen.getByRole("navigation", { name: "Conversations" })
     expect(await within(list).findByText("Birdy's own")).toBeInTheDocument()
     expect(within(list).getByText("Best creatives this month")).toBeInTheDocument()
-    expect(within(list).queryByText("Media Buyer's chat")).not.toBeInTheDocument()
+    expect(within(list).queryByText("Marketing Guru's chat")).not.toBeInTheDocument()
   })
 
   it("brings a chat kept in this browser up to date with the decisions on its saved conversation", async () => {

@@ -67,7 +67,7 @@ function setUpLines(facts) {
 }
 
 /**
- * Setup (/welcome), in order: Birdy's own setup chat, then Media Buyer's and
+ * Setup (/welcome), in order: Birdy's own setup chat, then Marketing Guru's and
  * Sales Coach's interviews, then sub-agents. "Your team" on the left shows
  * each as done, current or locked; the server's team state decides which is
  * open. `?s=` picks one (a locked one opens the next one to do), `?checklist=1`
@@ -123,7 +123,7 @@ export function SetupPage() {
     setFinishing(to);
     try {
       if (!setup.completed) await actions.complete();
-      // Finishing Birdy opens Media Buyer on the server.
+      // Finishing Birdy opens Marketing Guru on the server.
       await teamSetup.refresh();
       router.push(to === "buyer" ? "/welcome?s=buyer" : "/dashboard");
     } finally {

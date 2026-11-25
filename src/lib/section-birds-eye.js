@@ -1,8 +1,8 @@
-// What Media Buyer's and Sales Coach's Bird's Eye show, worked out from the
+// What Marketing Guru's and Sales Coach's Bird's Eye show, worked out from the
 // client groups the app already loads. No React here: plain figures in,
 // what to draw out. Birdy's own Bird's Eye is in ./birds-eye.js.
 //
-// Media Buyer reads only the ads side (Meta spend, leads, cost per lead and
+// Marketing Guru reads only the ads side (Meta spend, leads, cost per lead and
 // each client's limit); Sales Coach reads only the call side (the CRM funnel's
 // called step, and each client's per-day call series from Hot Prospector).
 
@@ -17,7 +17,7 @@ import { mergeDailyCalls } from "./saleshub-totals";
 const whole = (n) => Math.round(n).toLocaleString("en-GB");
 const percent = (part, all) => (all > 0 ? (part / all) * 100 : null);
 
-// ── Media Buyer ─────────────────────────────────────────────────────────────
+// ── Marketing Guru ─────────────────────────────────────────────────────────────
 
 /**
  * Where a client's cost per lead sits against the limit set for it.
@@ -40,7 +40,7 @@ export function buyerClientRows(groups) {
 }
 
 /**
- * Media Buyer's tiles for the agency: Spend, Leads, CPL. The CPL tile says how many clients are over their own limit.
+ * Marketing Guru's tiles for the agency: Spend, Leads, CPL. The CPL tile says how many clients are over their own limit.
  * @returns {{key, label, value, kind, delta, goodWhen, note, noteTone}[]}
  */
 export function buyerTiles({ current, previous, preset, rows }) {
@@ -60,7 +60,7 @@ export function buyerTiles({ current, previous, preset, rows }) {
   ];
 }
 
-/** Which series Media Buyer's chart switches between. Inside a client it adds Closed, as Birdy does. */
+/** Which series Marketing Guru's chart switches between. Inside a client it adds Closed, as Birdy does. */
 export const buyerChartKeys = (scoped) => (scoped ? ["leads", "spend", "cpl", "closes"] : ["leads", "spend", "cpl"]);
 
 /** The bands of the "Clients by cost per lead" card, in the order they are drawn. */
@@ -298,7 +298,7 @@ const AGAINST = { today: "yesterday", last_7d: "the previous 7 days" };
 const NOTABLE = 10;
 
 /**
- * Media Buyer's one line: the biggest move in spend, leads or cost per lead, and how many clients are over their limit.
+ * Marketing Guru's one line: the biggest move in spend, leads or cost per lead, and how many clients are over their limit.
  * @returns {{lead: string, rest: string} | null}
  */
 export function buyerFinding({ current, previous, preset, rows }) {

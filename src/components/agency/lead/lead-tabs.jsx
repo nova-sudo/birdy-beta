@@ -305,7 +305,7 @@ export function AdsPane({ attribution, groupId }) {
         />
         {groupId && (
           <Link href={`/media-buyer/table?client=${encodeURIComponent(groupId)}`} className="mt-3 inline-flex items-center gap-0.5 text-by-body-sm font-semibold text-by-accent hover:underline">
-            Open in Media Buyer<ChevronRight aria-hidden="true" className="size-3.5" />
+            Open in Marketing Guru<ChevronRight aria-hidden="true" className="size-3.5" />
           </Link>
         )}
       </Sec>

@@ -37,7 +37,7 @@ const STATUS = [
 ];
 const SECTIONS = [
   ["Agency Ops", "bg-by-ops-bg text-by-ops", "bg-by-ops"],
-  ["Media Buyer", "bg-by-buyer-bg text-by-buyer", "bg-by-buyer"],
+  ["Marketing Guru", "bg-by-buyer-bg text-by-buyer", "bg-by-buyer"],
   ["Sales Coach", "bg-by-coach-bg text-by-coach", "bg-by-coach"],
   ["Clients", "bg-by-clients-bg text-by-clients", "bg-by-clients"],
 ];
@@ -46,7 +46,7 @@ const PURPLES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
 
 const TYPE = [
   ["display", "32", "font-by-display text-by-display font-semibold", "£2,888"],
-  ["title", "24", "font-by-display text-by-title font-semibold", "Media Buyer"],
+  ["title", "24", "font-by-display text-by-title font-semibold", "Marketing Guru"],
   ["heading", "18", "font-by-display text-by-heading font-semibold", "Closes halved in the last 7 days"],
   ["body-lg", "15", "text-by-body-lg", "Only 29% of leads got a call, down 9 pts."],
   ["body", "14", "text-by-body", "Pause “HIFU - Half Cut”"],

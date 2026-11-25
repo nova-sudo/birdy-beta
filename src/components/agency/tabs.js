@@ -1,6 +1,6 @@
 "use client";
 
-// A section's views and where each one lives. Media Buyer and Sales Coach
+// A section's views and where each one lives. Marketing Guru and Sales Coach
 // have four tabs; Birdy has three, its first view being the old Portfolio
 // Dashboard. The addresses come from their config.
 
@@ -10,7 +10,7 @@ import { useSuggestionCount } from "@/components/agency/use-suggestions";
 import { OPS_SECTION } from "@/components/agency/sections";
 import { usePendingProposals } from "@/lib/proposals-api";
 
-/** Media Buyer's and Sales Coach's tab pill. */
+/** Marketing Guru's and Sales Coach's tab pill. */
 export const SECTION_TABS = [
   { value: "chat", label: "Chat" },
   { value: "birdseye", label: "Bird's Eye" },
@@ -27,7 +27,7 @@ export const OPS_TABS = SECTION_TABS;
 /**
  * The pages under the "More" menu at the end of the tab pill, in the reference's order. A section
  * lists only the ones it has an address for (sections.js `paths`): Reports for Birdy (the
- * account's Slack reports) and Media Buyer (its agent's reports), Projections for Media Buyer only
+ * account's Slack reports) and Marketing Guru (its agent's reports), Projections for Marketing Guru only
  * (budget pacing), so the menu never leads to a page with nothing real on it.
  */
 export const MORE_PAGES = [
@@ -40,7 +40,7 @@ export const MORE_PAGES = [
 export const morePagesOf = (section = OPS_SECTION) => MORE_PAGES.filter((p) => section.paths[p.value]);
 
 /**
- * A section's tabs, with the number of its open suggestions on the Suggestions tab. Media Buyer
+ * A section's tabs, with the number of its open suggestions on the Suggestions tab. Marketing Guru
  * and Sales Coach also count the proposals waiting for the owner's approval in their area.
  * @param {import("./sections").SectionConfig} [section] Birdy when left out
  */

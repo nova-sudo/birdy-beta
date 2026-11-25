@@ -51,7 +51,7 @@ const AGENT = {
   },
 }
 
-describe("the Media Buying Agent's reports, as Media Buyer's Reports shows them", () => {
+describe("the Media Buying Agent's reports, as Marketing Guru's Reports shows them", () => {
   it("lists the morning report every day at its time, and the weekly one on its weekday", () => {
     const [morning, weekly] = buyerReports(AGENT, { local_date: "2026-11-20" }, NOW)
     expect(morning).toMatchObject({

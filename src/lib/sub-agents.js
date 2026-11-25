@@ -1,4 +1,4 @@
-// Sub-agents under Media Buyer and Sales Coach: the server's records, the words
+// Sub-agents under Marketing Guru and Sales Coach: the server's records, the words
 // the page uses for them, and the owner's edits turned into a PATCH body.
 // Routes (birdy-backend routers/sub_agents.py):
 //   GET    /api/agents/sub?parent=media_buyer|sales_coach&status=
@@ -27,7 +27,7 @@ const DAY_KEYS = DAYS.map(([k]) => k)
 const WEEKDAYS = DAY_KEYS.slice(0, 5)
 
 /** Which main agent a parent key is, in words. */
-export const PARENT_NAMES = { media_buyer: "Media Buyer", sales_coach: "Sales Coach" }
+export const PARENT_NAMES = { media_buyer: "Marketing Guru", sales_coach: "Sales Coach" }
 
 const str = (v) => (typeof v === "string" ? v : "")
 

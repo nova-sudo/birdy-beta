@@ -77,7 +77,7 @@ function LessonRow({ agent, lesson, showClient, onChanged }) {
  * edited and deleted in place. Inside a client, that client's lessons come first and a new one is
  * kept for that client.
  *
- * @param {import("./sections").SectionConfig} props.section Media Buyer or Sales Coach
+ * @param {import("./sections").SectionConfig} props.section Marketing Guru or Sales Coach
  * @param {{id: string, name: string}|null} [props.client]
  */
 export function LessonsSection({ section, client = null }) {

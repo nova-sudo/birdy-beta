@@ -1,7 +1,7 @@
 "use client";
 
 // The card every section table sits in, and what it shows instead of rows.
-// Shared by a client's tables and the agency-wide ones on Media Buyer's and Sales Coach's Dashboard.
+// Shared by a client's tables and the agency-wide ones on Marketing Guru's and Sales Coach's Dashboard.
 
 import { useState } from "react";
 import { SearchX } from "lucide-react";

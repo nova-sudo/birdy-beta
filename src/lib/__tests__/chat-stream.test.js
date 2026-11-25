@@ -98,8 +98,8 @@ describe("postChat", () => {
   })
 
   it("rejects with the server's message on an error event", async () => {
-    apiRequest.mockResolvedValueOnce(streamResponse([sse("route", ROUTE1), sse("error", { message: "Media Buyer timed out" })]))
-    await expect(postChat({ message: "hi" })).rejects.toThrow("Media Buyer timed out")
+    apiRequest.mockResolvedValueOnce(streamResponse([sse("route", ROUTE1), sse("error", { message: "Marketing Guru timed out" })]))
+    await expect(postChat({ message: "hi" })).rejects.toThrow("Marketing Guru timed out")
     expect(apiRequest).toHaveBeenCalledTimes(1)
   })
 

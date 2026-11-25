@@ -10,9 +10,9 @@ const ROUTE = {
   status: "done", seconds: 34, credits: 18, limit_hit: null,
   steps: [
     { id: "s1", agent: "sales_coach", name: "Sales Coach", kind: "main", status: "done", summary: "212 calls checked", question: null, asked_by: null, tools: [], answer: null, credits: 7, seconds: 11 },
-    { id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", status: "done", summary: "Chose Media Buyer", question: "Did leads change?", asked_by: "s1", tools: [], answer: null, credits: 2, seconds: 3 },
+    { id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", status: "done", summary: "Chose Marketing Guru", question: "Did leads change?", asked_by: "s1", tools: [], answer: null, credits: 2, seconds: 3 },
     {
-      id: "s3", agent: "media_buyer", name: "Media Buyer", kind: "main", status: "done", summary: "6 campaigns checked", question: "Did the leads change?", asked_by: "s2",
+      id: "s3", agent: "media_buyer", name: "Marketing Guru", kind: "main", status: "done", summary: "6 campaigns checked", question: "Did the leads change?", asked_by: "s2",
       tools: [{ name: "leads_by_ad", label: "Leads by ad", detail: "84 leads" }], answer: "The form was swapped on Tuesday.", credits: 9, seconds: 20,
     },
   ],
@@ -33,13 +33,13 @@ describe("ChatThread with route maps", () => {
     render(<ChatThread name="Sales Coach" partPlacement="inline" chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />)
     const map = screen.getByRole("group", { name: "Agents in this reply" })
     expect(map.compareDocumentPosition(screen.getByText("The leads changed.")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    const box = screen.getByRole("button", { name: /^Media Buyer/ })
+    const box = screen.getByRole("button", { name: /^Marketing Guru/ })
     await userEvent.click(box)
     expect(box).toHaveAttribute("aria-pressed", "true")
-    const part = screen.getByRole("region", { name: "Media Buyer’s part" })
+    const part = screen.getByRole("region", { name: "Marketing Guru’s part" })
     expect(within(part).getByText("The form was swapped on Tuesday.")).toBeInTheDocument()
-    await userEvent.click(within(part).getByRole("button", { name: "Close Media Buyer’s part" }))
-    expect(screen.queryByRole("region", { name: "Media Buyer’s part" })).not.toBeInTheDocument()
+    await userEvent.click(within(part).getByRole("button", { name: "Close Marketing Guru’s part" }))
+    expect(screen.queryByRole("region", { name: "Marketing Guru’s part" })).not.toBeInTheDocument()
     expect(box).toHaveFocus()
   })
 
@@ -60,11 +60,11 @@ describe("ChatThread with route maps", () => {
     const view = render(<ChatThread name="Sales Coach" partPlacement="inline" chat={chatWith({ messages, loading: true, route: live })} />)
     expect(screen.queryByRole("status", { name: "Sales Coach is replying" })).not.toBeInTheDocument()
     expect(screen.getByText("Working")).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    await userEvent.click(screen.getByRole("button", { name: /^Marketing Guru/ }))
     expect(screen.getByText("Still working on it.")).toBeInTheDocument()
     view.rerender(<ChatThread name="Sales Coach" partPlacement="inline" chat={chatWith({ messages: [...messages, { role: "assistant", content: "Done.", route: ROUTE }] })} />)
     expect(screen.getByText("The form was swapped on Tuesday.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^Media Buyer/ })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: /^Marketing Guru/ })).toHaveAttribute("aria-pressed", "true")
   })
 
   it("shows the typing dots while no other agent is involved", () => {
@@ -93,27 +93,27 @@ describe("ChatThread with route maps", () => {
     Object.defineProperty(scroller, "clientHeight", { value: 700 })
     scroller.getBoundingClientRect = () => ({ left: 300, top: 80, right: 1415, bottom: 780, width: 1115, height: 700 })
     box.getBoundingClientRect = () => ({ left: 450, top: 80, right: 1250, bottom: 780, width: 800, height: 700 })
-    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    await userEvent.click(screen.getByRole("button", { name: /^Marketing Guru/ }))
     expect(screen.getByRole("complementary", { name: "Agent’s part" })).toBeInTheDocument()
     // Dock left edge 1400 - 340 = 1060; the column's right (1222) must clear 1036, moving left first (by 154).
     expect(onDock).toHaveBeenLastCalledWith({ shift: 154, pad: 186, gutter: 15 })
-    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    await userEvent.click(screen.getByRole("button", { name: /^Marketing Guru/ }))
     expect(onDock).toHaveBeenLastCalledWith(null)
   })
 
   it("leaves the map out when asked, and shows one thinking line while it works", () => {
     const messages = [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }]
-    const view = render(<ChatThread name="Media Buyer" routeMap={false} bubbles chat={chatWith({ messages })} />)
+    const view = render(<ChatThread name="Marketing Guru" routeMap={false} bubbles chat={chatWith({ messages })} />)
     expect(screen.getByText("The leads changed.")).toBeInTheDocument()
     expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
-    view.rerender(<ChatThread name="Media Buyer" routeMap={false} bubbles chat={chatWith({ messages: messages.slice(0, 1), loading: true, route: ROUTE })} />)
+    view.rerender(<ChatThread name="Marketing Guru" routeMap={false} bubbles chat={chatWith({ messages: messages.slice(0, 1), loading: true, route: ROUTE })} />)
     expect(screen.queryByRole("group", { name: "Agents in this reply" })).not.toBeInTheDocument()
-    expect(screen.getByRole("status", { name: "Media Buyer is replying" })).toBeInTheDocument()
+    expect(screen.getByRole("status", { name: "Marketing Guru is replying" })).toBeInTheDocument()
     expect(screen.getByText("Thinking")).toBeInTheDocument()
   })
 
   it("keeps the map by default", () => {
-    render(<ChatThread name="Media Buyer" chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />)
+    render(<ChatThread name="Marketing Guru" chat={chatWith({ messages: [{ role: "user", content: "Why?" }, { role: "assistant", content: "The leads changed.", route: ROUTE }] })} />)
     expect(screen.getByRole("group", { name: "Agents in this reply" })).toBeInTheDocument()
   })
 })

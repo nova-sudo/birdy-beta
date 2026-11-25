@@ -9,7 +9,7 @@ const route = { search: "" }
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(route.search) }))
 
 describe("the More menu", () => {
-  it("lists Media Buyer's Reports and Context, keeping the client the page is narrowed to", async () => {
+  it("lists Marketing Guru's Reports and Context, keeping the client the page is narrowed to", async () => {
     route.search = "client=g0&range=last_14d"
     render(<SectionMore section={BUYER_SECTION} tab="birdseye" />)
     const more = screen.getByRole("button", { name: "More" })

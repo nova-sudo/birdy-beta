@@ -96,7 +96,7 @@ describe("LeadView", () => {
     render(<LeadView contactId="c1" />)
     expect(await screen.findByText("This lead isn’t in Birdy anymore")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
-    // Back to the leads, now Media Buyer's Leads level: the old hub is retired.
+    // Back to the leads, now Marketing Guru's Leads level: the old hub is retired.
     expect(screen.getByRole("link", { name: /Back to Leads/ })).toHaveAttribute("href", "/media-buyer/table?view=leads")
   })
 

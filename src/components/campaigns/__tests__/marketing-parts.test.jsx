@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-// MarketingContent in halves, as Media Buyer's Bird's Eye (the hero) and Dashboard (the table) draw it.
+// MarketingContent in halves, as Marketing Guru's Bird's Eye (the hero) and Dashboard (the table) draw it.
 
 let search = ""
 const hub = { args: null }

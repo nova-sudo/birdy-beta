@@ -154,7 +154,7 @@ const ACTIONS = { approve: approveSubAgent, reject: rejectSubAgent, pause: pause
  * A main agent's sub-agents on its Context page: proposals waiting for approval first, then the
  * ones at work, then paused ones. Inside a client only the ones that cover it are listed.
  *
- * @param {import("./sections").SectionConfig} props.section Media Buyer or Sales Coach
+ * @param {import("./sections").SectionConfig} props.section Marketing Guru or Sales Coach
  * @param {string|null} [props.clientId]
  * @param {(n: number) => void} [props.onWaiting] how many proposals wait for the owner
  */

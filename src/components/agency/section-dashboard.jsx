@@ -12,9 +12,9 @@ import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 import { AskDock, PAGE, RangeMenu, scopedSubtitle, useAddressRange, useRangeGroups, useSectionChat } from "./section-parts";
 
 /**
- * Media Buyer's or Sales Coach's Dashboard tab: the old hub's table, as it is on the hub.
+ * Marketing Guru's or Sales Coach's Dashboard tab: the old hub's table, as it is on the hub.
  *
- * Media Buyer draws the Marketing Hub's (`/campaigns`) Campaigns / Ad Sets / Ads / Leads / Creatives table with its
+ * Marketing Guru draws the Marketing Hub's (`/campaigns`) Campaigns / Ad Sets / Ads / Leads / Creatives table with its
  * columns menu, saved views, search, filters and drill-down; Sales Coach the Sales Hub's (`/Sales-Hub`) call-centre
  * table with its tabs and filters. The client comes from the rail's switcher (`?client=`) and the range from the
  * header (`?range=`). The table scrolls inside its card; the header, the table's tabs and its toolbar stay put.

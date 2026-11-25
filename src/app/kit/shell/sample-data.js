@@ -20,7 +20,7 @@ export const CLIENTS = [
 
 export const STATUS_LABEL = { danger: "At risk", warning: "At risk", success: "On track" };
 
-// Media Buyer's Dashboard rows: client, leads, CPL tone, CPL, ad spend, Birdy pill.
+// Marketing Guru's Dashboard rows: client, leads, CPL tone, CPL, ad spend, Birdy pill.
 export const ROWS = [
   ["Plush Aesthetics", 13, "success", 4.67, 60.71, ["danger", "Ads stopped"]],
   ["Cloud Nine Beauty", 19, "danger", 5.9, 112.15, ["accent", "2 changes"]],

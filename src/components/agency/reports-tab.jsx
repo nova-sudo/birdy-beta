@@ -6,7 +6,7 @@ import { SlackReportPage, SlackReportsList } from "@/components/agency/reports-s
 import { AgentReportPage, AgentReportsList } from "@/components/agency/reports-agent";
 
 /**
- * A section's Reports, under "More". Birdy's are the account's Slack reports; Media Buyer's are
+ * A section's Reports, under "More". Birdy's are the account's Slack reports; Marketing Guru's are
  * its Media Buying Agent's morning and weekly reports. Sales Coach has no reports of its own, so it
  * has no Reports page (tabs.js).
  *

@@ -53,13 +53,13 @@ describe("TabPill", () => {
   it("says why a tab is disabled and shows a badge after a label", () => {
     const items = [
       { value: "ops", label: "Birdy" },
-      { value: "buyer", label: "Media Buyer", badge: <span>New</span> },
-      { value: "coach", label: "Sales Coach", disabled: true, hint: "Unlocks after Media Buyer" },
+      { value: "buyer", label: "Marketing Guru", badge: <span>New</span> },
+      { value: "coach", label: "Sales Coach", disabled: true, hint: "Unlocks after Marketing Guru" },
       { value: "later", label: "Later", disabled: true },
     ]
     render(<TabPill items={items} value="ops" onValueChange={() => {}} aria-label="Setup" />)
-    expect(screen.getByRole("tab", { name: /Media Buyer/ })).toHaveTextContent("Media BuyerNew")
-    expect(screen.getByRole("tab", { name: "Sales Coach" })).toHaveAttribute("title", "Unlocks after Media Buyer")
+    expect(screen.getByRole("tab", { name: /Marketing Guru/ })).toHaveTextContent("Marketing GuruNew")
+    expect(screen.getByRole("tab", { name: "Sales Coach" })).toHaveAttribute("title", "Unlocks after Marketing Guru")
     expect(screen.getByRole("tab", { name: "Later" })).toHaveAttribute("title", "Coming soon")
   })
 })
@@ -203,13 +203,13 @@ describe("Table, Card and EmptyState", () => {
 
   it("gives the empty state a heading, an explanation and one action", () => {
     render(
-      <EmptyState title="No suggestions for Aura" action={<Button>Ask Media Buyer</Button>}>
-        Media Buyer checks every client each morning.
+      <EmptyState title="No suggestions for Aura" action={<Button>Ask Marketing Guru</Button>}>
+        Marketing Guru checks every client each morning.
       </EmptyState>,
     )
     expect(screen.getByRole("heading", { name: "No suggestions for Aura" })).toBeInTheDocument()
-    expect(screen.getByText("Media Buyer checks every client each morning.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Ask Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByText("Marketing Guru checks every client each morning.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Ask Marketing Guru" })).toBeInTheDocument()
   })
 })
 

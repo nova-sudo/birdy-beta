@@ -87,7 +87,7 @@ describe("The agent interview", () => {
   it("starts with what the agent is and how far it got, and asks to carry on", async () => {
     replies["GET /api/team/setup"] = [200, team()]
     page()
-    expect(await screen.findByRole("heading", { name: "Media Buyer", level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Marketing Guru", level: 1 })).toBeInTheDocument()
     expect(screen.getByText(/We’ve done 4 of 6 questions/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /Carry on/ }))
     expect(send).toHaveBeenCalledWith("Let’s carry on.")
@@ -201,7 +201,7 @@ describe("The agent interview", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/api/chat/conversations/sess-1")).toBe(true))
   })
 
-  it("says what Media Buyer still misses before it can switch on", async () => {
+  it("says what Marketing Guru still misses before it can switch on", async () => {
     replies["GET /api/team/setup"] = [200, team({ mb: { status: "done", current: null, activation: { status: "not_ready", missing: ["Connect a Meta ad account"] } }, sc: { status: "open", waits_on: null } })]
     page()
     expect(await screen.findByText("Connect a Meta ad account")).toBeInTheDocument()
@@ -224,10 +224,10 @@ describe("The agent interview", () => {
     expect(send).not.toHaveBeenCalled()
   })
 
-  it("opens Sales Coach once Media Buyer is done", async () => {
+  it("opens Sales Coach once Marketing Guru is done", async () => {
     replies["GET /api/team/setup"] = [200, team({ mb: { status: "done", current: null }, sc: { status: "open", waits_on: null } })]
     page()
-    expect(await screen.findByText(/Media Buyer is ready/)).toBeInTheDocument()
+    expect(await screen.findByText(/Marketing Guru is ready/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /Set up Sales Coach/ }))
     expect(push).toHaveBeenCalledWith("/welcome?s=coach")
   })
@@ -235,7 +235,7 @@ describe("The agent interview", () => {
 
 describe("The interview chat", () => {
   const ROUTE = { status: "done", seconds: 9, credits: 3.9, steps: [
-    { id: "a", agent: "media_buyer", name: "Media Buyer", kind: "main", status: "done", summary: "Looked at show setup step", tools: [{ name: "show_setup_step", label: "show setup step" }], credits: 3.9, seconds: 9 },
+    { id: "a", agent: "media_buyer", name: "Marketing Guru", kind: "main", status: "done", summary: "Looked at show setup step", tools: [{ name: "show_setup_step", label: "show setup step" }], credits: 3.9, seconds: 9 },
   ] }
 
   it("shows a reply as the agent's text and then its form, with no route card", async () => {
@@ -256,7 +256,7 @@ describe("The interview chat", () => {
     chat.messages = [{ role: "user", content: "Hi" }]
     chat.loading = true
     page()
-    expect(await screen.findByRole("status", { name: "Media Buyer is replying" })).toBeInTheDocument()
+    expect(await screen.findByRole("status", { name: "Marketing Guru is replying" })).toBeInTheDocument()
     expect(screen.getByText("Thinking")).toBeInTheDocument()
   })
 
@@ -273,7 +273,7 @@ describe("The interview chat", () => {
     expect(form).toHaveTextContent("Type your change in the message box below, for example: judge ads after 10 days, keep 6 ads live, or pause losers on your own.")
     await userEvent.type(box, "judge ads after 10 days{Enter}")
     expect(send).toHaveBeenCalledWith("judge ads after 10 days")
-    expect(screen.getByRole("textbox", { name: "Answer Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Answer Marketing Guru" })).toBeInTheDocument()
   })
 })
 
@@ -289,21 +289,21 @@ describe("Finishing an agent", () => {
     await userEvent.click(within(form).getByRole("button", { name: "Not in Slack" }))
   }
 
-  it("celebrates the moment Media Buyer's last answer is saved, with what it learned", async () => {
+  it("celebrates the moment Marketing Guru's last answer is saved, with what it learned", async () => {
     replies["GET /api/team/setup"] = [200, before()]
     replies["GET /api/integrations/slack/channels"] = [200, { channels: [] }]
     replies["PUT /api/team/setup/media_buyer/slack"] = [200, after()]
     chat.messages = ask("slack", "Where should I post?")
     page()
     await answerSlack()
-    const dialog = await screen.findByRole("dialog", { name: "Media Buyer is ready" })
+    const dialog = await screen.findByRole("dialog", { name: "Marketing Guru is ready" })
     expect(dialog).toHaveTextContent("It now checks your clients’ ads")
     for (const line of ["Clients: All active clients", "CPL limits: £6 for every client", "Schedule: Every day at 07:00", "Slack: #ads-team"]) {
       expect(within(dialog).getByText(line)).toBeInTheDocument()
     }
     // Its own tile, not the mascot.
     expect(dialog.querySelector("svg.lucide-megaphone")).toBeTruthy()
-    expect(within(dialog).getByRole("button", { name: "Open Media Buyer" })).toBeInTheDocument()
+    expect(within(dialog).getByRole("button", { name: "Open Marketing Guru" })).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole("button", { name: /Set up Sales Coach/ }))
     expect(push).toHaveBeenCalledWith("/welcome?s=coach")
   })
@@ -315,7 +315,7 @@ describe("Finishing an agent", () => {
     chat.messages = ask("slack", "Where should I post?")
     page()
     await answerSlack()
-    await screen.findByRole("dialog", { name: "Media Buyer is ready" })
+    await screen.findByRole("dialog", { name: "Marketing Guru is ready" })
     await userEvent.keyboard("{Escape}")
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
     expect(screen.getByRole("button", { name: /Set up Sales Coach/ })).toBeInTheDocument()
@@ -324,7 +324,7 @@ describe("Finishing an agent", () => {
   it("doesn't celebrate on a reload or a later visit", async () => {
     replies["GET /api/team/setup"] = [200, after()]
     page()
-    expect(await screen.findByText(/Media Buyer is ready\./)).toBeInTheDocument()
+    expect(await screen.findByText(/Marketing Guru is ready\./)).toBeInTheDocument()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
@@ -337,7 +337,7 @@ describe("Finishing an agent", () => {
     chat.messages = ask("slack", "Where should I post?")
     page()
     await answerSlack()
-    expect(await screen.findByText(/Media Buyer is ready\./)).toBeInTheDocument()
+    expect(await screen.findByText(/Marketing Guru is ready\./)).toBeInTheDocument()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })
@@ -362,7 +362,7 @@ describe("The sub-agents step", () => {
 
   it("opens with a short intro and two ways to start, not an empty list", async () => {
     open()
-    const ask = await screen.findByRole("button", { name: "Ask Media Buyer for ideas" })
+    const ask = await screen.findByRole("button", { name: "Ask Marketing Guru for ideas" })
     expect(screen.getByRole("button", { name: "Ask Sales Coach for ideas" })).toBeInTheDocument()
     expect(screen.queryByText(/Nothing proposed yet/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Waiting for you/)).not.toBeInTheDocument()
@@ -386,7 +386,7 @@ describe("The sub-agents step", () => {
     expect(within(card).getByText("All your clients")).toBeInTheDocument()
     expect(within(card).getByText("Every day at 14:10")).toBeInTheDocument()
     expect(within(card).getByText("Ad results")).toBeInTheDocument()
-    expect(within(card).getByText("Reports to").nextSibling).toHaveTextContent("Media Buyer")
+    expect(within(card).getByText("Reports to").nextSibling).toHaveTextContent("Marketing Guru")
     // Only one card, and no tool's raw name anywhere.
     expect(screen.queryByRole("group", { name: "Sub-agent idea: Lead Watcher" })).not.toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/get_ad_insights|get_meta_insights_live/)
@@ -397,7 +397,7 @@ describe("The sub-agents step", () => {
     const next = await screen.findByRole("group", { name: "Sub-agent idea: Lead Watcher" })
     expect(within(next).getByText("2 of 2")).toBeInTheDocument()
     expect(within(next).getByText("Leads")).toBeInTheDocument()
-    expect(within(next).getByText("When Media Buyer asks")).toBeInTheDocument()
+    expect(within(next).getByText("When Marketing Guru asks")).toBeInTheDocument()
 
     await userEvent.click(within(next).getByRole("button", { name: "Not now" }))
     expect(await screen.findByText("Not now: Lead Watcher")).toBeInTheDocument()
@@ -449,7 +449,7 @@ describe("The sub-agents step", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Finish/ }))
     const dialog = await screen.findByRole("dialog", { name: "Your team is set up" })
     expect(calls.find((c) => c.url === "/api/team/setup/sub_agents/finish").body).toEqual({ skipped: false })
-    expect(within(dialog).getByText("Media Buyer is set up")).toBeInTheDocument()
+    expect(within(dialog).getByText("Marketing Guru is set up")).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
     await userEvent.click(within(dialog).getByRole("button", { name: /Open Birdy/ }))
     expect(push).toHaveBeenCalledWith("/dashboard")
