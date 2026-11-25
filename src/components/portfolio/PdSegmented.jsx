@@ -25,6 +25,9 @@ export function PdSegmented({
   className,
   itemClassName,
   panelId,
+  // The white chip slides between options. Off, it simply sits on the selected one, as the
+  // section header's tab pill reads when a tab opens: the table tabs use that.
+  animate = true,
 }) {
   const itemsRef = useRef([]);
   const isTablist = role === "tablist";
@@ -83,7 +86,10 @@ export function PdSegmented({
               itemClassName
             )}
           >
-            {selected && (
+            {selected && !animate && (
+              <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-pd-surface shadow-pd-segment" />
+            )}
+            {selected && animate && (
               <motion.span
                 layoutId={pillId}
                 aria-hidden="true"

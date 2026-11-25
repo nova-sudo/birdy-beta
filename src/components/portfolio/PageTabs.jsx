@@ -45,6 +45,8 @@ export function PageTabs({
       options={options}
       value={value}
       onChange={onChange}
+      // No sliding chip on a table's tabs: the selected one is marked at once.
+      animate={false}
       // The track hugs its tabs rather than spanning the page: w-fit does that
       // anywhere, self-start also stops a flex row stretching it. self-start
       // alone was inert on Settings and Alerts, where the strip sits in a plain
