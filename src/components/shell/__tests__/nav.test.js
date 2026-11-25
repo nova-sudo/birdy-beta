@@ -79,7 +79,7 @@ describe("isRebuilt", () => {
     expect(isRebuilt("/campaigns")).toBe(false)
   })
 
-  it("is true for Media Buyer's and Sales Coach's four tabs, and not the old hubs", () => {
+  it("is true for Marketing Guru's and Sales Coach's four tabs, and not the old hubs", () => {
     for (const base of ["/media-buyer", "/sales-coach"]) {
       for (const tab of ["", "/chat", "/table", "/suggestions", "/context"]) expect(isRebuilt(`${base}${tab}`)).toBe(true)
       expect(isRebuilt(`${base}/other`)).toBe(false)
@@ -112,7 +112,7 @@ describe("agent sections and clients", () => {
     expect(clientIdFromLocation("/sales-coach", "client=x%20y")).toBe("x y")
   })
 
-  it("keeps a client picked inside Media Buyer or Sales Coach in that section and tab", () => {
+  it("keeps a client picked inside Marketing Guru or Sales Coach in that section and tab", () => {
     expect(clientHrefFrom("/media-buyer/table", "a b")).toBe("/media-buyer/table?client=a%20b")
     expect(clientHrefFrom("/sales-coach", "a")).toBe("/sales-coach?client=a")
     expect(clientHrefFrom("/dashboard/chat", "a")).toBe("/dashboard?client=a")

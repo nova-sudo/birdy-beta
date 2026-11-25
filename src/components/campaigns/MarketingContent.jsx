@@ -147,7 +147,7 @@ export function MarketingContent({
   granularity: controlledGranularity,
   onAskBirdy,
   fill = false,
-  // Hides the Creatives tab (and ignores links to it). Media Buyer's Dashboard hides it for now.
+  // Hides the Creatives tab (and ignores links to it). Marketing Guru's Dashboard hides it for now.
   hideCreatives = false,
 }) {
   const { currency: userCurrency, currencySymbol } = useCurrency()

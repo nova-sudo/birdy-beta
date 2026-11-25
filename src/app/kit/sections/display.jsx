@@ -35,7 +35,7 @@ export function DisplaySection() {
     <>
       <Section title="Navigation">
         <Sub title="Tab pill">
-          <TabPill items={TABS} value={tab} onValueChange={setTab} aria-label="Media Buyer views">
+          <TabPill items={TABS} value={tab} onValueChange={setTab} aria-label="Marketing Guru views">
             {TABS.map((t) => (
               <TabPanel key={t.value} value={t.value} className="mt-2 text-by-body-sm text-by-text-2">Showing {t.label}.</TabPanel>
             ))}
@@ -122,8 +122,8 @@ export function DisplaySection() {
           </Sub>
           <Sub title="Empty state">
             <Card>
-              <EmptyState icon={<Inbox />} title="No suggestions for Aura" action={<Button kind="primary"><Plus aria-hidden="true" />Ask Media Buyer</Button>}>
-                Media Buyer checks every client against its limits each morning. New suggestions appear here.
+              <EmptyState icon={<Inbox />} title="No suggestions for Aura" action={<Button kind="primary"><Plus aria-hidden="true" />Ask Marketing Guru</Button>}>
+                Marketing Guru checks every client against its limits each morning. New suggestions appear here.
               </EmptyState>
             </Card>
           </Sub>

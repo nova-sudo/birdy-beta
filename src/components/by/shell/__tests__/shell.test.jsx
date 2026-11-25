@@ -18,7 +18,7 @@ const section = (id) => SECTIONS.find((s) => s.id === id)
 
 describe("sections", () => {
   it("keeps Creative Strategist off the rail", () => {
-    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Media Buyer", "Sales Coach"])
+    expect(visibleSections().map((s) => s.name)).toEqual(["Agency Ops", "Marketing Guru", "Sales Coach"])
   })
 })
 
@@ -27,14 +27,14 @@ describe("Rail", () => {
     render(<Rail activeId="buyer" />)
     const nav = screen.getByRole("navigation", { name: "Sections" })
     expect(within(nav).getAllByRole("button")).toHaveLength(3)
-    expect(screen.getByRole("button", { name: "Media Buyer" })).toHaveAttribute("aria-current", "page")
+    expect(screen.getByRole("button", { name: "Marketing Guru" })).toHaveAttribute("aria-current", "page")
     expect(screen.getByRole("button", { name: "Sales Coach" })).not.toHaveAttribute("aria-current")
     expect(screen.queryByRole("button", { name: /Creative/ })).not.toBeInTheDocument()
   })
 
   it("flags a section only when it has something waiting", () => {
     render(<Rail activeId="ops" counts={{ buyer: 8, coach: 0 }} />)
-    expect(screen.getByRole("button", { name: "Media Buyer, 8 waiting" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Marketing Guru, 8 waiting" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Sales Coach" })).toBeInTheDocument()
   })
 
@@ -42,7 +42,7 @@ describe("Rail", () => {
     render(<Rail activeId="ops" counts={{ coach: 3 }} locks={{ coach: true }} />)
     const button = screen.getByRole("button", { name: "Sales Coach, locked" })
     expect(button.querySelector("[data-lock]")).not.toBeNull()
-    expect(screen.getByRole("button", { name: "Media Buyer" }).querySelector("[data-lock]")).toBeNull()
+    expect(screen.getByRole("button", { name: "Marketing Guru" }).querySelector("[data-lock]")).toBeNull()
   })
 
   it("starts with Birdy's mark in its round frame, above the switcher", () => {
@@ -182,14 +182,14 @@ describe("SectionHeader", () => {
 
   it("names the section and falls back to its description", () => {
     render(<SectionHeader section={section("buyer")} {...base} />)
-    expect(screen.getByRole("heading", { level: 1, name: "Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Marketing Guru" })).toBeInTheDocument()
     expect(screen.getByText("Your entire agency")).toBeInTheDocument()
-    expect(screen.getByRole("tablist", { name: "Media Buyer views" })).toBeInTheDocument()
+    expect(screen.getByRole("tablist", { name: "Marketing Guru views" })).toBeInTheDocument()
   })
 
   it("leaves the tab pill out when it has no tabs", () => {
     render(<SectionHeader section={section("buyer")} subtitle="Setup" />)
-    expect(screen.getByRole("heading", { level: 1, name: "Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Marketing Guru" })).toBeInTheDocument()
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
   })
 

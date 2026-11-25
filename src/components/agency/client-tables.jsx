@@ -85,7 +85,7 @@ const LEAD_SEARCH = ["name", "campaign", "ad", "source", "client", "email", "pho
 
 /**
  * A client's leads: tabs by how far each got, search, and where each came from.
- * Media Buyer's agency table reuses it for its Leads level, with its own controls around it.
+ * Marketing Guru's agency table reuses it for its Leads level, with its own controls around it.
  *
  * @param {{rows: object[], total: number|null, loading: boolean, error: boolean, retry: () => void, capped?: string}} props.data
  * @param {boolean} [props.showClient] a Client column, for leads across the agency (rows carry `client`)

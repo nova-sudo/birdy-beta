@@ -77,7 +77,7 @@ describe("originOf", () => {
 })
 
 describe("the Suggestions tab's count", () => {
-  it("adds what waits for approval in Media Buyer's and Sales Coach's sections", () => {
+  it("adds what waits for approval in Marketing Guru's and Sales Coach's sections", () => {
     const { result } = renderHook(() => useSectionTabs(BUYER_SECTION))
     expect(result.current.find((t) => t.value === "suggestions").count).toBe(5)
   })

@@ -23,7 +23,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-describe("Media Buyer › Projections", () => {
+describe("Marketing Guru › Projections", () => {
   it("reads this month's figures and paces the budgets", () => {
     render(<BuyerProjections client={null} />)
     expect(asked).toContain("this_month")

@@ -155,7 +155,7 @@ const MODE_KINDS = [["remove", "Pausing ads"], ["add", "Adding ads"], ["revive",
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null)
 
 /**
- * Media Buyer's playbook as lines to review, from the playbook block's
+ * Marketing Guru's playbook as lines to review, from the playbook block's
  * `modes` and `scoring` (the stock agent's own settings). Only what the block
  * carries is shown; `creative` is left out until its fields have agreed words.
  */

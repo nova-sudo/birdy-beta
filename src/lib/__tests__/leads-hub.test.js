@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { LEADS_HREF, leadsHubRedirect } from "../leads-hub"
 
 describe("leadsHubRedirect", () => {
-  it("sends the hub to Media Buyer's Leads level", () => {
+  it("sends the hub to Marketing Guru's Leads level", () => {
     expect(leadsHubRedirect()).toBe(LEADS_HREF)
     expect(leadsHubRedirect({})).toBe("/media-buyer/table?view=leads")
   })

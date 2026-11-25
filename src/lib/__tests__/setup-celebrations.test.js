@@ -40,7 +40,7 @@ describe("setup celebrations", () => {
   })
 
   it("says what the whole team has", () => {
-    expect(teamLines(team, 2)).toEqual(["Agency Ops is set up", "Media Buyer is set up", "Sales Coach is set up", "2 sub-agents working for you"])
+    expect(teamLines(team, 2)).toEqual(["Agency Ops is set up", "Marketing Guru is set up", "Sales Coach is set up", "2 sub-agents working for you"])
     expect(teamLines(team, 0)).toHaveLength(3)
   })
 })

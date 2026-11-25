@@ -31,10 +31,10 @@ describe("an approval card under a reply (A1)", () => {
   it("waits for the owner, says who proposes it and who makes it", () => {
     render(<ReplyProposals proposals={[P()]} onUpdate={vi.fn()} />)
     const card = screen.getByRole("group", { name: "Proposal: Put the old lead form back" })
-    expect(card).toHaveTextContent("Media Buyer proposes")
+    expect(card).toHaveTextContent("Marketing Guru proposes")
     expect(card).toHaveTextContent("Waiting for you")
     expect(card).toHaveTextContent("Lead form: v2 → v1")
-    expect(card).toHaveTextContent("Media Buyer makes the change")
+    expect(card).toHaveTextContent("Marketing Guru makes the change")
   })
 
   it("approving hands it to the owning agent and keeps a receipt with a link to its chat", async () => {
@@ -50,7 +50,7 @@ describe("an approval card under a reply (A1)", () => {
   it("shows the approved and declined states in one line each", () => {
     render(<ReplyProposals proposals={[P({ status: "approved", session_id: "mb-9", receipt: "Done." }), P({ id: "p2", title: "Raise the budget", status: "dismissed" })]} />)
     expect(screen.getByText(/Approved by you/)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat?client=g0&c=mb-9")
+    expect(screen.getByRole("link", { name: /Open Marketing Guru’s chat/ })).toHaveAttribute("href", "/media-buyer/chat?client=g0&c=mb-9")
     expect(screen.getByText("Declined")).toBeInTheDocument()
     expect(screen.getByText("Nothing was changed.")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull()
@@ -93,7 +93,7 @@ describe("undoing an approved change", () => {
   it("shows an undone change as undone, with no Undo", () => {
     render(<ReplyProposals proposals={[P({ status: "approved", can_undo: false, undone: true, undo_receipt: "Back as it was." })]} />)
     expect(screen.getByText("Undone")).toBeInTheDocument()
-    expect(screen.getByText(/Undone at your request/)).toHaveTextContent("Media Buyer: “Back as it was.”")
+    expect(screen.getByText(/Undone at your request/)).toHaveTextContent("Marketing Guru: “Back as it was.”")
     expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull()
   })
 
@@ -108,7 +108,7 @@ describe("undoing an approved change", () => {
   it("names a sub-agent as the proposer when its name came with the proposal", () => {
     render(<ReplyProposals proposals={[P({ proposed_by: "sub:s1", proposed_by_name: "Form checker" }), P({ id: "p3", proposed_by: "sub:s2" })]} />)
     expect(screen.getByText("Form checker proposes")).toBeInTheDocument()
-    expect(screen.getByText("Media Buyer proposes")).toBeInTheDocument()
+    expect(screen.getByText("Marketing Guru proposes")).toBeInTheDocument()
   })
 })
 

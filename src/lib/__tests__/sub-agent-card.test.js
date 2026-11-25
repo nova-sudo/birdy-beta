@@ -27,7 +27,7 @@ describe("sub-agent card words", () => {
   it("builds the four facts from the record only", () => {
     const facts = cardFacts({ parent: "media_buyer", clients: [{ id: "a", name: "Aura" }], schedule: null, tools: [{ name: "get_ad_insights" }] })
     expect(facts.map((f) => [f.label, f.value])).toEqual([
-      ["Clients", "Aura"], ["Runs", "When Media Buyer asks"], ["Reads", "Ad results"], ["Reports to", "Media Buyer"],
+      ["Clients", "Aura"], ["Runs", "When Marketing Guru asks"], ["Reads", "Ad results"], ["Reports to", "Marketing Guru"],
     ])
   })
 

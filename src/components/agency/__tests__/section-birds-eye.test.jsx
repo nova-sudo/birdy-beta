@@ -54,7 +54,7 @@ beforeEach(() => {
   portfolio.result = result()
 })
 
-describe("Media Buyer's Bird's Eye", () => {
+describe("Marketing Guru's Bird's Eye", () => {
   it("opens on the Marketing Hub's first section for every client, with the section's cards under it", () => {
     render(<SectionBirdsEye section="buyer" />)
     expect(seen.marketing).toMatchObject({ part: "hero", showHeader: false, showGroupFilter: false, selectedClientGroup: null, datePreset: "last_7d", clientGroups: GROUPS })
@@ -81,7 +81,7 @@ describe("Media Buyer's Bird's Eye", () => {
     expect(seen.marketing.granularity).toBe("Weekly")
   })
 
-  it("sends “Ask Birdy about this” to Media Buyer's conversation", async () => {
+  it("sends “Ask Birdy about this” to Marketing Guru's conversation", async () => {
     render(<SectionBirdsEye section="buyer" />)
     await userEvent.click(screen.getByRole("button", { name: "Ask Birdy about this" }))
     expect(sendChatMessage).toHaveBeenCalled()

@@ -14,12 +14,12 @@ const SALES_COACH = {
   credits: 7, seconds: 11,
 };
 const BIRDY = {
-  id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", status: "done", summary: "Chose Media Buyer",
+  id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", status: "done", summary: "Chose Marketing Guru",
   question: "Did the leads coming in for Aura change this week?", asked_by: "s1",
-  tools: [{ name: "ask_agent", label: "Asked Media Buyer", detail: null }], answer: "Passed the question to Media Buyer.", credits: 2, seconds: 3,
+  tools: [{ name: "ask_agent", label: "Asked Marketing Guru", detail: null }], answer: "Passed the question to Marketing Guru.", credits: 2, seconds: 3,
 };
 const MEDIA_BUYER = {
-  id: "s3", agent: "media_buyer", name: "Media Buyer", kind: "main", status: "done", summary: "6 campaigns checked",
+  id: "s3", agent: "media_buyer", name: "Marketing Guru", kind: "main", status: "done", summary: "6 campaigns checked",
   question: "Did the leads coming in for Aura change this week?", asked_by: "s2",
   tools: [
     { name: "campaign_insights", label: "Campaign results, 7 days", detail: "6 campaigns" },
@@ -77,13 +77,13 @@ export function AgentsSection() {
 
       <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-5">
         <div className="flex flex-col gap-5">
-          <Sub title="Finished, Media Buyer’s part open">
+          <Sub title="Finished, Marketing Guru’s part open">
             <RouteMap route={DONE} selected={picked} onSelect={setPicked} />
           </Sub>
           <Sub title="While working (replays every few seconds)">
             <LiveMap />
           </Sub>
-          <Sub title="Four agents, with a sub-agent under Media Buyer">
+          <Sub title="Four agents, with a sub-agent under Marketing Guru">
             <RouteMap route={LONG} />
           </Sub>
           <Sub title="An agent couldn’t finish, one was skipped, and the ask limit was hit">

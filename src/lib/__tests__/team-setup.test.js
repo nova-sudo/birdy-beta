@@ -74,7 +74,7 @@ describe("progress", () => {
 
   it("counts the agents' steps into setup's share", () => {
     const steps = { a: "done", b: "todo" }
-    // Birdy 1 of 2, Media Buyer 2 of 6, Sales Coach 0 of 5, sub-agents 0 of 1.
+    // Birdy 1 of 2, Marketing Guru 2 of 6, Sales Coach 0 of 5, sub-agents 0 of 1.
     expect(setupPercent(steps, team)).toBe(Math.round((3 / 14) * 100))
     expect(setupPercent(steps, team, { completed: true })).toBe(Math.round((4 / 14) * 100))
     expect(setupPercent(steps, null)).toBe(50)

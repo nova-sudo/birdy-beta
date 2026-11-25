@@ -184,7 +184,7 @@ function RunsBody({ sub }) {
       ) : isLoading ? (
         <div aria-busy="true" aria-label="Loading runs" className="flex flex-col gap-3"><Skeleton className="w-64" /><Skeleton className="w-96 max-w-full" /><Skeleton className="w-80 max-w-full" /></div>
       ) : runs.length === 0 ? (
-        <p className="text-by-body text-by-text-2">{sub.name} hasn’t run yet. Its runs show here once it has, whether on its schedule, when {sub.parent === "sales_coach" ? "Sales Coach" : "Media Buyer"} asks it, or when you run it by hand.</p>
+        <p className="text-by-body text-by-text-2">{sub.name} hasn’t run yet. Its runs show here once it has, whether on its schedule, when {sub.parent === "sales_coach" ? "Sales Coach" : "Marketing Guru"} asks it, or when you run it by hand.</p>
       ) : (
         <TableScroll className="max-h-[min(60vh,32rem)] shadow-none">
           <Table aria-label={`${sub.name}’s runs`}>

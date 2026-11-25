@@ -1,9 +1,9 @@
-// The Leads hub (/contacts) is retired. Leads live in Media Buyer's Dashboard, on its Leads tab.
+// The Leads hub (/contacts) is retired. Leads live in Marketing Guru's Dashboard, on its Leads tab.
 // The hub's old address sends people there.
 
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 
-/** Every lead from the agency's ads: Media Buyer's Dashboard on its Leads tab. */
+/** Every lead from the agency's ads: Marketing Guru's Dashboard on its Leads tab. */
 export const LEADS_HREF = "/media-buyer/table?view=leads";
 
 // The names a link to the hub might have used for one client.

@@ -77,7 +77,7 @@ beforeEach(() => {
 describe("a section's Context page", () => {
   it("shows what the section knows, with when Birdy uses each card, under the Context page of More", () => {
     render(<ContextTab section="buyer" />)
-    expect(screen.getByRole("heading", { level: 2, name: "What Media Buyer knows" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "What Marketing Guru knows" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Context" })).toHaveAttribute("aria-current", "page")
     expect(screen.getByText("Clinics only")).toBeInTheDocument()
     expect(screen.getByText("From your data")).toBeInTheDocument()
@@ -148,7 +148,7 @@ describe("the Sub-agents card", () => {
     subApi.approve.mockResolvedValue({})
     render(<ContextTab section="buyer" />)
     expect(screen.getByText("1 sub-agent is waiting for your approval.")).toBeInTheDocument()
-    const rows = within(screen.getByRole("list", { name: "Media Buyer’s sub-agents" })).getAllByRole("listitem")
+    const rows = within(screen.getByRole("list", { name: "Marketing Guru’s sub-agents" })).getAllByRole("listitem")
     expect(rows[0]).toHaveTextContent("Fatigue watcher")
     expect(rows[0]).toHaveTextContent("Waiting for you")
     await userEvent.click(screen.getByRole("button", { name: "Approve Fatigue watcher" }))
@@ -187,7 +187,7 @@ describe("a sub-agent's runs", () => {
   it("shows the last run on the row, with how it went and what it cost", () => {
     subs.state = { ...subs.state, subAgents: [sub({ last_run: { status: "timeout", at: "2026-11-20T08:00:00Z", summary: "Stopped at 100 seconds", credits: 3 } })] }
     render(<ContextTab section="buyer" />)
-    const row = within(screen.getByRole("list", { name: "Media Buyer’s sub-agents" })).getAllByRole("listitem")[0]
+    const row = within(screen.getByRole("list", { name: "Marketing Guru’s sub-agents" })).getAllByRole("listitem")[0]
     expect(row).toHaveTextContent("Ran out of time")
     expect(row).toHaveTextContent("Stopped at 100 seconds")
     expect(row).toHaveTextContent("3 credits")
@@ -270,7 +270,7 @@ describe("lessons on Context", () => {
     render(<ContextTab section="buyer" />)
     const card = screen.getByRole("region", { name: "Lessons" })
     await userEvent.click(within(card).getByRole("button", { name: "Add a lesson" }))
-    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Media Buyer" }), "Never pause an ad in its first 3 days")
+    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Marketing Guru" }), "Never pause an ad in its first 3 days")
     await userEvent.click(within(card).getByRole("button", { name: "Add lesson" }))
     expect(lessons.add).toHaveBeenCalledWith("media_buyer", { text: "Never pause an ad in its first 3 days", clientId: null })
   })
@@ -294,7 +294,7 @@ describe("lessons on Context", () => {
     render(<ContextTab section="buyer" />)
     const card = screen.getByRole("region", { name: "Lessons" })
     await userEvent.click(within(card).getByRole("button", { name: "Add a lesson" }))
-    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Media Buyer" }), "x")
+    await userEvent.type(within(card).getByRole("textbox", { name: "A lesson for Marketing Guru" }), "x")
     await userEvent.click(within(card).getByRole("button", { name: "Add lesson" }))
     expect(await within(card).findByText("A lesson can be at most 500 characters.")).toBeInTheDocument()
   })

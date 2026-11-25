@@ -50,7 +50,7 @@ export const forClient = (rows, clientName) => (clientName ? rows.filter((r) => 
 
 /**
  * The page's heading for a number of suggestions.
- * @param {string|null} [from] the section's name when it is not Birdy: "8 suggestions from Media Buyer"
+ * @param {string|null} [from] the section's name when it is not Birdy: "8 suggestions from Marketing Guru"
  */
 export function suggestionsHeading(count, clientName, from = null) {
   if (count === 0) return clientName ? `No suggestions for ${clientName}` : "All looking good";

@@ -9,9 +9,9 @@ const DONE = {
   status: "done", seconds: 34, credits: 18, limit_hit: null,
   steps: [
     step({ question: "Why did booked calls drop?" }),
-    step({ id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", summary: "Chose Media Buyer", asked_by: "s1" }),
+    step({ id: "s2", agent: "birdy", name: "Birdy", kind: "orchestrator", summary: "Chose Marketing Guru", asked_by: "s1" }),
     step({
-      id: "s3", agent: "media_buyer", name: "Media Buyer", summary: "6 campaigns checked", asked_by: "s2", question: "Did the leads change?",
+      id: "s3", agent: "media_buyer", name: "Marketing Guru", summary: "6 campaigns checked", asked_by: "s2", question: "Did the leads change?",
       tools: [{ name: "a", label: "Campaign results, 7 days", detail: "6 campaigns" }, { name: "b", label: "Leads by ad", detail: null }],
       answer: "The Spring Promo form was swapped.", credits: 9, seconds: 20,
     }),
@@ -25,8 +25,8 @@ describe("RouteMap", () => {
     expect(within(group).getAllByRole("button")).toHaveLength(3)
     // The mascot is decorative, so its glyphs stay out of the names.
     within(group).getByRole("button", { name: /^Sales Coach\s*212 calls checked\s*, Done$/ })
-    within(group).getByRole("button", { name: /^Birdy\s*Chose Media Buyer\s*, Done$/ })
-    within(group).getByRole("button", { name: /^Media Buyer\s*6 campaigns checked\s*, Done$/ })
+    within(group).getByRole("button", { name: /^Birdy\s*Chose Marketing Guru\s*, Done$/ })
+    within(group).getByRole("button", { name: /^Marketing Guru\s*6 campaigns checked\s*, Done$/ })
     expect(screen.getByText("Answer came back to Sales Coach")).toBeInTheDocument()
     expect(screen.getByText("34s · 18 credits")).toBeInTheDocument()
     // Birdy only ever appears in its round frame.
@@ -41,10 +41,10 @@ describe("RouteMap", () => {
   it("reports presses and marks the open agent with aria-pressed, by click and keyboard", async () => {
     const onSelect = vi.fn()
     const view = render(<RouteMap route={DONE} selected={null} onSelect={onSelect} />)
-    await userEvent.click(screen.getByRole("button", { name: /^Media Buyer/ }))
+    await userEvent.click(screen.getByRole("button", { name: /^Marketing Guru/ }))
     expect(onSelect).toHaveBeenLastCalledWith("s3")
     view.rerender(<RouteMap route={DONE} selected="s3" onSelect={onSelect} />)
-    const open = screen.getByRole("button", { name: /^Media Buyer/ })
+    const open = screen.getByRole("button", { name: /^Marketing Guru/ })
     expect(open).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByRole("button", { name: /^Birdy/ })).toHaveAttribute("aria-pressed", "false")
     open.focus()
@@ -63,7 +63,7 @@ describe("RouteMap", () => {
     expect(wires[0].className).not.toMatch(/by-flow/)
     // The moving dashes are motion-safe only, so "reduce motion" keeps them still.
     expect(wires[1].className).toMatch(/motion-safe:animate-\[by-flow/)
-    expect(screen.getByRole("button", { name: /^Media Buyer.*Working/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Marketing Guru.*Working/ })).toBeInTheDocument()
     expect(screen.getByText("Working")).toBeInTheDocument()
     expect(screen.getByText("12s")).toBeInTheDocument()
   })
@@ -76,7 +76,7 @@ describe("RouteMap", () => {
     render(<RouteMap route={failed} />)
     expect(screen.getByText("Couldn’t finish · Timed out")).toBeInTheDocument()
     expect(screen.getByText("Skipped")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^Form checker.*Skipped, sub-agent of Media Buyer/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Form checker.*Skipped, sub-agent of Marketing Guru/ })).toBeInTheDocument()
     expect(screen.getByText("Stopped")).toBeInTheDocument()
     expect(screen.getByText(/limit of 3 agent asks/)).toBeInTheDocument()
   })
@@ -104,14 +104,14 @@ describe("RouteMap", () => {
 describe("AgentPart", () => {
   it("shows who asked what, the tools with their detail, the answer, its share and a link to its chat", () => {
     render(<AgentPart route={DONE} stepId="s3" />)
-    const part = screen.getByRole("region", { name: "Media Buyer’s part" })
+    const part = screen.getByRole("region", { name: "Marketing Guru’s part" })
     expect(within(part).getByText("Birdy asked")).toBeInTheDocument()
     expect(within(part).getByText("Did the leads change?")).toBeInTheDocument()
     const tools = within(part).getAllByRole("listitem")
     expect(tools.map((t) => t.textContent)).toEqual(["Campaign results, 7 days6 campaigns", "Leads by ad"])
     expect(within(part).getByText("The Spring Promo form was swapped.")).toBeInTheDocument()
     expect(within(part).getByText("Done · 20s · 9 credits")).toBeInTheDocument()
-    expect(within(part).getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
+    expect(within(part).getByRole("link", { name: /Open Marketing Guru’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
   })
 
   it("says 'You asked' for the first agent, and closes with the button or Escape", async () => {
@@ -129,9 +129,9 @@ describe("AgentPart", () => {
   it("names a sub-agent's main agent and links to that chat", () => {
     const route = { ...DONE, steps: [...DONE.steps, step({ id: "s4", agent: "sub:x", name: "Form checker", kind: "sub", asked_by: "s3", question: "Which form changed?" })] }
     render(<AgentPart route={route} stepId="s4" />)
-    expect(screen.getByText("Sub-agent of Media Buyer")).toBeInTheDocument()
-    expect(screen.getByText("Media Buyer asked")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
+    expect(screen.getByText("Sub-agent of Marketing Guru")).toBeInTheDocument()
+    expect(screen.getByText("Marketing Guru asked")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Open Marketing Guru’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
   })
 
   it("links a sub-agent to its row on its main agent's Context page", () => {
@@ -143,10 +143,10 @@ describe("AgentPart", () => {
   it("names a helper's main agent, links to that chat and offers no Context link", () => {
     const route = { ...DONE, steps: [...DONE.steps, step({ id: "s4", agent: "sub:helper-9f", name: "Ad check", kind: "helper", asked_by: "media_buyer", question: "Check every campaign's CPL." })] }
     render(<AgentPart route={route} stepId="s4" />)
-    expect(screen.getByText("One-off helper of Media Buyer, not saved")).toBeInTheDocument()
+    expect(screen.getByText("One-off helper of Marketing Guru, not saved")).toBeInTheDocument()
     expect(screen.queryByText(/Sub-agent of/)).toBeNull()
     expect(screen.queryByRole("link", { name: /in Context/ })).toBeNull()
-    expect(screen.getByRole("link", { name: /Open Media Buyer’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
+    expect(screen.getByRole("link", { name: /Open Marketing Guru’s chat/ })).toHaveAttribute("href", "/media-buyer/chat")
   })
 
   it("says why a skipped agent was not asked, from the route's limit", () => {
@@ -161,7 +161,7 @@ describe("AgentPart", () => {
     const route = { ...DONE, steps: [DONE.steps[0], { ...DONE.steps[2], status: "failed", summary: "Ran out of time", answer: null, seconds: 100 }] }
     render(<AgentPart route={route} stepId="s3" />)
     expect(screen.getByText("Why it stopped")).toBeInTheDocument()
-    expect(screen.getByText(/Media Buyer ran out of time after 1m 40s before it could answer/)).toBeInTheDocument()
+    expect(screen.getByText(/Marketing Guru ran out of time after 1m 40s before it could answer/)).toBeInTheDocument()
   })
 
   it("draws nothing for an unknown agent", () => {

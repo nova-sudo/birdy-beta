@@ -1,4 +1,4 @@
-// A main agent's lessons (Media Buyer, Sales Coach): what the owner has told it
+// A main agent's lessons (Marketing Guru, Sales Coach): what the owner has told it
 // to do differently, kept per agent and shown on its Context page. Routes:
 //   GET    /api/team/{agent}/lessons?client_group_id=
 //          -> {lessons: [{id, text, client_group_id, client_name, source, created_at, updated_at}]}

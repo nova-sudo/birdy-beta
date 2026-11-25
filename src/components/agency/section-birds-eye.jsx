@@ -37,9 +37,9 @@ const FUNNEL_PARTS = {
 const BAND_FILL = { success: "bg-by-success", danger: "bg-by-danger-solid", accent: "bg-by-accent", neutral: "bg-by-line-strong" };
 
 /**
- * Bird's Eye for Media Buyer or Sales Coach.
+ * Bird's Eye for Marketing Guru or Sales Coach.
  *
- * The top is the old hub's first section, drawn by the old components on the same data: Media Buyer gets the Marketing
+ * The top is the old hub's first section, drawn by the old components on the same data: Marketing Guru gets the Marketing
  * Hub's metric tabs over the chart with Birdy's read beside it (MarketingContent's hero), Sales Coach the Sales Hub's
  * (CallCentreOverview). Under it, the two cards the old hubs had no equivalent of.
  *
@@ -173,7 +173,7 @@ function OpenLink({ href }) {
   );
 }
 
-// ── Media Buyer ─────────────────────────────────────────────────────────────
+// ── Marketing Guru ─────────────────────────────────────────────────────────────
 
 function BuyerCards({ data, preset, money, scoped, dashboardHref }) {
   const { current, previous, client, groups, previousGroups } = data;

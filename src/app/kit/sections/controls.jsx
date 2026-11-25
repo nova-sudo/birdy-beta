@@ -63,7 +63,7 @@ export function ControlsSection() {
       </Sub>
 
       <Sub title="Ask bar">
-        <AskBar className="max-w-[720px]" placeholder="Ask Media Buyer about your clients, or tell it what to change" onSubmit={setAsked} />
+        <AskBar className="max-w-[720px]" placeholder="Ask Marketing Guru about your clients, or tell it what to change" onSubmit={setAsked} />
         <p className="mt-2 text-by-caption text-by-muted" aria-live="polite">{asked ? `Sent: “${asked}”` : "Type something and press Enter."}</p>
       </Sub>
 

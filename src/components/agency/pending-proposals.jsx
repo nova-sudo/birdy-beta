@@ -1,6 +1,6 @@
 "use client";
 
-// "Waiting for your approval" at the top of Media Buyer's and Sales Coach's
+// "Waiting for your approval" at the top of Marketing Guru's and Sales Coach's
 // Suggestions: every change proposed in their area, from a chat or a
 // sub-agent's run, with the same approval card the chat shows.
 

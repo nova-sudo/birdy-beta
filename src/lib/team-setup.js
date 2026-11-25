@@ -23,7 +23,7 @@ export const INTERVIEWERS = ["media_buyer", "sales_coach"]
 /** Rail and /welcome section ids <-> the server's agent keys. */
 export const AGENT_OF_SECTION = { ops: "birdy", buyer: "media_buyer", coach: "sales_coach", subs: "sub_agents" }
 export const SECTION_OF_AGENT = { birdy: "ops", media_buyer: "buyer", sales_coach: "coach", sub_agents: "subs" }
-export const AGENT_NAMES = { birdy: "Agency Ops", media_buyer: "Media Buyer", sales_coach: "Sales Coach", sub_agents: "Sub-agents" }
+export const AGENT_NAMES = { birdy: "Agency Ops", media_buyer: "Marketing Guru", sales_coach: "Sales Coach", sub_agents: "Sub-agents" }
 
 /** Each step's name in words, for when the server sends no `known` line for it. */
 export const STEP_LABELS = {
@@ -63,7 +63,7 @@ function normalizeAgent(raw, key) {
     completed_at: a.completed_at ?? null,
     // The interview's own conversation (team_setup chats are left out of the chat history), to reopen it.
     chat_session_id: typeof a.chat_session_id === "string" && a.chat_session_id ? a.chat_session_id : null,
-    // Media Buyer, once its interview is done: switched on, or what its readiness check still misses.
+    // Marketing Guru, once its interview is done: switched on, or what its readiness check still misses.
     activation: a.activation && typeof a.activation === "object"
       ? { status: a.activation.status === "active" ? "active" : "not_ready", missing: (Array.isArray(a.activation.missing) ? a.activation.missing : []).filter((m) => typeof m === "string") }
       : null,

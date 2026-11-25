@@ -105,11 +105,11 @@ describe("Birdy's Suggestions tab", () => {
   })
 })
 
-describe("Media Buyer's and Sales Coach's Suggestions tab", () => {
-  it("lists Media Buyer's own suggestions, says whose they are, and keeps the history", () => {
+describe("Marketing Guru's and Sales Coach's Suggestions tab", () => {
+  it("lists Marketing Guru's own suggestions, says whose they are, and keeps the history", () => {
     sugg.state = state({ suggestions: [{ ...S("1", "Pause Body Sculpting", "Aura"), platform: "Meta Ads" }, { ...S("2", "Call back the missed leads", "Aura"), platform: "Hot Prospector" }] })
     render(<SuggestionsTab section="buyer" />)
-    expect(screen.getByRole("heading", { level: 2, name: "1 suggestion from Media Buyer" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "1 suggestion from Marketing Guru" })).toBeInTheDocument()
     expect(screen.queryByText("Call back the missed leads")).not.toBeInTheDocument()
     expect(screen.getByRole("complementary", { name: "History" })).toBeInTheDocument()
   })
@@ -121,7 +121,7 @@ describe("Media Buyer's and Sales Coach's Suggestions tab", () => {
     expect(screen.queryByRole("complementary", { name: "History" })).not.toBeInTheDocument()
   })
 
-  it("puts what waits for approval first in Media Buyer's and Sales Coach's, not in Birdy's", () => {
+  it("puts what waits for approval first in Marketing Guru's and Sales Coach's, not in Birdy's", () => {
     pending.agents = []
     const { unmount } = render(<SuggestionsTab />)
     expect(screen.queryByRole("region", { name: "Waiting for your approval" })).toBeNull()

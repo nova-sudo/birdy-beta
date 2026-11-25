@@ -36,17 +36,17 @@ describe("AgentGate", () => {
     replies["GET /api/team/setup"] = [200, TEAM]
     wrap(<AgentGate agent="sales_coach"><p>Sales Coach page</p></AgentGate>)
     const card = await screen.findByRole("region", { name: "Sales Coach is locked" })
-    expect(within(card).getByText(/It unlocks once Media Buyer is set up/)).toBeInTheDocument()
+    expect(within(card).getByText(/It unlocks once Marketing Guru is set up/)).toBeInTheDocument()
     expect(within(card).getByText("Agency Ops is ready")).toBeInTheDocument()
-    expect(within(card).getByText("Media Buyer: 2 left (Schedule, Slack)")).toBeInTheDocument()
-    expect(within(card).getByRole("link", { name: /Continue Media Buyer setup/ })).toHaveAttribute("href", "/welcome?s=buyer")
+    expect(within(card).getByText("Marketing Guru: 2 left (Schedule, Slack)")).toBeInTheDocument()
+    expect(within(card).getByRole("link", { name: /Continue Marketing Guru setup/ })).toHaveAttribute("href", "/welcome?s=buyer")
     expect(screen.queryByText("Sales Coach page")).not.toBeInTheDocument()
   })
 
   it("shows the page of an agent that is open", async () => {
     replies["GET /api/team/setup"] = [200, TEAM]
-    wrap(<AgentGate agent="media_buyer"><p>Media Buyer page</p></AgentGate>)
-    expect(await screen.findByText("Media Buyer page")).toBeInTheDocument()
+    wrap(<AgentGate agent="media_buyer"><p>Marketing Guru page</p></AgentGate>)
+    expect(await screen.findByText("Marketing Guru page")).toBeInTheDocument()
   })
 
   it("shows the page when the team state can't be read", async () => {
@@ -61,8 +61,8 @@ describe("A locked agent's chat", () => {
     const chat = { messages: [], loading: false, configured: true, outOfCredits: false, submittedUIs: [], locked: { agent: "sales_coach", waits_on: "media_buyer" } }
     wrap(<ChatThread chat={chat} name="Sales Coach" />)
     const card = screen.getByRole("region", { name: "Sales Coach is locked" })
-    expect(card).toHaveTextContent("It unlocks once Media Buyer is set up.")
-    await waitFor(() => expect(within(card).getByRole("link", { name: /Continue Media Buyer setup/ })).toHaveAttribute("href", "/welcome?s=buyer"))
+    expect(card).toHaveTextContent("It unlocks once Marketing Guru is set up.")
+    await waitFor(() => expect(within(card).getByRole("link", { name: /Continue Marketing Guru setup/ })).toHaveAttribute("href", "/welcome?s=buyer"))
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument()
   })
 })

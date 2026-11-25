@@ -1,4 +1,4 @@
-// The route a reply took between agents (Birdy, Media Buyer, Sales Coach and
+// The route a reply took between agents (Birdy, Marketing Guru, Sales Coach and
 // their sub-agents), shaped for the route map and the "agent's part" panel.
 // Pure functions only: no React, no fetch.
 //
@@ -14,7 +14,7 @@
  */
 export const AGENTS = {
   birdy: { key: "birdy", name: "Birdy", role: "ops", icon: "mascot", kind: "orchestrator", chat: "/dashboard/chat", context: "/dashboard/context" },
-  media_buyer: { key: "media_buyer", name: "Media Buyer", role: "buyer", icon: "megaphone", kind: "main", chat: "/media-buyer/chat", context: "/media-buyer/context" },
+  media_buyer: { key: "media_buyer", name: "Marketing Guru", role: "buyer", icon: "megaphone", kind: "main", chat: "/media-buyer/chat", context: "/media-buyer/context" },
   sales_coach: { key: "sales_coach", name: "Sales Coach", role: "coach", icon: "phone", kind: "main", chat: "/sales-coach/chat", context: "/sales-coach/context" },
 };
 

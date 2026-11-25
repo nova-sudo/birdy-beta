@@ -5,7 +5,7 @@
 // weekly brief and any report added since. Each has a trigger, a channel, an
 // on/off switch and its last run; the server keeps no list of past runs.
 //
-// Media Buyer: the Birdy Media Buying Agent's own reports. It runs every day at
+// Marketing Guru: the Birdy Media Buying Agent's own reports. It runs every day at
 // its scheduled time (agent.scope.schedule), checks one batch of clients on
 // that batch's weekdays and only the alerts on other days, and posts to its
 // Slack channel. On the weekly report's weekday the same run also builds the
@@ -66,7 +66,7 @@ export function slackReportView(report, { alerts = [], birdyChannel = null, acco
   };
 }
 
-// ─── Media Buyer: the Media Buying Agent's reports ──────────────────────────
+// ─── Marketing Guru: the Media Buying Agent's reports ──────────────────────────
 
 const DEFAULT_BATCHES = [{ id: "a", name: "Batch A", weekdays: [0, 3] }, { id: "b", name: "Batch B", weekdays: [1, 4] }];
 

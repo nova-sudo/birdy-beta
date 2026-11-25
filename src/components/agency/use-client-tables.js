@@ -36,7 +36,7 @@ export function useClientTables(client, preset, { adLeads: wantAdLeads = false }
   const location = client?.ghl_location_id;
   const calls = useSWR(location ? `/api/hotprospector/call-center?location_id=${encodeURIComponent(location)}&skip=0&limit=${CALLS_LIMIT}${range(preset)}` : null, json, OPTIONS);
 
-  // The same ad-attributed leads Media Buyer's agency table lists, for this client alone.
+  // The same ad-attributed leads Marketing Guru's agency table lists, for this client alone.
   const adLeads = useSWR(id && wantAdLeads ? `/api/facebook-leads/filtered?groups=${encodeURIComponent(id)}&limit=${AD_LEADS_LIMIT}${range(preset)}` : null, json, OPTIONS);
 
   // Every ad level carries the client's CPL limit, which the table marks rows against.
