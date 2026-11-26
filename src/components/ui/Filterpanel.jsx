@@ -26,10 +26,16 @@ import { Input } from "@/components/ui/input"
  * Choices are drafted locally and only committed on Apply, so a half-made
  * selection never refetches the table.
  *
- * @param {Array} groups  [{ id, label, mode, items, value, onChange, allValue?, allLabel? }]
- *                        `items` may be strings or { value, label } objects.
+ * @param {Array} groups  [{ id, label, mode, items, value, onChange, allValue?, allLabel?, clears? }]
+ *                        `items` may be strings or { value, label, count? } objects, or a
+ *                        function of the draft returning them, for a group whose choices hang
+ *                        on another group's (a pipeline's stages). `count` is shown beside the
+ *                        label. `clears` names groups a change here resets in the draft.
+ * @param {(draft: object) => void} [onApply]  takes every group's choice at once, by group id,
+ *                        in place of each group's onChange; for a page that keeps them all in
+ *                        one place (the address), where one change per group would trip over itself.
  */
-export function FilterPanel({ groups = [], onSave, triggerClassName }) {
+export function FilterPanel({ groups = [], onSave, onApply, triggerClassName }) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState(groups[0]?.id)
   const [search, setSearch] = useState("")
@@ -42,12 +48,13 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
         ...g,
         mode: g.mode ?? "multi",
         allValue: g.allValue ?? "all",
-        options: (g.items ?? []).map((item) =>
-          typeof item === "string" ? { value: item, label: item } : item
-        ),
       })),
     [groups]
   )
+  const optionsOf = (g) =>
+    ((typeof g.items === "function" ? g.items(draft) : g.items) ?? []).map((item) =>
+      typeof item === "string" ? { value: item, label: item } : item
+    )
 
   // Re-seed the draft whenever the panel opens or the parent resets a value
   // from outside — otherwise a "Clear all" elsewhere would leave stale ticks.
@@ -84,17 +91,26 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
     if (!group) return
     setDraft((prev) => {
       const value = prev[group.id]
+      // A group whose choices hang on this one starts again when this one changes.
+      const cleared = Object.fromEntries(
+        (group.clears ?? []).map((id) => {
+          const other = normalised.find((g) => g.id === id)
+          return [id, other?.mode === "single" ? other.allValue : []]
+        })
+      )
       if (group.mode === "single") {
         // Clicking the chosen one clears back to "all" — otherwise a
         // single-select filter can only ever be narrowed, never undone.
         return {
           ...prev,
+          ...cleared,
           [group.id]: value === optionValue ? group.allValue : optionValue,
         }
       }
       const list = value ?? []
       return {
         ...prev,
+        ...cleared,
         [group.id]: list.includes(optionValue)
           ? list.filter((v) => v !== optionValue)
           : [...list, optionValue],
@@ -104,19 +120,24 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
 
   const handleClear = () => {
     if (!group) return
+    const reset = (g) => (g.mode === "single" ? g.allValue : [])
     setDraft((prev) => ({
       ...prev,
-      [group.id]: group.mode === "single" ? group.allValue : [],
+      ...Object.fromEntries(
+        (group.clears ?? []).map((id) => normalised.find((g) => g.id === id)).filter(Boolean).map((g) => [g.id, reset(g)])
+      ),
+      [group.id]: reset(group),
     }))
   }
 
   const handleApply = () => {
-    normalised.forEach((g) => g.onChange?.(draft[g.id]))
+    if (onApply) onApply(draft)
+    else normalised.forEach((g) => g.onChange?.(draft[g.id]))
     onSave?.()
     setOpen(false)
   }
 
-  const visibleOptions = (group?.options ?? []).filter((o) =>
+  const visibleOptions = (group ? optionsOf(group) : []).filter((o) =>
     String(o.label).toLowerCase().includes(search.toLowerCase())
   )
 
@@ -235,6 +256,11 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
                   <span className="text-[13px] text-pd-ink flex-1 select-none">
                     {option.label}
                   </span>
+                  {option.count != null && (
+                    <span className="shrink-0 text-[12px] tabular-nums text-pd-faint select-none">
+                      {Number(option.count).toLocaleString()}
+                    </span>
+                  )}
                 </button>
               )
             })

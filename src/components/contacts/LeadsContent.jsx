@@ -1,6 +1,6 @@
 "use client"
-import { Search } from "lucide-react"
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { Search, X } from "lucide-react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
@@ -34,6 +34,13 @@ import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 // there, and selectedClientGroup/onSelectClientGroup are left uncontrolled so
 // this manages its own single-client scope) — see the client-group-selection
 // comment below for how that split works.
+//
+// Agency Ops' Dashboard tab, inside one client, mounts it with `stages="lead"`:
+// the tabs are the lead's own stages (All, Meta lead, In CRM, Called, Closed,
+// Lost, counted by the backend's meta.lead_stages), the CRM's pipeline and its
+// stages are a Pipeline and a Stage group in Filters, and the tab, filters and
+// page live in the address (`query` / `onQuery`) so Back from a lead returns
+// to the same place.
 
 const baseContactColumns = buildContactColumns()
 
@@ -54,6 +61,55 @@ const PIPELINE_TABS = [
   { key: "lost", label: "Lost", stat: "lost" },
 ]
 
+// The lead's own stages, for one client (`stages="lead"`). Each key is the
+// backend's `lead_stage` value and its count in `meta.lead_stages`; Meta lead
+// overlaps the others, which between them add up to All.
+export const LEAD_STAGE_TABS = [
+  { key: "all", label: "All" },
+  { key: "meta", label: "Meta lead" },
+  { key: "crm", label: "In CRM" },
+  { key: "called", label: "Called" },
+  { key: "closed", label: "Closed" },
+  { key: "lost", label: "Lost" },
+]
+
+// With the lead tabs, Opportunities is a filter rather than the tabs, so it
+// lists every status the CRM has, not only those on the page in view.
+const OPPORTUNITY_STATUSES = [
+  { value: "open", label: "Open" },
+  { value: "won", label: "Won" },
+  { value: "lost", label: "Lost" },
+  { value: "abandoned", label: "Abandoned" },
+]
+
+const NONE = []
+
+/**
+ * The client's CRM pipelines from `meta.pipelines`, in the CRM's order, each
+ * stage with its count; `total` is the pipeline's leads.
+ */
+export function pipelinesOf(meta) {
+  const list = Array.isArray(meta?.pipelines) ? meta.pipelines : []
+  return list
+    .map((p) => {
+      const stages = (Array.isArray(p?.stages) ? p.stages : [])
+        .filter((st) => st?.id != null)
+        .map((st) => ({ id: String(st.id), name: String(st.name || "").trim() || "Unnamed stage", count: Number(st.count) || 0 }))
+      return { id: String(p?.id ?? ""), name: String(p?.name || "").trim() || "Pipeline", total: stages.reduce((n, st) => n + st.count, 0), stages }
+    })
+    .filter((p) => p.id && p.stages.length > 0)
+}
+
+/** The pipeline the Stage filter lists first: the one holding the most leads, the CRM's first on a tie. */
+const busiestPipeline = (pipelines) => pipelines.reduce((best, p) => (!best || p.total > best.total ? p : best), null)
+
+/**
+ * @param {"opportunity"|"lead"} [props.stages] which tabs sit over the table: Open / Won / Abandoned /
+ *   Lost (the Leads hub's, the default) or the lead's own stages, with the CRM pipeline and stage in Filters
+ * @param {object} [props.query] the tab, filters and page, when the caller keeps them (in the address):
+ *   `{ tab, pipeline, stage, page, sources, type, opportunity, tags }`; left out they are kept here
+ * @param {(changes: object) => void} [props.onQuery] takes changes to `query`, null removing one
+ */
 export function LeadsContent({
   clientGroups,
   groupsLoading,
@@ -63,7 +119,11 @@ export function LeadsContent({
   onSelectClientGroup,
   // Fills the height it is given: the toolbar and pager stay put and only the table scrolls, inside its card.
   fill = false,
+  stages = "opportunity",
+  query,
+  onQuery,
 }) {
+  const leadTabs = stages === "lead"
   const router = useRouter()
   const [contacts, setContacts] = useState([])
   const [metaData, setMetaData] = useState(null)
@@ -89,7 +149,15 @@ export function LeadsContent({
     }).catch(() => {})
   }, [])
 
-  const [currentPage, setCurrentPage] = useState(1)
+  // The tab, the filters and the page: the caller's (the address) when it keeps them, else here.
+  const [localState, setLocalState] = useState({})
+  const tableState = query ?? localState
+  const updateState = useCallback((changes) => {
+    if (onQuery) onQuery(changes)
+    else setLocalState((prev) => ({ ...prev, ...changes }))
+  }, [onQuery])
+
+  const currentPage = Math.max(1, Number.parseInt(tableState.page ?? "1", 10) || 1)
   const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("contacts")
 
   // Filter to GHL groups only
@@ -144,10 +212,13 @@ export function LeadsContent({
   }, [viewsLoaded, savedColumns])
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSources, setSelectedSources] = useState([])
-  const [selectedType, setSelectedType] = useState("all")
-  const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
-  const [selectedTags, setSelectedTags] = useState([])
+  const selectedSources = tableState.sources?.length ? tableState.sources : NONE
+  const selectedType = tableState.type || "all"
+  const selectedOpportunityStatus = tableState.opportunity || "all"
+  const selectedTags = tableState.tags?.length ? tableState.tags : NONE
+  const selectedLeadStage = LEAD_STAGE_TABS.some((t) => t.key === tableState.tab) ? tableState.tab : "all"
+  // Any filter but the page itself starts the table again at its first page.
+  const setSelectedOpportunityStatus = (value) => updateState({ opportunity: value === "all" ? null : value, page: null })
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
 
@@ -159,6 +230,8 @@ export function LeadsContent({
   const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
   const selectedClientGroup = controlledClientGroup ?? uncontrolledClientGroup
   const setSelectedClientGroup = onSelectClientGroup ?? setUncontrolledClientGroup
+  // A client given without a way to change it is the page's scope, not a filter: Clear leaves it.
+  const clientLocked = controlledClientGroup !== undefined && !onSelectClientGroup
 
 
   // ── Saved column views ─────────────────────────────────────────────────
@@ -243,62 +316,126 @@ export function LeadsContent({
     [contacts]
   )
 
-  // Every filter on this page, in one control. Sources and Tags narrow to a
-  // set; Types and Opportunities pick one, with "all" meaning unfiltered.
-  const filterGroups = useMemo(() => [
-    { id: "sources", label: "Sources", mode: "multi",
-      items: sources, value: selectedSources, onChange: setSelectedSources },
-    { id: "types", label: "Types", mode: "single",
-      items: types, value: selectedType, onChange: setSelectedType },
-    { id: "opportunities", label: "Opportunities", mode: "single",
-      items: opportunityStatuses, value: selectedOpportunityStatus,
-      onChange: setSelectedOpportunityStatus },
-    { id: "tags", label: "Tags", mode: "multi",
-      items: allTags, value: selectedTags, onChange: setSelectedTags },
-  ], [sources, selectedSources, types, selectedType, opportunityStatuses,
-      selectedOpportunityStatus, allTags, selectedTags])
+  // The client's CRM pipelines, from the last page that answered (they ignore
+  // the stage picked, so a stage's page keeps the whole pipeline's counts).
+  const [pipelines, setPipelines] = useState(NONE)
+  const defaultPipeline = useMemo(() => busiestPipeline(pipelines), [pipelines])
+  const stageOwner = tableState.stage ? pipelines.find((p) => p.stages.some((st) => st.id === tableState.stage)) : null
+  const pipeline = pipelines.find((p) => p.id === tableState.pipeline) ?? stageOwner ?? defaultPipeline
+  const stage = pipeline?.stages.find((st) => st.id === tableState.stage) ?? null
+  const stagesIn = useCallback(
+    (pipelineId) => (pipelines.find((p) => p.id === pipelineId) ?? pipeline)?.stages ?? NONE,
+    [pipelines, pipeline]
+  )
 
-  const fetchContacts = async (page = 1, overrides = {}) => {
-    setLoading(true)
-    setError(null)
-    try {
-      if (ghlClientGroups.length === 0) {
+  // Every filter on this page, in one control. Sources and Tags narrow to a
+  // set; Types and Opportunities pick one, with "all" meaning unfiltered. With
+  // the lead tabs, the CRM's pipeline (when it has more than one) and stage
+  // lead, the stages in the CRM's order with their counts.
+  const filterGroups = useMemo(() => [
+    ...(leadTabs && pipelines.length > 1 ? [
+      { id: "pipeline", label: "Pipeline", mode: "single", allValue: defaultPipeline.id, clears: ["stage"],
+        items: pipelines.map((p) => ({ value: p.id, label: p.name, count: p.total })), value: pipeline.id },
+    ] : []),
+    ...(leadTabs && pipelines.length > 0 ? [
+      { id: "stage", label: "Stage", mode: "single",
+        items: (draft) => stagesIn(draft.pipeline).map((st) => ({ value: st.id, label: st.name, count: st.count })),
+        value: stage?.id ?? "all" },
+    ] : []),
+    { id: "sources", label: "Sources", mode: "multi", items: sources, value: selectedSources },
+    { id: "types", label: "Types", mode: "single", items: types, value: selectedType },
+    { id: "opportunities", label: "Opportunities", mode: "single",
+      items: leadTabs ? OPPORTUNITY_STATUSES : opportunityStatuses, value: selectedOpportunityStatus },
+    { id: "tags", label: "Tags", mode: "multi", items: allTags, value: selectedTags },
+  ], [leadTabs, pipelines, defaultPipeline, pipeline, stage, stagesIn, sources, selectedSources, types,
+      selectedType, opportunityStatuses, selectedOpportunityStatus, allTags, selectedTags])
+
+  // Filters' Apply: every choice at once, so the address changes in one step.
+  const applyFilters = (draft) => {
+    const one = (value) => (!value || value === "all" ? null : value)
+    const list = (value) => (value?.length ? value : null)
+    const next = {
+      sources: list(draft.sources),
+      type: one(draft.types),
+      opportunity: one(draft.opportunities),
+      tags: list(draft.tags),
+    }
+    if ("pipeline" in draft) next.pipeline = draft.pipeline === defaultPipeline?.id ? null : draft.pipeline
+    if ("stage" in draft) next.stage = one(draft.stage)
+    const now = {
+      sources: list(selectedSources), type: one(selectedType), opportunity: one(selectedOpportunityStatus),
+      tags: list(selectedTags), pipeline: tableState.pipeline || null, stage: tableState.stage || null,
+    }
+    const changes = Object.fromEntries(
+      Object.entries(next).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(now[key]))
+    )
+    if (Object.keys(changes).length) updateState({ ...changes, page: null })
+  }
+
+  // The page of leads to ask for. With the lead tabs, a tab is `lead_stage`
+  // and a stage `stage_id`; a stage the address carries is asked for as it is,
+  // and dropped once the CRM's pipelines turn out not to have it.
+  const requestUrl = useMemo(() => {
+    if (ghlClientGroups.length === 0) return null
+    const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+    const { start_date, end_date } = presetToDateRange(datePreset)
+    let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${currentPage}&limit=15`
+    if (start_date) endpoint += `&start_date=${start_date}`
+    if (end_date) endpoint += `&end_date=${end_date}`
+    selectedSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
+    selectedTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
+    if (selectedOpportunityStatus !== "all") endpoint += `&opportunity_status=${encodeURIComponent(selectedOpportunityStatus)}`
+    if (leadTabs && selectedLeadStage !== "all") endpoint += `&lead_stage=${encodeURIComponent(selectedLeadStage)}`
+    if (leadTabs && tableState.stage) endpoint += `&stage_id=${encodeURIComponent(tableState.stage)}`
+    return endpoint
+  }, [ghlClientGroups.length, selectedClientGroup, datePreset, currentPage, selectedSources, selectedTags,
+      selectedOpportunityStatus, leadTabs, selectedLeadStage, tableState.stage])
+
+  // Only the latest request draws the table, however the answers arrive.
+  const latestRequest = useRef(0)
+  useEffect(() => {
+    const id = ++latestRequest.current
+    if (!requestUrl) {
+      if (!groupsLoading) {
         setContacts([])
         setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
         setLoading(false)
-        return
       }
-
-      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-      const { start_date, end_date } = presetToDateRange(datePreset)
-
-      const activeSources = overrides.sources ?? selectedSources
-      const activeTags = overrides.tags ?? selectedTags
-      const activeStatus = overrides.opportunityStatus ?? selectedOpportunityStatus
-
-      let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
-      if (start_date) endpoint += `&start_date=${start_date}`
-      if (end_date) endpoint += `&end_date=${end_date}`
-      activeSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
-      activeTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
-      if (activeStatus && activeStatus !== "all") endpoint += `&opportunity_status=${encodeURIComponent(activeStatus)}`
-
-      const response = await apiRequest(endpoint)
-      if (!response.ok) throw new Error(`Failed: ${response.status}`)
-
-      const data = await response.json()
-      setContacts(data.contacts || [])
-      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
-      setCurrentPage(page)
-
-    } catch (err) {
-      setError(err.message)
-      setContacts([])
-      setMetaData(null)
-    } finally {
-      setLoading(false)
+      return
     }
-  }
+    setLoading(true)
+    setError(null)
+    apiRequest(requestUrl)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Failed: ${response.status}`)
+        return response.json()
+      })
+      .then((data) => {
+        if (id !== latestRequest.current) return
+        setContacts(data.contacts || [])
+        setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+        if (leadTabs) setPipelines(pipelinesOf(data.meta))
+      })
+      .catch((err) => {
+        if (id !== latestRequest.current) return
+        setError(err.message)
+        setContacts([])
+        setMetaData(null)
+      })
+      .finally(() => {
+        if (id === latestRequest.current) setLoading(false)
+      })
+  }, [requestUrl, groupsLoading, leadTabs])
+
+  // A pipeline or stage the address names that the CRM doesn't have (renamed,
+  // removed, another client's) is dropped once the answer says so.
+  useEffect(() => {
+    if (!leadTabs || loading || !metaData) return
+    const changes = {}
+    if (tableState.pipeline && !pipelines.some((p) => p.id === tableState.pipeline)) changes.pipeline = null
+    if (tableState.stage && !stage) changes.stage = null
+    if (Object.keys(changes).length) updateState({ ...changes, page: null })
+  }, [leadTabs, loading, metaData, pipelines, stage, tableState.pipeline, tableState.stage, updateState])
 
   // When embedded for a single group under internal (uncontrolled) selection,
   // auto-select it once groups load. Controlled usage (the Lead Hub page)
@@ -309,13 +446,6 @@ export function LeadsContent({
       setUncontrolledClientGroup(ghlClientGroups[0].id)
     }
   }, [controlledClientGroup, ghlClientGroups, uncontrolledClientGroup])
-
-  // Re-fetch whenever the preset, group filter, or group list changes
-  useEffect(() => {
-    if (ghlClientGroups.length > 0) {
-      fetchContacts(1)
-    }
-  }, [selectedClientGroup, ghlClientGroups.length, datePreset, selectedSources, selectedTags, selectedOpportunityStatus])
 
   const filteredAndSortedContacts = useMemo(() => {
     let filtered = [...contacts]
@@ -363,11 +493,8 @@ export function LeadsContent({
 
   const clearAllFilters = () => {
     setSearchQuery("")
-    setSelectedSources([])
-    setSelectedType("all")
-    setSelectedOpportunityStatus("all")
-    setSelectedClientGroup("all")
-    setSelectedTags([])
+    updateState({ sources: null, type: null, opportunity: null, tags: null, pipeline: null, stage: null, page: null })
+    if (!clientLocked) setSelectedClientGroup("all")
     setSortColumn("")
     setSortDirection("asc")
   }
@@ -377,16 +504,18 @@ export function LeadsContent({
     selectedSources.length > 0 ||
     selectedType !== "all" ||
     selectedOpportunityStatus !== "all" ||
-    selectedClientGroup !== "all" ||
-    selectedTags.length > 0
+    (!clientLocked && selectedClientGroup !== "all") ||
+    selectedTags.length > 0 ||
+    Boolean(tableState.stage)
 
 
   const totalPages = metaData?.total_pages || 1
+  const goToPage = (page) => updateState({ page: page > 1 ? String(page) : null })
   const handlePreviousPage = () => {
-    if (currentPage > 1) fetchContacts(currentPage - 1)
+    if (currentPage > 1) goToPage(currentPage - 1)
   }
   const handleNextPage = () => {
-    if (metaData?.has_next) fetchContacts(currentPage + 1)
+    if (metaData?.has_next) goToPage(currentPage + 1)
   }
 
   // Pipeline tabs, with the design's count badges — the same figures the
@@ -394,6 +523,16 @@ export function LeadsContent({
   // meta.stats rather than re-deriving them, since this table already pulls
   // them on every window/group change.
   const pipelineTabs = useMemo(() => {
+    if (leadTabs) {
+      // Counted by the backend over every other filter; an older one sends
+      // none, and the tabs then go without numbers rather than wrong ones.
+      const counts = metaData?.lead_stages
+      return LEAD_STAGE_TABS.map((tab) => ({
+        key: tab.key,
+        label: tab.label,
+        badge: counts && counts[tab.key] != null ? Number(counts[tab.key]).toLocaleString() : undefined,
+      }))
+    }
     const stats = metaData?.stats ?? {}
     // PageTabs tints the badges (purple on the active tab, neutral elsewhere).
     return PIPELINE_TABS.map((tab) => ({
@@ -401,7 +540,21 @@ export function LeadsContent({
       label: tab.label,
       badge: (stats[tab.stat] ?? 0).toLocaleString(),
     }))
-  }, [metaData])
+  }, [metaData, leadTabs])
+
+  // The stage picked in Filters, beside them as a chip that takes it off.
+  const stageChip = leadTabs && stage && (
+    <button
+      type="button"
+      onClick={() => updateState({ stage: null, page: null })}
+      aria-label={`Remove the ${stage.name} stage filter`}
+      title={pipelines.length > 1 ? `${pipeline.name} · ${stage.name}` : undefined}
+      className={`${TOOLBAR_CHIP} max-w-[240px] shrink-0 whitespace-nowrap`}
+    >
+      <span className="truncate">Stage: {stage.name}</span>
+      <X className="size-[14px] text-pd-subtle" aria-hidden="true" />
+    </button>
+  )
 
   return (
     <div className={fill ? "flex min-h-0 min-w-0 flex-1 flex-col" : "min-w-0"}>
@@ -417,15 +570,18 @@ export function LeadsContent({
         <StaggerItem className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <PageTabs
-              label="Pipeline stage"
+              label={leadTabs ? "Lead stage" : "Pipeline stage"}
               panelId={LEADS_PANEL_ID}
               tabs={pipelineTabs}
-              value={selectedOpportunityStatus}
-              onChange={setSelectedOpportunityStatus}
+              value={leadTabs ? selectedLeadStage : selectedOpportunityStatus}
+              onChange={leadTabs
+                ? (value) => updateState({ tab: value === "all" ? null : value, page: null })
+                : setSelectedOpportunityStatus}
             />
 
-            <div className="flex items-center gap-2.5 md:ml-auto">
-              <div className="relative">
+            <div className="flex min-w-0 items-center gap-2.5 md:ml-auto">
+              {/* The search gives way first when the row fills up (a stage chip and Clear beside it). */}
+              <div className="relative min-w-[120px] md:w-[200px]">
                 <Search
                   className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
                   aria-hidden="true"
@@ -435,11 +591,13 @@ export function LeadsContent({
                   aria-label="Search leads"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full pl-9 text-[13px] md:w-[200px]"
+                  className="h-[38px] w-full pl-9 text-[13px]"
                 />
               </div>
 
-              <FilterPanel groups={filterGroups} triggerClassName={TOOLBAR_CHIP} />
+              {stageChip}
+
+              <FilterPanel groups={filterGroups} onApply={applyFilters} triggerClassName={TOOLBAR_CHIP} />
 
 
               {/* The dropdown above is this page's filter panel (Sources,
@@ -501,7 +659,7 @@ export function LeadsContent({
                   ) : (
                     <PaginationLink
                       href="#"
-                      onClick={(e) => { e.preventDefault(); if (page !== currentPage) fetchContacts(page) }}
+                      onClick={(e) => { e.preventDefault(); if (page !== currentPage) goToPage(page) }}
                       isActive={currentPage === page}
                       className="cursor-pointer"
                     >
