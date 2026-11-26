@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Check, Link2, Phone, Users } from "lucide-react";
-import { Card, Delta, EmptyState, Funnel, RankList, SectionHeader, Skeleton } from "@/components/by";
+import { Card, EmptyState, RankList, SectionHeader, Skeleton } from "@/components/by";
+import { FunnelChart } from "@/components/agency/funnel-chart";
 import { usePortfolioData } from "@/app/dashboard/usePortfolioData";
 import { MarketingContent } from "@/components/campaigns/MarketingContent";
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview";
@@ -192,18 +193,13 @@ function BuyerCards({ data, preset, money, scoped, dashboardHref }) {
     <div className="grid gap-3.5 lg:grid-cols-2">
       {scoped ? (
         <>
-          <Card className="px-5 py-4.5">
+          <Card className="flex flex-col px-5 py-4.5">
             <CardHead title="Performance funnel" />
             {stages.length ? (
               <>
-                <Funnel
-                  className="mt-4"
-                  stages={stages.map((s) => ({
-                    key: s.key,
-                    ...FUNNEL_PARTS[s.key],
-                    value: s.count,
-                    note: Number.isFinite(s.delta) ? <Delta value={s.direction === "down" ? -s.delta : s.delta} goodWhen="up" /> : s.share ? `${s.share} of leads` : null,
-                  }))}
+                <FunnelChart
+                  className="mt-3"
+                  steps={stages.map((s) => ({ key: s.key, label: s.label ?? FUNNEL_PARTS[s.key]?.label ?? s.key, value: Number(s.count) }))}
                 />
                 <Diagnosis diagnosis={diagnosis} />
               </>
@@ -280,13 +276,13 @@ function CoachCards({ data, preset, rangeLabel, format, scoped, dashboardHref })
 
   return (
     <div className="grid gap-3.5 lg:grid-cols-2">
-      <Card className="px-5 py-4.5">
+      <Card className="flex flex-col px-5 py-4.5">
         <CardHead title="New lead to close" />
         {funnel ? (
           <>
-            <Funnel
-              className="mt-4"
-              stages={funnel.stages.map((s) => ({ key: s.key, ...FUNNEL_PARTS[s.key], value: s.count.toLocaleString("en-GB"), note: s.share ? `${s.share} of new in CRM` : rangeLabel.toLowerCase() }))}
+            <FunnelChart
+              className="mt-3"
+              steps={funnel.stages.map((s) => ({ key: s.key, label: s.label ?? FUNNEL_PARTS[s.key]?.label ?? s.key, value: Number(s.count) }))}
             />
             <Diagnosis diagnosis={funnel.diagnosis} />
           </>
