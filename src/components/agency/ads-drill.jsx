@@ -7,7 +7,8 @@
 
 import { useMemo, useState } from "react";
 import { Megaphone } from "lucide-react";
-import { RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr } from "@/components/by";
+import { RowArrow, SearchField, Table, TableBody, TableHead, Td, Th, Tr } from "@/components/by";
+import { PageTabs } from "@/components/portfolio";
 import { LeadsTable } from "./client-tables";
 import { DrillTrail } from "./buyer-drill";
 import { TableCard, money as moneyOf, tableState, useColumns } from "./table-card";
@@ -71,7 +72,7 @@ export function AdsDrill({ nav, levels, ads, leads, nameOf, currencySymbol = "£
   // At phone width the level switch scrolls sideways inside the card rather than being cut off.
   const levelSwitch = (
     <div className="max-w-full min-w-0 overflow-x-auto">
-      <TabPill aria-label="Show by" value={level} onValueChange={setLevel} items={scope.levels.map((key) => ({ value: key, label: LEVELS[key].label, count: counted(key) }))} />
+      <PageTabs label="Show by" value={level} onChange={setLevel} tabs={scope.levels.map((key) => ({ key, label: LEVELS[key].label, badge: counted(key) }))} />
     </div>
   );
   const trailLine = <DrillTrail trail={trail} applied={applied} loading={ads.loading} onStep={step} onClear={clear} onOpenClient={onOpenClient} />;

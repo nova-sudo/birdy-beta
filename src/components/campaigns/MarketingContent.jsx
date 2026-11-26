@@ -169,7 +169,7 @@ export function MarketingContent({
   useEffect(() => {
     if (!showTable) return
     if (!hideCreatives && (urlParams?.get("tab") === "creatives" || urlParams?.get("creative"))) setActiveTab("creatives")
-    // A lead's "back to this client's leads" link (lib/lead-view clientLeadsHref) lands on the Leads tab.
+    // A lead's "Back to Leads" link (lib/leads-hub LEADS_HREF, ?view=leads) lands on the Leads tab.
     else if (urlParams?.get("view") === "leads") setActiveTab("leads")
   }, [urlParams, showTable, hideCreatives])
   // Ads-tab-only layout switch: the same rows and column order drawn either as

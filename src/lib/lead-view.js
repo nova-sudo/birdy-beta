@@ -279,5 +279,5 @@ export function markParts(text, query, base) {
   return out;
 }
 
-/** The leads table the lead belongs to: the client's Marketing Guru Dashboard, Leads view; without a client, Marketing Guru's Leads level. */
-export const clientLeadsHref = (groupId) => (groupId ? `/media-buyer/table?client=${encodeURIComponent(groupId)}&view=leads` : LEADS_HREF);
+/** The leads table the lead belongs to: the client's lead pipeline on Agency Ops' Dashboard; without a client, Marketing Guru's Leads level. */
+export const clientLeadsHref = (groupId) => (groupId ? `/dashboard/table?client=${encodeURIComponent(groupId)}` : LEADS_HREF);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adLeadRow, adLevelRows, adRows, callRows, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
+import { adLeadRow, adLevelRows, adRows, busiestPipeline, callRows, leadPipelines, filterLeads, leadCounts, leadFilterOptions, leadRow, lengthLabel, repRows, searchBy, sortBy, toggleSort, whenLabel } from "../client-tables"
 
 const contact = (over = {}) => ({ contactId: "c1", contactName: "Leanne Turner", dateAdded: "2026-11-04T18:31:00Z", source: "Facebook", opportunities: [], ...over })
 
@@ -194,5 +194,42 @@ describe("adLevelRows ids", () => {
     expect(adLevelRows(group, {}, "campaigns")[0]).toMatchObject({ campaignId: "c1", adsetId: "" })
     expect(adLevelRows(group, {}, "adsets")[0]).toMatchObject({ campaignId: "c1", adsetId: "s1" })
     expect(adLevelRows(group, {}, "ads")[0]).toMatchObject({ campaignId: "c1", adsetId: "s1" })
+  })
+})
+
+describe("lead pipelines", () => {
+  const meta = {
+    pipelines: [
+      { id: "p2", name: "Reactivation", stages: [{ id: "r1", name: "Re-engaged", count: 3 }] },
+      { id: "p1", name: "Main", stages: [{ id: "s1", name: "Opt-in", count: "41" }, { id: "s2", name: "", count: 2 }] },
+      { id: "p3", name: "Empty", stages: [] },
+    ],
+  }
+
+  it("keeps the CRM's order, counts each pipeline and drops one without stages", () => {
+    expect(leadPipelines(meta)).toEqual([
+      { id: "p2", name: "Reactivation", total: 3, stages: [{ id: "r1", name: "Re-engaged", count: 3 }] },
+      { id: "p1", name: "Main", total: 43, stages: [{ id: "s1", name: "Opt-in", count: 41 }, { id: "s2", name: "Unnamed stage", count: 2 }] },
+    ])
+  })
+
+  it("is empty from a backend that sends none", () => {
+    expect(leadPipelines(undefined)).toEqual([])
+    expect(leadPipelines({ total_contacts: 4 })).toEqual([])
+    expect(busiestPipeline([])).toBeNull()
+  })
+
+  it("opens on the pipeline with the most leads", () => {
+    expect(busiestPipeline(leadPipelines(meta)).id).toBe("p1")
+  })
+
+  it("shows the deal in the focused stage, else the focused pipeline", () => {
+    const c = contact({ opportunities: [
+      { pipelineId: "p1", pipelineStageId: "s1", pipelineName: "Main", pipelineStageName: "Opt-in", status: "open" },
+      { pipelineId: "p2", pipelineStageId: "r1", pipelineName: "Reactivation", pipelineStageName: "Re-engaged", status: "won" },
+    ] })
+    expect(leadRow(c)).toMatchObject({ stageName: "Opt-in", pipelineName: "Main", dealStatus: "open" })
+    expect(leadRow(c, { stageId: "r1" })).toMatchObject({ stageName: "Re-engaged", dealStatus: "won" })
+    expect(leadRow(c, { pipelineId: "p2" }).stageName).toBe("Re-engaged")
   })
 })
