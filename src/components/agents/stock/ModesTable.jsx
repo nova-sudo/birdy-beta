@@ -3,6 +3,8 @@
 import { TriangleAlert } from "lucide-react"
 
 import { Frame, Notice, SegmentedTabs, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ds"
+import { TABLE_TD, TABLE_TH } from "@/lib/table-style"
+import { cn } from "@/lib/utils"
 
 export const MODE_LABELS = { flag: "Flag", ask: "Ask me", auto: "Auto" }
 const MODE_HELP = {
@@ -133,17 +135,17 @@ export function ModesTable({ settings, clients, onChange, errors = {} }) {
         <Frame title="Different for one client" description="Leave a client on Default to follow the choices above." className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2 font-medium">Client</th>
+              <tr>
+                <th className={cn(TABLE_TH)}>Client</th>
                 {CHANGE_TYPES.map((t) => (
-                  <th key={t.kind} className="px-3 py-2 font-medium">{t.label}</th>
+                  <th key={t.kind} className={cn(TABLE_TH)}>{t.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {clients.map((c) => (
-                <tr key={c.id} className="border-t">
-                  <td className="px-3 py-2 font-medium text-foreground">
+                <tr key={c.id}>
+                  <td className={cn(TABLE_TD, "font-medium text-foreground")}>
                     {c.name}
                     {errors[c.id] && (
                       <p role="alert" className="mt-1 text-xs font-normal text-danger-ink">
@@ -155,7 +157,7 @@ export function ModesTable({ settings, clients, onChange, errors = {} }) {
                     const locked = kind === "add" && !addOn
                     const own = clientModes[c.id]?.[kind]
                     return (
-                      <td key={kind} className="px-3 py-2">
+                      <td key={kind} className={cn(TABLE_TD)}>
                         <Select value={locked && own ? "flag" : (own ?? DEFAULT)} onValueChange={(m) => setClient(c.id, kind, m)}>
                           <SelectTrigger size="sm" aria-label={`${label} for ${c.name}`} className="w-44">
                             <SelectValue />

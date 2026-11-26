@@ -1,18 +1,20 @@
 "use client"
 
 // components/views/ColumnsMenu.jsx
-// The table toolbar's "Columns" control — concept 5C from the Marketing Hub
-// Columns handoff (design_handoff_hubs/design_handoff_marketing_columns).
+// The table toolbar's "Views" control. It started as concept 5C of the
+// Marketing Hub Columns handoff (design_handoff_hubs/design_handoff_marketing_columns),
+// and was renamed from "Columns" because people did not know saved views
+// existed under that name. Views are views; the client health tabs are filters.
 //
-// One 480×560 popover, split:
-//   left rail  (160px) — saved views, then a read-only metric-source filter,
-//                        then Save New View / Update View pinned to the bottom
-//   right pane          — select-all header, the column list, search at the
-//                         BOTTOM (not the top, deliberately)
+// One 400px-wide popover, top to bottom:
+//   Views                — Default and the saved views, the current one ticked,
+//                          then Update view / Save as new view
+//   Columns in this view — the metric-source filter, select-all, the column
+//                          list, and search at the BOTTOM (deliberately)
 //
 // A view stores the visible column set and the source it was scoped to.
 // "Default" is synthetic: it is the page's own baseline column set and cannot
-// be renamed or deleted. It CAN be saved over — "Save to existing" writes the
+// be renamed or deleted. It CAN be saved over — "Update view" writes the
 // current columns to the page's own stored layout, which is what makes them
 // come back next visit.
 //
@@ -95,7 +97,7 @@ function SourceBadge({ source, label }) {
 const RAIL_LABEL =
   "text-[10px] font-bold uppercase tracking-[.04em] text-pd-faint"
 
-// Rail rows (saved views and the source filter) share one treatment: the
+// View rows share one treatment: the
 // selected row keeps its own highlight and never takes the grey hover.
 const railRowClass = (on, hovered) =>
   cn(
@@ -116,8 +118,8 @@ export default function ColumnsMenu({
   defaultColumns = [],       // the protected "Default" view's column set
   views,                     // the usePageViews return value
   sources = DEFAULT_SOURCES, // metric-filter rail options; first must be "all"
-  // Persists the current columns as the page's own layout — where "Save to
-  // existing" writes when no saved view is selected. Without it that button
+  // Persists the current columns as the page's own layout — where "Update
+  // view" writes when no saved view is selected. Without it that button
   // has nothing to save to on Default.
   onSaveDefault,
   buttonClassName = "",
@@ -251,6 +253,9 @@ export default function ColumnsMenu({
     setDeleteTarget(null)
   }
 
+  // The button names the view on screen once it is one you saved.
+  const activeName = activeIsStored ? rail.find(v => v.id === activeId)?.name : null
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -261,16 +266,21 @@ export default function ColumnsMenu({
           className={cn("h-[38px] gap-2 px-[13px] text-[13px]", buttonClassName)}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
             <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
             <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
             <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
             <line x1="17" y1="16" x2="23" y2="16" />
           </svg>
-          Columns
+          <span className="flex min-w-0 items-center">
+            Views
+            {activeName && (
+              <span className="max-w-[140px] truncate font-medium text-pd-faint">&nbsp;·&nbsp;{activeName}</span>
+            )}
+          </span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M6 9l6 6 6-6" />
           </svg>
         </Button>
@@ -278,20 +288,22 @@ export default function ColumnsMenu({
 
       {/* Portalled, so a toolbar with overflow-x-auto (the Clients page has
           one) can't clip it — CSS forces the other axis to auto too, which
-          squashed this menu into a scrolling strip the height of the toolbar. */}
+          squashed this menu into a scrolling strip the height of the toolbar.
+
+          Views come first: they were tucked into a side rail under a button
+          called "Columns", and people did not know saved views existed. The
+          columns follow, as the contents of the view you are on. */}
       <PopoverContent
         align="end"
         sideOffset={6}
-        aria-label="Columns and saved views"
-        className="flex h-[560px] w-[480px] overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0 shadow-pd-popover"
+        aria-label="Views and columns"
+        className="flex max-h-[min(640px,var(--radix-popover-content-available-height))] w-[400px] flex-col overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0 shadow-pd-popover"
       >
-          {/* ── Left rail ─────────────────────────────────────────────── */}
-          <div className="flex w-[160px] flex-col border-r border-pd-border bg-pd-table-head">
-            <div className={`${RAIL_LABEL} border-b border-pd-border px-[14px] pb-[10px] pt-[12px]`}>
-              Saved views
-            </div>
+          {/* ── Views ─────────────────────────────────────────────────── */}
+          <div className="shrink-0 border-b border-pd-border">
+            <div className={`${RAIL_LABEL} px-[14px] pb-[6px] pt-[12px]`}>Views</div>
 
-            <div className="overflow-y-auto">
+            <div role="list" aria-label="Saved views" className="max-h-[176px] overflow-y-auto">
               {rail.map(view => {
                 const on = view.id === activeId
                 const hovered = hoverView === view.id
@@ -301,7 +313,7 @@ export default function ColumnsMenu({
 
                 if (editTarget?.id === view.id) {
                   return (
-                    <div key={view.id} className="flex items-center gap-[5px] px-[11px] py-[6px]">
+                    <div key={view.id} role="listitem" className="flex items-center gap-[5px] px-[11px] py-[6px]">
                       <input
                         value={editValue}
                         onChange={e => setEditValue(e.target.value)}
@@ -337,26 +349,22 @@ export default function ColumnsMenu({
 
                 if (deleteTarget?.id === view.id) {
                   return (
-                    <div key={view.id} className="flex flex-col gap-[6px] bg-pd-danger-surface px-[14px] py-[8px]">
-                      <span className="text-[11.5px] font-semibold text-pd-body">
+                    <div key={view.id} role="listitem" className="flex items-center gap-[8px] bg-pd-danger-surface px-[14px] py-[8px]">
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-pd-body">
                         Delete &ldquo;{view.name}&rdquo;?
                       </span>
-                      <div className="flex gap-[6px]">
-                        <Button
-                          type="button" variant="destructive" size="xs"
-                          onClick={confirmDelete} disabled={busy}
-                          className="flex-1"
-                        >
-                          Delete
-                        </Button>
-                        <Button
-                          type="button" variant="outline" size="xs"
-                          onClick={() => setDeleteTarget(null)}
-                          className="flex-1"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
+                      <Button
+                        type="button" variant="destructive" size="xs"
+                        onClick={confirmDelete} disabled={busy}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        type="button" variant="outline" size="xs"
+                        onClick={() => setDeleteTarget(null)}
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   )
                 }
@@ -364,10 +372,11 @@ export default function ColumnsMenu({
                 return (
                   <div
                     key={view.id}
+                    role="listitem"
                     onMouseEnter={() => setHoverView(view.id)}
                     onMouseLeave={() => setHoverView(null)}
                     className={cn(
-                      "flex items-center gap-[6px] px-[14px] py-[8px]",
+                      "flex items-center gap-[8px] px-[14px] py-[8px]",
                       railRowClass(on, hovered)
                     )}
                   >
@@ -375,7 +384,7 @@ export default function ColumnsMenu({
                       type="button"
                       onClick={() => pickView(view)}
                       aria-current={on ? "true" : undefined}
-                      className={cn("min-w-0 flex-1 truncate text-left text-[12.5px]", railTextClass(on))}
+                      className={cn("min-w-0 flex-1 truncate text-left text-[13px]", railTextClass(on))}
                     >
                       {view.name}
                     </button>
@@ -392,7 +401,7 @@ export default function ColumnsMenu({
                           aria-label={`Rename ${view.name}`}
                           className="shrink-0 text-pd-faint hover:text-pd-body animate-in fade-in duration-150"
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
                           </svg>
@@ -403,7 +412,7 @@ export default function ColumnsMenu({
                           aria-label={`Delete ${view.name}`}
                           className="shrink-0 text-pd-danger animate-in fade-in duration-150"
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 6h18" />
                             <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -412,37 +421,22 @@ export default function ColumnsMenu({
                         </button>
                       </>
                     )}
+                    {/* The view on screen is ticked, as well as tinted. */}
+                    {on && (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                           className="shrink-0 text-pd-primary" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    )}
                   </div>
                 )
               })}
             </div>
 
-            <div className={`${RAIL_LABEL} px-[14px] pb-[6px] pt-[14px]`}>Metric filter</div>
-            {sources.map(s => {
-              const on = s.id === source
-              const hovered = hoverSource === s.id
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSource(s.id)}
-                  onMouseEnter={() => setHoverSource(s.id)}
-                  onMouseLeave={() => setHoverSource(null)}
-                  aria-pressed={on}
-                  className={cn(
-                    "px-[14px] py-[8px] text-left text-[12.5px]",
-                    railRowClass(on, hovered),
-                    railTextClass(on)
-                  )}
-                >
-                  {s.label}
-                </button>
-              )
-            })}
-
-            <div className="mt-auto px-[14px] pb-[14px] pt-[9px]">
+            <div className="px-[14px] pb-[12px] pt-[8px]">
               {composing ? (
-                <div className="flex flex-col gap-[6px]">
+                <div className="flex items-center gap-[6px]">
                   <input
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
@@ -453,39 +447,35 @@ export default function ColumnsMenu({
                     placeholder="View name…"
                     autoFocus
                     aria-label="New view name"
-                    className="h-8 w-full rounded-full border border-gray-300 bg-background px-[12px] text-[12px] text-pd-ink outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15"
+                    className="h-8 min-w-0 flex-1 rounded-full border border-gray-300 bg-background px-[12px] text-[12px] text-pd-ink outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15"
                   />
-                  <div className="flex gap-[6px]">
-                    <Button
-                      type="button"
-                      size="md"
-                      onClick={confirmSave}
-                      disabled={!newName.trim() || busy}
-                      className="flex-1"
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="md"
-                      onClick={() => { setComposing(false); setNewName("") }}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    size="md"
+                    onClick={confirmSave}
+                    disabled={!newName.trim() || busy}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    onClick={() => { setComposing(false); setNewName("") }}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-[6px]">
-                  {/* Above Save New View: the common case is refining the view
-                      you are already on, not starting another. */}
+                <div className="flex gap-[6px]">
+                  {/* First: the common case is refining the view you are
+                      already on, not starting another. */}
                   <Button
                     type="button"
                     size="md"
                     onClick={saveToExisting}
                     disabled={busy}
-                    className="w-full"
+                    className="flex-1"
                   >
                     {justUpdated ? (
                       <>
@@ -496,15 +486,7 @@ export default function ColumnsMenu({
                         Saved
                       </>
                     ) : (
-                      <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                          <path d="M17 21v-8H7v8" />
-                          <path d="M7 3v5h8" />
-                        </svg>
-                        Save to existing
-                      </>
+                      "Update view"
                     )}
                   </Button>
 
@@ -513,32 +495,56 @@ export default function ColumnsMenu({
                     variant="outline"
                     size="md"
                     onClick={() => { setComposing(true); setNewName("") }}
-                    className="w-full"
+                    className="flex-1"
                   >
-                    Save New View
+                    Save as new view
                   </Button>
-
-                  {saveError && (
-                    <p className="text-[10.5px] text-pd-danger">{saveError}</p>
-                  )}
                 </div>
+              )}
+              {saveError && (
+                <p className="mt-[6px] text-[11px] text-pd-danger">{saveError}</p>
               )}
             </div>
           </div>
 
-          {/* ── Right pane ────────────────────────────────────────────── */}
-          <div className="flex min-w-0 flex-1 flex-col">
+          {/* ── Columns in this view ──────────────────────────────────── */}
+          <div className="flex min-h-[220px] flex-1 flex-col">
+            <div className={`${RAIL_LABEL} px-[14px] pb-[8px] pt-[12px]`}>Columns in this view</div>
+
+            {/* Which metrics the list below shows. Part of a saved view. */}
+            <div role="group" aria-label="Metric filter" className="flex flex-wrap gap-[6px] px-[14px] pb-[10px]">
+              {sources.map(s => {
+                const on = s.id === source
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSource(s.id)}
+                    aria-pressed={on}
+                    className={cn(
+                      "rounded-full border px-[10px] py-[3px] text-[12px]",
+                      on
+                        ? "border-pd-primary bg-pd-primary-tint font-semibold text-pd-primary"
+                        : "border-pd-border font-medium text-pd-body hover:bg-pd-divider"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                )
+              })}
+            </div>
+
             <button
               type="button"
               onClick={toggleAll}
-              className="flex items-center gap-[10px] border-b border-pd-border pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
+              className="flex items-center gap-[10px] border-y border-pd-border py-[8px] pl-[14px] pr-[24px] text-left"
             >
               <Tick on={allOn} />
               <span className={`${RAIL_LABEL} flex-1`}>Metric name</span>
               <span className={RAIL_LABEL}>Source</span>
             </button>
 
-            <div className="flex-1 overflow-y-auto p-1">
+            <div className="min-h-0 flex-1 overflow-y-auto p-1">
               {shown.length === 0 ? (
                 <p className="px-[14px] py-6 text-[12px] text-pd-faint">
                   No metrics match that search.
@@ -550,7 +556,7 @@ export default function ColumnsMenu({
                     type="button"
                     onClick={() => toggleColumn(col.id)}
                     aria-pressed={visibleColumns.includes(col.id)}
-                    className="flex w-full items-center gap-[10px] rounded-xl px-[10px] py-[8px] text-left hover:bg-pd-divider"
+                    className="flex w-full items-center gap-[10px] rounded-xl px-[10px] py-[7px] text-left hover:bg-pd-divider"
                   >
                     <Tick on={visibleColumns.includes(col.id)} />
                     <span className="flex-1 truncate text-[12.5px] font-semibold text-pd-ink">
@@ -562,7 +568,7 @@ export default function ColumnsMenu({
               )}
             </div>
 
-            {/* Search sits at the bottom of this pane by design, not the top. */}
+            {/* Search sits at the bottom of the column list by design, not the top. */}
             <div className="border-t border-pd-border px-[14px] py-[10px]">
               <div className="flex h-8 items-center gap-[7px] rounded-full border border-gray-300 bg-background px-[12px] text-pd-faint transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"

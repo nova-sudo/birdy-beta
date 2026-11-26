@@ -11,17 +11,19 @@ const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id
 const ROW = "flex h-8 w-full cursor-pointer items-center gap-2 rounded-by-md px-2 text-left transition-colors duration-(--by-dur-fast) ease-by-out hover:bg-by-sunken";
 
 /**
- * The Columns button and its panel: saved views first (one click to a set of
- * columns), then every column by group.
+ * The Views button and its panel: saved views first (one click to a set of
+ * columns), then the columns in the view, by group. Named "Views" rather than
+ * "Columns" so people find the saved views at all.
  *
  * @param {{id: string, label: string, group?: string, icon?: React.ReactNode}[]} props.columns every column that can be shown, in the order they appear in the table; `group` adds a heading, `icon` sits before the label
  * @param {string[]} props.value ids of the columns shown
  * @param {(ids: string[]) => void} props.onChange
  * @param {{name: string, ids: string[]}[]} [props.views] saved views; the one matching `value` is marked
- * @param {() => void} [props.onSaveView] adds a "Save current view" action
+ * @param {() => void} [props.onSaveView] adds a "Save as new view" action
+ * @param {() => void} [props.onUpdateView] adds an "Update view" action, for writing the shown columns over the current view
  * @param {(open: boolean) => void} [props.onOpenChange] lets the page make room beside the panel
  */
-export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, onOpenChange, className }) {
+export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, onUpdateView, onOpenChange, className }) {
   const on = new Set(value);
   const groups = [...new Set(columns.map((c) => c.group ?? ""))];
   const current = views.find((v) => sameSet(v.ids, value))?.name ?? (views.length ? "Custom" : null);
@@ -41,7 +43,7 @@ export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, 
         <Button className={cn("data-[state=open]:border-by-accent data-[state=open]:text-by-accent", className)}>
           <Columns3 aria-hidden="true" />
           <span>
-            Columns
+            Views
             {/* The button names the view on screen, unless it is the default one. */}
             {current && current !== views[0]?.name && <span className="font-medium text-by-muted"> · {current}</span>}
           </span>
@@ -51,12 +53,12 @@ export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, 
         <PopoverPrimitive.Content
           align="end"
           sideOffset={8}
-          aria-label="Show columns"
+          aria-label="Views and columns"
           className="z-50 max-h-(--radix-popover-content-available-height) w-56 origin-(--radix-popover-content-transform-origin) overflow-y-auto overscroll-contain rounded-by-lg bg-by-surface px-2 pt-1.5 pb-2.5 font-by-body text-by-body text-by-text shadow-by-floating outline-none motion-safe:animate-[by-menu_var(--by-dur-base)_var(--by-ease-spring)]"
         >
-          {(views.length > 0 || onSaveView) && (
-            <div role="group" aria-label="Saved views">
-              <div className="px-2 pt-1.5 pb-1 text-by-caption font-semibold text-by-muted">Saved views</div>
+          {(views.length > 0 || onSaveView || onUpdateView) && (
+            <div role="group" aria-label="Views">
+              <div className="px-2 pt-1.5 pb-1 text-by-caption font-semibold text-by-muted">Views</div>
               {views.map((view) => {
                 const active = view.name === current;
                 return (
@@ -66,16 +68,25 @@ export function ColumnsMenu({ columns, value, onChange, views = [], onSaveView, 
                   </button>
                 );
               })}
+              {onUpdateView && (
+                <button type="button" onClick={onUpdateView} className={cn(ROW, "font-semibold text-by-accent", FOCUS_RING)}>
+                  <Check aria-hidden="true" className="size-3.5" />
+                  Update view
+                </button>
+              )}
               {onSaveView && (
                 <button type="button" onClick={onSaveView} className={cn(ROW, "font-semibold text-by-accent", FOCUS_RING)}>
                   <Plus aria-hidden="true" className="size-3.5" />
-                  Save current view
+                  Save as new view
                 </button>
               )}
             </div>
           )}
+          <div className={cn("px-2 pt-1.5 pb-1 text-by-caption font-semibold text-by-muted", (views.length > 0 || onSaveView || onUpdateView) && "mt-1.5 border-t border-by-line pt-3")}>
+            Columns in this view
+          </div>
           {groups.map((group, i) => (
-            <div key={group || "all"} role="group" aria-label={group || "Columns"} className={cn((i > 0 || views.length > 0 || onSaveView) && "mt-1.5 border-t border-by-line pt-1.5")}>
+            <div key={group || "all"} role="group" aria-label={group || "Columns"} className={cn(i > 0 && "mt-1.5 border-t border-by-line pt-1.5")}>
               {group && <div className="px-2 pt-1.5 pb-1 text-by-caption font-semibold text-by-muted">{group}</div>}
               {columns.filter((c) => (c.group ?? "") === group).map((c) => (
                 <Checkbox

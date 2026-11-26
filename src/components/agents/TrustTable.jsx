@@ -8,6 +8,7 @@ import { useAgentRules } from "@/lib/agents-api"
 import { cn } from "@/lib/utils"
 import { RULE_ORDER } from "./PlaybookDraft"
 import { RULE_COPY } from "./PlaybookRule"
+import { TABLE_TD, TABLE_TH } from "@/lib/table-style"
 
 const SLOTS = 10
 
@@ -90,14 +91,14 @@ export function TrustTable({ agentId, className }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-sm">
             <thead>
-              <tr className="border-b border-divider text-left text-xs text-muted-foreground">
-                <th scope="col" className="px-4 py-2.5 font-medium">Rule</th>
-                <th scope="col" className="px-4 py-2.5 font-medium">Mode</th>
-                <th scope="col" className="px-4 py-2.5 font-medium">Recent decisions</th>
-                <th scope="col" className="px-4 py-2.5 text-right font-medium">Approved</th>
+              <tr>
+                <th scope="col" className={cn(TABLE_TH)}>Rule</th>
+                <th scope="col" className={cn(TABLE_TH)}>Mode</th>
+                <th scope="col" className={cn(TABLE_TH)}>Recent decisions</th>
+                <th scope="col" className={cn(TABLE_TH, "text-right")}>Approved</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-divider">
+            <tbody>
               {ordered.map((rule) => {
                 const copy = RULE_COPY[rule.kind]
                 const Icon = copy.icon
@@ -105,7 +106,7 @@ export function TrustTable({ agentId, className }) {
                 const ok = last10.filter((d) => d === "ok").length
                 return (
                   <tr key={rule.id} data-kind={rule.kind}>
-                    <td className="px-4 py-3">
+                    <td className={cn(TABLE_TD)}>
                       <span className="flex items-center gap-2 text-foreground">
                         <span
                           aria-hidden
@@ -116,13 +117,13 @@ export function TrustTable({ agentId, className }) {
                         {copy.title}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={cn(TABLE_TD)}>
                       <ModeBadge mode={rule.mode} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={cn(TABLE_TD)}>
                       <TrustSquares last10={last10} />
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-foreground">
+                    <td className={cn(TABLE_TD, "text-right font-mono tabular-nums text-foreground")}>
                       {last10.length ? `${ok} / ${last10.length}` : <span className="text-muted-foreground">–</span>}
                     </td>
                   </tr>

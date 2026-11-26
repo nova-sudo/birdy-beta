@@ -13,9 +13,23 @@ export const LEAD_STAGES = [
   { key: "lost", label: "Lost", tone: "neutral" },
 ];
 
-/** One row of the Leads table, from a contact of `/api/leads/unified`. */
-export function leadRow(contact) {
+/**
+ * One row of the Leads table, from a contact of `/api/leads/unified`.
+ *
+ * `focus` names the CRM pipeline and stage the table is showing. A contact can have a deal in
+ * several pipelines; the row's real stage (`stageName`) is the deal in the focused stage, else in
+ * the focused pipeline, else the first deal the CRM named a stage for.
+ *
+ * @param {{pipelineId?: string|null, stageId?: string|null}} [focus]
+ */
+export function leadRow(contact, focus = {}) {
   const opps = Array.isArray(contact.opportunities) ? contact.opportunities : [];
+  const deal =
+    (focus.stageId && opps.find((o) => String(o.pipelineStageId ?? "") === String(focus.stageId))) ||
+    (focus.pipelineId && opps.find((o) => String(o.pipelineId ?? "") === String(focus.pipelineId))) ||
+    opps.find((o) => o.pipelineStageName) ||
+    opps[0] ||
+    null;
   const statuses = opps.map((o) => String(o.status ?? "").toLowerCase());
   const calls = num(contact.hp_enrichment?.call_logs_count);
   const won = statuses.includes("won");
@@ -32,6 +46,10 @@ export function leadRow(contact) {
     stage,
     // What the CRM says about it, beside the stage: the pipeline stage's name where the CRM gives one.
     stageNote: opps.find((o) => o.pipelineStageName || o.stageName)?.pipelineStageName ?? opps.find((o) => o.stageName)?.stageName ?? "",
+    // The CRM's own stage and pipeline for the deal above, and how that deal stands (open, won, lost).
+    stageName: deal?.pipelineStageName || deal?.stageName || "",
+    pipelineName: deal?.pipelineName || "",
+    dealStatus: String(deal?.status ?? "").toLowerCase(),
     campaign: meta.campaign_name || "",
     ad: meta.ad_name || "",
     source: contact.source || "",
@@ -44,6 +62,28 @@ export function leadRow(contact) {
     value: opps.reduce((sum, o) => sum + num(o.monetaryValue ?? o.monetary_value), 0),
   };
 }
+
+/**
+ * The client's CRM pipelines from `/api/leads/unified`'s `meta.pipelines`, in the CRM's order, each
+ * with its stages in order and how many leads sit in each. Empty when the backend sends none
+ * (an older backend, no CRM, or more than one client asked for); the table then falls back to LEAD_STAGES.
+ *
+ * @returns {{id: string, name: string, total: number, stages: {id: string, name: string, count: number}[]}[]}
+ */
+export function leadPipelines(meta) {
+  const list = Array.isArray(meta?.pipelines) ? meta.pipelines : [];
+  return list
+    .map((p) => {
+      const stages = (Array.isArray(p?.stages) ? p.stages : [])
+        .filter((st) => st?.id != null)
+        .map((st) => ({ id: String(st.id), name: String(st.name || "").trim() || "Unnamed stage", count: num(st.count) }));
+      return { id: String(p?.id ?? ""), name: String(p?.name || "").trim() || "Pipeline", total: stages.reduce((n, st) => n + st.count, 0), stages };
+    })
+    .filter((p) => p.id && p.stages.length > 0);
+}
+
+/** The pipeline a client's lead table opens on: the one holding the most leads, the CRM's first on a tie. */
+export const busiestPipeline = (pipelines) => (pipelines ?? []).reduce((best, p) => (!best || p.total > best.total ? p : best), null);
 
 /** How many leads sit in each stage, plus the total. */
 export function leadCounts(rows) {

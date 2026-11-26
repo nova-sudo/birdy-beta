@@ -7,7 +7,7 @@ const SKELETON_WIDTHS = ["w-3/5", "w-2/5", "w-1/2", "w-1/3", "w-2/3"]
 const SKELETON_BAR =
   "block h-3 rounded-full bg-skeleton motion-safe:animate-skeleton motion-safe:bg-[linear-gradient(90deg,var(--color-skeleton)_25%,var(--color-skeleton-shine)_50%,var(--color-skeleton)_75%)] motion-safe:bg-[length:200%_100%]"
 
-const SKELETON_CELL = "bg-background px-3 py-2.5 align-middle first:pl-4 last:pr-4"
+const SKELETON_CELL = "bg-background px-[20px] align-middle"
 
 /**
  * Placeholder rows for a table body while it loads: one bar per cell, widths staggered so the rows
@@ -16,9 +16,9 @@ const SKELETON_CELL = "bg-background px-3 py-2.5 align-middle first:pl-4 last:pr
  * @param {object} props
  * @param {number} props.columnCount
  * @param {number} [props.rowCount=5]
- * @param {string} [props.rowHeight="h-15"]
+ * @param {string} [props.rowHeight="h-[48px]"]
  */
-function DataTableSkeletonRows({ columnCount, rowCount = 5, rowHeight = "h-15", className }) {
+function DataTableSkeletonRows({ columnCount, rowCount = 5, rowHeight = "h-[48px]", className }) {
   return (
     <tbody data-ds="data-table-skeleton" aria-busy="true" className={className}>
       {Array.from({ length: rowCount }, (_, i) => (

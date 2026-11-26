@@ -38,7 +38,7 @@ describe("Leads table", () => {
   it("counts each stage on its tab and narrows to it", async () => {
     render(<LeadsTable data={data(LEADS)} />)
     const tabs = screen.getByRole("tablist", { name: "Leads by stage" })
-    expect(within(tabs).getAllByRole("tab").map((t) => t.textContent)).toEqual(["All3", "In CRM1", "Called1", "Closed1", "Lost"])
+    expect(within(tabs).getAllByRole("tab").map((t) => t.textContent)).toEqual(["All3", "In CRM1", "Called1", "Closed1", "Lost0"])
     await userEvent.click(within(tabs).getByRole("tab", { name: /^Called/ }))
     expect(names()).toEqual(["Leah Fenwick"])
     await userEvent.click(within(tabs).getByRole("tab", { name: /^Lost/ }))

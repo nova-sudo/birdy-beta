@@ -26,6 +26,7 @@ import { integrationsHref } from "@/components/agents/ClientScopeTable"
 import { currencySymbol } from "@/lib/chat-viz"
 import { ClientsBulkBar } from "./ClientsBulkBar"
 import { ErrorNotice, SetupFooter, clientErrors, parseNumber, saveMessage, settingsOf, show } from "./SetupShared"
+import { TABLE_TD, TABLE_TH } from "@/lib/table-style"
 
 const NO_TREATMENT = "__none"
 
@@ -316,8 +317,8 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
         <div className="overflow-x-auto">
           <table ref={tableRef} className="w-full min-w-[56rem] text-sm">
             <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="w-10 px-3 py-2">
+              <tr>
+                <th className={cn(TABLE_TH, "w-10")}>
                   <Checkbox
                     aria-label="Select all clients"
                     checked={allPicked ? true : pickedClients.length ? "indeterminate" : false}
@@ -325,13 +326,13 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                     onCheckedChange={(v) => setPicked(v === true ? pickable.map((c) => c.id) : [])}
                   />
                 </th>
-                <th className="px-3 py-2 font-medium">Client</th>
-                <th className="px-3 py-2 font-medium">Targets</th>
-                <th className="px-3 py-2 font-medium">Batch</th>
-                <th className="px-3 py-2 font-medium">Treatment</th>
-                <th className="px-3 py-2 font-medium">Prepaid</th>
-                <th className="px-3 py-2 font-medium">Watch</th>
-                <th className="px-3 py-2"><span className="sr-only">Targets action</span></th>
+                <th className={cn(TABLE_TH)}>Client</th>
+                <th className={cn(TABLE_TH)}>Targets</th>
+                <th className={cn(TABLE_TH)}>Batch</th>
+                <th className={cn(TABLE_TH)}>Treatment</th>
+                <th className={cn(TABLE_TH)}>Prepaid</th>
+                <th className={cn(TABLE_TH)}>Watch</th>
+                <th className={cn(TABLE_TH)}><span className="sr-only">Targets action</span></th>
               </tr>
             </thead>
             <tbody>
@@ -349,12 +350,12 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                     data-gid={c.id}
                     data-focused={focusClient === c.id ? "true" : undefined}
                     className={cn(
-                      "border-t align-middle",
+                      "align-middle",
                       isPicked && "bg-primary-soft",
                       focusClient === c.id && "bg-primary-soft shadow-[inset_3px_0_0_var(--color-primary)]"
                     )}
                   >
-                    <td className="px-3 py-2">
+                    <td className={cn(TABLE_TD)}>
                       <Checkbox
                         aria-label={`Select ${c.name}`}
                         checked={isPicked}
@@ -362,7 +363,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                         onCheckedChange={(v) => setPicked((ids) => (v === true ? [...ids, c.id] : ids.filter((i) => i !== c.id)))}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={cn(TABLE_TD)}>
                       <div className={c.account ? "font-medium text-foreground" : "font-medium text-muted-foreground"}>{c.name}</div>
                       {!c.account && (
                         <p className="text-xs text-muted-foreground">
@@ -381,7 +382,7 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                     </td>
                     {on ? (
                       <>
-                        <td className="px-3 py-2">
+                        <td className={cn(TABLE_TD)}>
                           {row.own ? (
                             <div className="flex items-center gap-2">
                               {["green", "red"].map((key) => (
@@ -413,10 +414,10 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                             <Badge tone="neutral" size="sm">Your zones</Badge>
                           )}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className={cn(TABLE_TD)}>
                           <RowSeg batches={settings.batches} value={row.batch_id} name={c.name} onChange={(v) => setRow(c.id, { batch_id: v })} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className={cn(TABLE_TD)}>
                           <Select
                             value={row.treatment_ids[0] ?? NO_TREATMENT}
                             onValueChange={(v) => setRow(c.id, { treatment_ids: v === NO_TREATMENT ? [] : [v] })}
@@ -434,19 +435,19 @@ export function SetupClients({ agent, clients, actions, flagOnly, setFlagOnly, o
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className="px-3 py-2">
+                        <td className={cn(TABLE_TD)}>
                           <Switch aria-label={`Prepaid ${c.name}`} checked={row.prepaid} onCheckedChange={(v) => setRow(c.id, { prepaid: v })} />
                         </td>
                       </>
                     ) : (
-                      <td colSpan={4} className="px-3 py-2 text-muted-foreground">
+                      <td colSpan={4} className={cn(TABLE_TD, "text-muted-foreground")}>
                         {c.account ? "Not watched" : ""}
                       </td>
                     )}
-                    <td className="px-3 py-2">
+                    <td className={cn(TABLE_TD)}>
                       <Switch aria-label={`Watch ${c.name}`} checked={on} disabled={!c.account} onCheckedChange={(v) => toggle(c.id, v)} />
                     </td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <td className={cn(TABLE_TD, "text-right whitespace-nowrap")}>
                       {on && (row.own ? (
                         <Button size="sm" variant="link" onClick={() => useYourZones([c.id])}>
                           Use your zones

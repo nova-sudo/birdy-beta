@@ -78,7 +78,7 @@ export function DisplaySection() {
               <TableBody>
                 {ROWS.map(([name, tone, status, why, spend, cplTone, cpl, birdy]) => (
                   <Tr key={name} interactive>
-                    <Td className="font-semibold">{name}</Td>
+                    <Td primary>{name}</Td>
                     <Td><Pill tone={tone}>{status}</Pill>{why && <span className="ml-2 text-by-body-sm text-by-text-2">{why}</span>}</Td>
                     <Td numeric>{money(spend)}</Td>
                     <Td numeric><CplChip tone={cplTone}>{money(cpl)}</CplChip></Td>

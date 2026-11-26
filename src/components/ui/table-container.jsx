@@ -11,7 +11,24 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/ui/spinner"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Inbox } from "lucide-react"
+import { EmptyState } from "@/components/by/card"
+import {
+  TABLE_BODY_TEXT,
+  TABLE_CARD,
+  TABLE_HEAD_CELL,
+  TABLE_HEAD_ROW,
+  TABLE_HEAD_TEXT,
+  TABLE_HOVER_BG,
+  TABLE_NAME_TEXT,
+  TABLE_NUM,
+  TABLE_PAD_X,
+  TABLE_ROW_H,
+  TABLE_ROW_H_TALL,
+  TABLE_ROW_RULE_SHADOW,
+  TABLE_SELECTED_BG,
+  TABLE_SUB_TEXT,
+} from "@/lib/table-style"
 import { SYNCING_MESSAGE } from "@/lib/client-loading"
 
 import {
@@ -409,18 +426,21 @@ const StyledTable = ({
   // its container — that's what was causing a horizontal scrollbar to
   // appear under an empty state instead of a centered message.
   const isEmptyState = !isLoading && paginatedData.length === 0;
+  // One height for every row: the taller one when the name column carries a
+  // second line under it (a campaign with its client), else the single-line one.
+  const rowHeight = visibleColumns[0]?.sub ? TABLE_ROW_H_TALL : TABLE_ROW_H;
 
   return (
     <div className={fill ? "flex min-h-0 flex-col gap-4" : "space-y-4"}>
-      {/* Zebra rows are painted here rather than with Tailwind classes because
-          the name column is `position: sticky` — it scrolls over its
-          neighbours, so it needs an opaque background of its own that matches
-          the row it belongs to. The two have to agree, and a token is the only
-          way to keep them agreeing. */}
+      {/* The pinned cells (checkbox, status switch, name) are `position:
+          sticky`: they scroll over their neighbours, so each paints an opaque
+          background of its own. Hover therefore goes on every cell of the row
+          at once, from one rule, with no fade — the pinned cells used to snap
+          while the rest of the row faded in, so the two halves moved apart.
+          Colours and sizes come from lib/table-style, shared with the kit
+          table so the two cannot drift. */}
       <style jsx>{`
-        .fixed-column-even,
-        .fixed-column-odd,
-        .fixed-column-syncing,
+        .fixed-column,
         .fixed-header {
           text-align: left;
           min-width: 200px;
@@ -428,48 +448,36 @@ const StyledTable = ({
           width: 245px;
         }
 
-        .fixed-column-even {
-          background: var(--pd-surface);
+        .fixed-column,
+        .pinned-cell {
+          background: var(--by-surface);
         }
-        .fixed-column-odd {
-          background: var(--pd-row-zebra);
+        /* The row rule. The table collapses its borders, and a collapsed
+           border stays on the grid while a sticky cell slides over it, so
+           every cell draws the rule inside itself: pinned or not, they line up. */
+        tbody td {
+          box-shadow: ${TABLE_ROW_RULE_SHADOW};
         }
-        /* A syncing row sits in the hover tint whether or not it is hovered —
+        /* A syncing row sits in the hover colour whether or not it is hovered:
            it is the row the reader is waiting on, and the tint lifts it off the
-           zebra without introducing a colour the table doesn't already use. It
-           ignores the zebra so that a run of imported clients reads as one
-           block rather than a striped one. */
-        .fixed-column-syncing,
-        .cell-syncing {
-          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
+           table without introducing a colour the table doesn't already use. */
+        .row-syncing > td {
+          background: ${TABLE_HOVER_BG};
         }
         .fixed-header {
-          background: var(--pd-table-head);
+          background: var(--by-canvas);
         }
 
-        /* …and the hover tint has to agree too, or the row lights up either
-           side of a business name that stays stubbornly white. It can't just
-           repeat the row's class: that tint is 60% opaque, and a sticky cell
-           has to stay solid or the columns sliding under it show through. So
-           mix it into the row's own background and paint the result. */
-        tr.row-hoverable:hover .fixed-column-even {
-          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
+        tr.row-hoverable:hover > td {
+          background: ${TABLE_HOVER_BG};
         }
-        tr.row-hoverable:hover .fixed-column-odd {
-          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-row-zebra));
-        }
-        /* The pinned checkbox and status cells are solid for the same reason,
-           so they need the same mixed tint or the hover stops short of them. */
-        tr.row-hoverable:hover .pinned-cell-plain {
-          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
-        }
-        tr.row-hoverable:hover .pinned-cell-zebra {
-          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-row-zebra));
+        /* A ticked row keeps its tint under the pointer too. */
+        tr[data-state="selected"] > td {
+          background: ${TABLE_SELECTED_BG} !important;
         }
 
         @media (min-width: 768px) {
-          .fixed-column-even,
-          .fixed-column-odd {
+          .fixed-column {
             position: sticky;
             left: var(--name-sticky-left, 0px);
             z-index: 30;
@@ -494,22 +502,22 @@ const StyledTable = ({
 
       {/* Table */}
       <div
-        className={`table-container rounded-2xl border border-pd-border bg-pd-surface${fill ? " min-h-0" : ""}`}
+        className={`table-container ${TABLE_CARD}${fill ? " min-h-0" : ""}`}
         style={{
           "--name-sticky-left": `${nameStickyLeft}px`,
           overflowX: isEmptyState ? "hidden" : "auto",
         }}
       >
-        <table className="w-full text-sm" style={isEmptyState ? { width: "100%" } : undefined}>
+        <table className={`w-full font-by-body ${TABLE_BODY_TEXT}`} style={isEmptyState ? { width: "100%" } : undefined}>
           {/* Uppercase, letter-spaced and a shade off white — the header reads
               as a label strip rather than a first row of data. */}
-          <thead className={`${fill ? "sticky " : ""}top-0 z-40 border-b border-pd-border bg-pd-table-head text-[12.5px] font-bold tracking-[.03em] text-pd-faint uppercase`}>
-            <tr className="h-12 bg-pd-table-head transition-colors">
+          <thead className={`${fill ? "sticky " : ""}top-0 z-40`}>
+            <tr className={TABLE_HEAD_ROW}>
 
               {/* Checkbox header — sticky at left: 0 */}
               {enableSelection && (
                 <th
-                  className="h-12 w-10 min-w-0 bg-pd-table-head px-2 pr-0"
+                  className={`${TABLE_HEAD_CELL} w-[40px] min-w-[40px] px-2 pr-0`}
                   style={{ position: 'sticky', left: 0, zIndex: 51 }}
                 >
                   <div className="flex items-center">
@@ -537,7 +545,7 @@ const StyledTable = ({
               {/* ── Status toggle column — ONLY when NOT isClientMode ── */}
               {showToggleCol && (
                 <th
-                  className="h-12 w-[70px] min-w-[70px] bg-pd-table-head px-1"
+                  className={`${TABLE_HEAD_CELL} w-[70px] min-w-[70px] px-1`}
                   style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 51 }}
                 >
                   <div className="flex items-center justify-center">Status</div>
@@ -553,26 +561,23 @@ const StyledTable = ({
                     onDragLeave={() => { if (dragOverColumn === col.id) setDragOverColumn(null); }}
                     onDrop={(e) => handleDrop(e, col.id, colIdx)}
                     onDragEnd={() => { setDraggedColumn(null); setDragOverColumn(null); }}
-                    className={`h-12 select-none ${colIdx === 0 ? "cursor-default" : "cursor-grab"} ${
+                    className={`${TABLE_HEAD_CELL} select-none ${colIdx === 0 ? "cursor-default" : "cursor-grab"} ${
                       colIdx === 0
                         ? "fixed-header"
                         : isEmptyState
                           ? ""
                           : `${col.minWidthClass ?? "min-w-[135px]"} whitespace-nowrap`
-                    } ${draggedColumn === col.id ? "bg-pd-primary-tint" : ""}`}
+                    } ${draggedColumn === col.id ? "!bg-pd-primary-tint" : ""}`}
                     // Straight-edged dashed line on the live drop target, per
-                    // the handoff. Reserved as transparent so hovering doesn't
-                    // nudge the header a couple of pixels sideways.
+                    // the handoff. At rest the 2px it takes is padding instead,
+                    // so hovering doesn't nudge the header sideways, and no
+                    // border breaks the rule under the header row.
                     style={
                       colIdx === 0
                         ? undefined
-                        : {
-                            borderLeft: `2px dashed ${
-                              draggedColumn && dragOverColumn === col.id && draggedColumn !== col.id
-                                ? "var(--pd-primary)"
-                                : "transparent"
-                            }`,
-                          }
+                        : draggedColumn && dragOverColumn === col.id && draggedColumn !== col.id
+                          ? { borderLeft: "2px dashed var(--pd-primary)" }
+                          : { paddingLeft: 2 }
                     }
                   >
                     {/* No vertical rule between columns: the design separates
@@ -583,14 +588,14 @@ const StyledTable = ({
                         label, so it marks where the column came from without
                         crowding the word it belongs to. */}
                     <div
-                      className={`flex h-full w-full items-center gap-2 px-[22px] ${
+                      className={`flex h-full w-full items-center gap-2 ${TABLE_PAD_X} ${
                         numericColumns.has(col.id) ? "flex-row-reverse" : ""
                       }`}
                     >
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
-                        className={`flex min-w-0 items-center gap-1 truncate text-left align-middle ${
-                          col.sortable ? "cursor-pointer hover:text-pd-ink" : "cursor-default"
+                        className={`flex min-w-0 items-center gap-1 truncate text-left align-middle ${TABLE_HEAD_TEXT} ${
+                          col.sortable ? "cursor-pointer hover:text-by-text" : "cursor-default"
                         }`}
                       >
                         <span className="truncate">
@@ -599,7 +604,7 @@ const StyledTable = ({
                         {col.sortable && hasSorted && sortConfig.key === col.id && (
                           // The active sort column takes the ink colour, so
                           // the arrow is legible against the muted header.
-                          <span className="shrink-0 text-sm text-pd-ink">
+                          <span className="shrink-0 text-by-text">
                             {sortConfig.direction === "asc" ? "↑" : "↓"}
                           </span>
                         )}
@@ -610,7 +615,7 @@ const StyledTable = ({
                           typeof col.icons === "function" ? (
                             (() => {
                               const Icon = col.icons;
-                              return <Icon className="size-4 text-pd-faint" aria-hidden="true" />;
+                              return <Icon className="size-4 text-by-muted" aria-hidden="true" />;
                             })()
                           ) : (
                             <img
@@ -634,13 +639,10 @@ const StyledTable = ({
             {/* CASE 1: Loading → skeleton rows */}
             {isLoading ? (
               Array.from({ length: pageSize }).map((_, idx) => (
-                <tr
-                  key={`skeleton-${idx}`}
-                  className={`border-b border-pd-row-border ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
-                >
+                <tr key={`skeleton-${idx}`}>
                   {enableSelection && (
                     <td
-                      className={`w-10 min-w-0 px-2 pr-0 ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
+                      className={`pinned-cell ${rowHeight} w-[40px] min-w-[40px] px-2 pr-0`}
                       style={{ position: 'sticky', left: 0, zIndex: 30 }}
                     >
                       <Skeleton className="size-4 rounded-md" />
@@ -649,7 +651,7 @@ const StyledTable = ({
 
                   {showToggleCol && (
                     <td
-                      className={`w-[70px] min-w-[70px] px-1 ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
+                      className={`pinned-cell ${rowHeight} w-[70px] min-w-[70px] px-1`}
                       style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                     >
                       <div className="flex items-center justify-center">
@@ -663,20 +665,8 @@ const StyledTable = ({
                     : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))
                   ).map((col, colIdx) => (
                     <Fragment key={`skeleton-${idx}-${col.id}`}>
-                      <td
-                        className={`truncate ${
-                          colIdx === 0
-                            ? `${idx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11`
-                            : ""
-                        }`}
-                      >
-                        <div
-                          className={
-                            colIdx === 0
-                              ? "flex min-w-0 items-center gap-2 px-[22px] py-3"
-                              : "flex h-11 items-center px-[22px]"
-                          }
-                        >
+                      <td className={`truncate ${rowHeight} ${colIdx === 0 ? "fixed-column" : ""}`}>
+                        <div className={`flex min-w-0 items-center ${TABLE_PAD_X}`}>
                           <Skeleton className={`h-4 rounded-full ${colIdx === 0 ? "w-36" : "w-20"}`} />
                         </div>
                       </td>
@@ -692,53 +682,19 @@ const StyledTable = ({
                   colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
-                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-pd-faint">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="size-8 opacity-40"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9.75 9.75h.008v.008H9.75V9.75zm4.5 0h.008v.008h-.008V9.75zM12 3a9 9 0 100 18A9 9 0 0012 3zm0 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
-                      />
-                    </svg>
-                    <p className="text-[13.5px] font-semibold text-pd-ink">
-                      {emptyMessage?.title ?? "No data available"}
-                    </p>
-                    <p className="text-[12px]">
-                      {emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}
-                    </p>
-                  </div>
+                  <EmptyState icon={<Inbox />} title={emptyMessage?.title ?? "No data available"} className="py-10">
+                    {emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}
+                  </EmptyState>
                 </td>
               </tr>
             ) : (
               /* CASE 3: Has data */
               paginatedData.map((row, idx) => {
-                const globalIdx = (currentPage - 1) * pageSize + idx;
                 const isSelected = enableSelection && selectedRows.has(row.id);
-                // Alternating white and a hair off it. The stripe is there to
-                // help the eye track one row across a wide table, not to band
-                // the table — anything heavier competes with the figures.
-                // A syncing row steps out of the zebra and takes the hover tint
-                // permanently, so a run of freshly imported clients reads as
-                // one block of work in progress rather than striped rows that
-                // happen to be empty. 60% divider over the container's surface
-                // is the same colour the sticky cell mixes for :hover — the two
-                // have to agree or the business name stays a different shade
-                // from the rest of its row.
-                const rowBg = row._isSyncing
-                  ? "bg-pd-divider/60"
-                  : globalIdx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface";
-                // The sticky cells need that same colour flattened: they scroll
-                // over their neighbours, and a 60%-alpha tint would let the
-                // columns sliding underneath show through.
-                const stickyRowBg = row._isSyncing ? "cell-syncing" : `${rowBg} ${rowBg === "bg-pd-row-zebra" ? "pinned-cell-zebra" : rowBg === "bg-pd-surface" ? "pinned-cell-plain" : ""}`;
+                // No zebra: rows sit on white with a soft rule under each. A
+                // syncing row takes the hover colour permanently (see the
+                // style block), so a run of freshly imported clients reads as
+                // one block of work in progress.
                 const isToggling = showToggleCol && togglingRows.has(row.id);
                 const isActive = String(row.status).toLowerCase() === "active";
 
@@ -758,20 +714,20 @@ const StyledTable = ({
                       e.preventDefault();
                       onRowClick(row.original || row);
                     } : undefined}
-                    className={`border-b border-pd-row-border transition-colors ${
+                    className={`${row._isSyncing ? "row-syncing " : ""}${
                       (row._isCreating || row._isPending)
                         // Not clickable yet — the document isn't there to open.
                         // The row keeps its full opacity now that its cells
                         // shimmer: dimming on top of that read as "disabled",
                         // which is the wrong idea. It is working, not inert.
                         ? "w-fit cursor-wait"
-                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary"
-                    } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
+                        : "row-hoverable group w-fit cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary"
+                    }`}
                   >
                     {/* Checkbox cell */}
                     {enableSelection && (
                       <td
-                        className={`w-10 px-2 pr-0 min-w-0 ${stickyRowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
+                        className={`pinned-cell ${rowHeight} w-[40px] min-w-[40px] px-2 pr-0`}
                         style={{ position: 'sticky', left: 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -792,7 +748,7 @@ const StyledTable = ({
                     {/* ── Toggle switch cell — ONLY when NOT isClientMode ── */}
                     {showToggleCol && (
                       <td
-                        className={`w-[70px] min-w-[70px] px-1 ${stickyRowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
+                        className={`pinned-cell ${rowHeight} w-[70px] min-w-[70px] px-1`}
                         style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -845,9 +801,9 @@ const StyledTable = ({
                           <td
                             key={`${row.id || idx}-syncing-${colIdx}`}
                             colSpan={isBadgeCell ? 1 : visibleColumns.length - 2}
-                            className="h-11 text-[13.5px] text-pd-faint"
+                            className={`${rowHeight} text-by-muted`}
                           >
-                            <div className="flex min-w-0 items-center px-[22px]">
+                            <div className={`flex min-w-0 items-center ${TABLE_PAD_X}`}>
                               {isBadgeCell ? (
                                 <span className="inline-flex shrink-0 items-center rounded-full bg-pd-primary px-[9px] py-[3px] text-[11px] font-bold text-white">
                                   Syncing
@@ -863,21 +819,19 @@ const StyledTable = ({
                       return (
                       <Fragment key={`${row.id || idx}-${col.id}`}>
                         <td
-                          className={`truncate ${
+                          className={`truncate ${rowHeight} ${
                             colIdx === 0
                               ? // The name carries the row: heavier, in ink,
-                                // against numerics that sit back in body grey.
-                                `${row._isSyncing ? "fixed-column-syncing" : globalIdx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11 text-[14px] font-semibold text-pd-ink`
-                              : `text-[13.5px] text-pd-body ${
-                                  numericColumns.has(col.id) ? "text-right tabular-nums" : ""
-                                }`
-                          } ${isSelected && colIdx === 0 ? "!bg-pd-primary-tint" : ""}`}
+                                // against figures that sit back in body grey.
+                                `fixed-column ${TABLE_NAME_TEXT}`
+                              : numericColumns.has(col.id) ? TABLE_NUM : ""
+                          }`}
                         >
                           <div
                             className={
                               colIdx === 0
-                                ? "flex min-w-0 items-center gap-2 px-[22px] py-3"
-                                : "min-w-0 px-[22px]"
+                                ? `flex min-w-0 items-center gap-2 ${TABLE_PAD_X}`
+                                : `min-w-0 ${TABLE_PAD_X}`
                             }
                           >
                             {/* ── Client status — a dot rather than a badge, so
@@ -938,7 +892,7 @@ const StyledTable = ({
                                         {colIdx === 0 && col.sub && (() => {
                                           const sub = col.sub(row);
                                           return sub ? (
-                                            <span className="mt-[2px] block truncate text-[11px] font-normal leading-[1.3] text-pd-faint">
+                                            <span className={`mt-0.5 block truncate ${TABLE_SUB_TEXT}`}>
                                               {sub}
                                             </span>
                                           ) : null;
@@ -957,7 +911,8 @@ const StyledTable = ({
                             {/* A row that opens something says so on hover. */}
                             {colIdx === 0 && onRowClick && !row._isSyncing && (
                               <ChevronRight
-                                className="ml-auto size-4 shrink-0 text-pd-chevron opacity-0 transition-opacity group-hover:opacity-100"
+                                // Appears with the row's hover, at the same instant.
+                                className="ml-auto size-4 shrink-0 text-by-muted opacity-0 group-hover:opacity-100"
                                 aria-hidden="true"
                               />
                             )}

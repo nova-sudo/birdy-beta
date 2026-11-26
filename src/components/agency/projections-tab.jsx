@@ -123,7 +123,7 @@ function ClientsTable({ clients, money }) {
               const words = PACE_WORDS[c.status];
               return (
                 <Tr key={c.id}>
-                  <Td className="max-w-[240px] truncate font-semibold">
+                  <Td primary className="max-w-[240px] truncate">
                     <Link href={`/clients/${encodeURIComponent(c.id)}`} className="hover:text-by-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-by-accent">{c.name}</Link>
                   </Td>
                   <Td numeric>{money.money(c.spend)}</Td>

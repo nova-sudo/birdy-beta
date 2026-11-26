@@ -1,6 +1,18 @@
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import { FOCUS_RING } from "./motion";
 import { cn } from "./cn";
+import {
+  TABLE_BODY_TEXT,
+  TABLE_CARD,
+  TABLE_HEAD_TEXT,
+  TABLE_NAME_TEXT,
+  TABLE_NUM,
+  TABLE_ROW_H,
+  TABLE_ROW_HOVER,
+  TABLE_ROW_RULE,
+  TABLE_TH,
+  TABLE_TD,
+} from "@/lib/table-style";
 
 /**
  * A data table.
@@ -10,7 +22,7 @@ import { cn } from "./cn";
  * while the rows move under it. The page around it does not scroll.
  */
 export function Table({ className, ...props }) {
-  return <table className={cn("w-full border-collapse font-by-body text-by-body text-by-text", className)} {...props} />;
+  return <table className={cn("w-full border-collapse font-by-body", TABLE_BODY_TEXT, className)} {...props} />;
 }
 
 export function TableHead(props) {
@@ -22,13 +34,16 @@ export function TableBody({ className, ...props }) {
 }
 
 /**
- * A table row.
+ * A table row. Measurements and colours come from lib/table-style, shared with
+ * the classic table.
  * @param {boolean} [props.interactive] highlights on hover and nudges its RowArrow; pair with onClick
+ * @param {boolean} [props.tall] the taller row, for a cell with a second line under it
  */
-export function Tr({ interactive = false, className, ...props }) {
+export function Tr({ interactive = false, tall = false, className, ...props }) {
   return (
     <tr
-      className={cn(interactive && "group cursor-pointer transition-colors duration-(--by-dur-fast) ease-by-out hover:bg-by-canvas", className)}
+      // Hover paints every cell at the same instant, no fade, so the row moves as one.
+      className={cn(interactive && cn("group", TABLE_ROW_HOVER), tall && "[&>td]:h-[60px]", className)}
       {...props}
     />
   );
@@ -52,7 +67,8 @@ export function Th({ numeric = false, sort, onSort, className, children, ...prop
       className={cn(
         // Sticky, so the header stays put while the rows scroll beneath it. The rule under it is an inset
         // shadow, not a border: a collapsed border does not travel with a sticky cell.
-        "sticky top-0 z-10 h-10 whitespace-nowrap bg-by-surface px-4 text-left text-by-label font-semibold uppercase tracking-[0.07em] text-by-muted shadow-[inset_0_-1px_0_var(--by-line)]",
+        "sticky top-0 z-10",
+        TABLE_TH,
         numeric && "text-right",
         className,
       )}
@@ -63,7 +79,8 @@ export function Th({ numeric = false, sort, onSort, className, children, ...prop
           type="button"
           onClick={onSort}
           className={cn(
-            "-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-by-sm px-1.5 py-1 uppercase tracking-[0.07em] transition-colors duration-(--by-dur-fast) ease-by-out hover:text-by-text",
+            "-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-by-sm px-1.5 py-1 hover:text-by-text",
+            TABLE_HEAD_TEXT,
             sort && "text-by-text",
             FOCUS_RING,
           )}
@@ -80,9 +97,13 @@ export function Th({ numeric = false, sort, onSort, className, children, ...prop
   );
 }
 
-/** A body cell. @param {boolean} [props.numeric] right-aligned with figures that line up in columns */
-export function Td({ numeric = false, className, ...props }) {
-  return <td className={cn("h-12 whitespace-nowrap border-b border-by-line-soft px-4", numeric && "text-right tabular-nums", className)} {...props} />;
+/**
+ * A body cell.
+ * @param {boolean} [props.numeric] right-aligned with figures that line up in columns
+ * @param {boolean} [props.primary] the cell that names the row: semibold, in full ink
+ */
+export function Td({ numeric = false, primary = false, className, ...props }) {
+  return <td className={cn(TABLE_TD, "whitespace-nowrap", numeric && TABLE_NUM, primary && TABLE_NAME_TEXT, className)} {...props} />;
 }
 
 /**
@@ -93,19 +114,19 @@ export function Td({ numeric = false, className, ...props }) {
 export function TableScroll({ className, ...props }) {
   return (
     <div
-      className={cn("min-h-0 overflow-auto overscroll-contain rounded-by-lg border border-by-line bg-by-surface shadow-by-card", className)}
+      className={cn("min-h-0 overflow-auto overscroll-contain", TABLE_CARD, className)}
       {...props}
     />
   );
 }
 
-/** The trailing arrow on an interactive row. It nudges right when the row is hovered. */
+/** The trailing arrow on an interactive row. It darkens with the row (no fade) and nudges right when the row is hovered. */
 export function RowArrow({ className, ...props }) {
   return (
-    <td className={cn("h-12 w-9 border-b border-by-line-soft pr-3 text-by-muted", className)} {...props}>
+    <td className={cn(TABLE_ROW_H, TABLE_ROW_RULE, "w-9 pr-3 text-by-muted", className)} {...props}>
       <ChevronRight
         aria-hidden="true"
-        className="size-4 transition-[transform,color] duration-(--by-dur-press) ease-by-spring group-hover:text-by-text motion-safe:group-hover:translate-x-1"
+        className="size-4 transition-transform duration-(--by-dur-press) ease-by-spring group-hover:text-by-text motion-safe:group-hover:translate-x-1"
       />
     </td>
   );

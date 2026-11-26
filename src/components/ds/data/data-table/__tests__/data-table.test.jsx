@@ -304,20 +304,21 @@ describe("Bytes shell and toolbar", () => {
     expect(root().className).not.toContain("shadow-frame")
   })
 
-  it("uses the Bytes head and body cell classes: 14/500 heads, 60 rows, 52 dense", () => {
+  it("uses the one table style (lib/table-style): 44px uppercase heads, 48px rows, dense or not", () => {
     const { rerender } = render(<DataTable columns={columns} data={data} />)
     const head = within(table()).getAllByRole("columnheader")[0]
-    for (const c of ["h-9", "px-3", "first:pl-4", "last:pr-4", "text-sm", "font-medium", "text-muted-foreground"]) {
+    for (const c of ["h-[44px]", "px-[20px]", "text-[12px]", "font-semibold", "uppercase", "text-by-muted"]) {
       expect(head.className).toContain(c)
     }
-    expect(head.className).not.toContain("text-xs")
     const cell = within(table()).getByText("Alpha").closest("td")
-    for (const c of ["px-3", "py-2.5", "h-15", "group-hover/row:bg-row-hover"]) expect(cell.className).toContain(c)
+    for (const c of ["px-[20px]", "h-[48px]", "text-sm", "group-hover/row:bg-(--by-grey-75)"]) expect(cell.className).toContain(c)
+    // Hover changes the row at once: no fade on a cell.
+    expect(cell.className).not.toContain("transition")
     expect(cell.closest("tr").className).toContain("group/row")
     // Not inside a frame: rows sit on a surface with hairlines between them.
     expect(table().querySelector("tbody").className).toContain("[&>tr:not(:first-child)>*]:border-t")
     rerender(<DataTable columns={columns} data={data} dense />)
-    expect(within(table()).getByText("Alpha").closest("td").className).toContain("h-13")
+    expect(within(table()).getByText("Alpha").closest("td").className).toContain("h-[48px]")
   })
 
   it("searches through a SearchInput: icon on the right, meta.placeholder, a clear button once typed", () => {
@@ -500,11 +501,11 @@ describe("DataTable row expansion", () => {
     const child = within(table()).getByText("Aura").closest("tr")
     expect(child.className).toContain("bg-row-child")
     const cell = within(table()).getByText("Aura").closest("td")
-    // `first:` so it beats BODY_CELL's `first:pl-4`; a bare pl-10 loses to the variant.
+    // `first:` so it beats BODY_CELL's px-5 whatever order the CSS lands in.
     expect(cell.className).toContain("first:pl-10")
-    expect(cell.className).not.toContain("first:pl-4")
     const parentCell = within(table()).getByText("Rule one").closest("td")
-    expect(parentCell.className).toContain("first:pl-4")
+    expect(parentCell.className).not.toContain("first:pl-10")
+    expect(parentCell.className).toContain("px-[20px]")
   })
 
   it("a pinned child cell is opaque, so scrolled cells do not show through it", () => {

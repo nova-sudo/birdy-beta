@@ -99,7 +99,7 @@ describe("MarketingContent's table half", () => {
   it("draws the tabs and the table, and no hero", () => {
     mount({ part: "table", fill: true })
     expect(screen.getByPlaceholderText(/Search campaigns/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Columns/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Views/ })).toBeInTheDocument()
     expect(screen.queryByRole("region", { name: "Birdy's read" })).toBeNull()
     expect(screen.queryByTestId("funnel")).toBeNull()
   })
