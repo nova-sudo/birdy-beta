@@ -102,13 +102,13 @@
     --primary-glow: #7A61E0;
     /* lighter companion for gradient washes (btn-gradient, headings) */
 
-    --secondary: #F4F4F2;
+    --secondary: #F3F2F8;
     --secondary-foreground: #27272A;
 
-    --muted: #F4F4F2;
+    --muted: #F3F2F8;
     --muted-foreground: #6B6B72;
 
-    --accent: #EFEEEB;
+    --accent: #EFEEF5;
     --accent-foreground: #18181B;
 
     --destructive: #E5484D;
@@ -117,8 +117,8 @@
     --success: #16794C;
     --success-foreground: #ffffff;
 
-    --border: #E7E6E3;
-    --input: #E7E6E3;
+    --border: #E4E2ED;
+    --input: #E4E2ED;
     --ring: #5B3FD6;
 
     /* Round corners: cards land at 22px (rounded-xl), controls go pill. */
@@ -133,9 +133,9 @@
     --sidebar-foreground: #18181B;
     --sidebar-primary: #5B3FD6;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #F4F4F2;
+    --sidebar-accent: #F3F2F8;
     --sidebar-accent-foreground: #27272A;
-    --sidebar-border: #E7E6E3;
+    --sidebar-border: #E4E2ED;
     --sidebar-ring: #5B3FD6;
 
     /* ── Shadows — tinted with the ink, never pure black ─────── */
@@ -167,9 +167,9 @@
     /* ── Neutral scale ───────────────────────────────────────────
        Backs Tailwind's gray-* utilities: warm surfaces, zinc-leaning text,
        matching the ink above instead of Tailwind's blue-grey. */
-    --gray-50: #F7F7F5;
-    --gray-100: #F0EFEC;
-    --gray-200: #E7E6E3;
+    --gray-50: #F7F6FB;
+    --gray-100: #EFEEF5;
+    --gray-200: #E4E2ED;
     --gray-300: #D6D5D1;
     --gray-400: #A1A1A0;
     --gray-500: #74747A;
@@ -194,19 +194,21 @@
     --pd-muted: #63636B;
     --pd-subtle: #85858C;
     --pd-faint: #98989E;
-    --pd-divider: #EFEEEB;
-    --pd-border: #E7E6E3;
-    --pd-border-strong: #DCDBD7;
-    --pd-chevron: #CFCECA;
+    /* The neutrals below were warm off-whites from the old design. They now share the app's cool
+       grey scale (styles/tokens.css --by-grey-*), so a classic table sits on the page it is on. */
+    --pd-divider: #EFEEF5;
+    --pd-border: #E4E2ED;
+    --pd-border-strong: #D9D7E4;
+    --pd-chevron: #CFCDDA;
     --pd-surface: #ffffff;
-    --pd-canvas: #F6F6F4;
-    --pd-scroll: #DAD9D5;
+    --pd-canvas: #F7F6FB;
+    --pd-scroll: #D9D7E4;
     /* Table head and the alternate row. Both sit a hair off white on purpose:
        the stripe is meant to help the eye track a wide row across, not to
        divide the table into bands. */
-    --pd-table-head: #FAFAF8;
-    --pd-row-zebra: #FCFCFB;
-    --pd-row-border: #F2F1EE;
+    --pd-table-head: #F9F8FC;
+    --pd-row-zebra: #FBFBFD;
+    --pd-row-border: #F1F0F6;
     --pd-success: #16794C;
     --pd-success-bg: #E8F4EE;
     --pd-danger: #E5484D;
@@ -222,7 +224,7 @@
     --pd-info-bg: #EAF1FD;
     --pd-healthy-surface: #F1F8F4;
     --pd-healthy-border: #D3E9DC;
-    --pd-neutral-badge: #E7E6E3;
+    --pd-neutral-badge: #E4E2ED;
 
     /* Shadows — one per role in the design's shadow table. */
     --pd-shadow-segment: 0 2px 8px -2px rgba(91, 63, 214, 0.40);
