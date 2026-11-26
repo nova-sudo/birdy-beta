@@ -4,6 +4,7 @@ import * as React from "react"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { TABLE_HEAD_TEXT } from "@/lib/table-style"
 
 /**
  * A column head: 14/500 muted, optionally led by a small icon. A sortable head is a button that cycles ascending, descending and
@@ -49,7 +50,7 @@ function DataTableColumnHeader({ column, title, align, icon, className }) {
         type="button"
         onClick={toggle}
         data-sorted={sorted || undefined}
-        className="-mx-1.5 inline-flex h-7 cursor-pointer items-center gap-1 rounded-[8px] px-1.5 font-medium outline-none transition-colors hover:text-foreground focus-visible:shadow-focus data-[sorted]:text-foreground"
+        className={cn("-mx-1.5 inline-flex h-7 cursor-pointer items-center gap-1 rounded-[8px] px-1.5 outline-none hover:text-foreground focus-visible:shadow-focus data-[sorted]:text-foreground", TABLE_HEAD_TEXT)}
       >
         {lead}
         {title}

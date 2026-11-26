@@ -16,7 +16,7 @@ vi.mock("@/lib/creatives-api", () => ({
 }))
 vi.mock("@/lib/view-catalogues", () => ({ useRememberViewCatalogue: () => {} }))
 vi.mock("@/lib/usePageViews", () => ({ usePageViews: () => ({ views: [] }) }))
-vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Columns</button> }))
+vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Views</button> }))
 vi.mock("../CreativeDetailSheet", () => ({
   CreativeDetailSheet: ({ testId, open, onOpenChange }) =>
     open ? (

@@ -34,11 +34,11 @@ export const buildContactColumns = () => [
     // own placeholder.
     cell: (value, row) =>
       value && value !== "Unknown" ? (
-        <span className="text-sm text-foreground text-left block">{toTitleCase(value)}</span>
+        <span className="block text-left">{toTitleCase(value)}</span>
       ) : row?.phone ? (
-        <span className="text-sm text-foreground text-left block">{row.phone}</span>
+        <span className="block text-left">{row.phone}</span>
       ) : (
-        <span className="text-muted-foreground text-sm px-2">–</span>
+        <span className="text-muted-foreground">–</span>
       ),
     // The line under the name: where the lead came from and where its
     // opportunity stands — the two facts a reader scans the row for, and the
@@ -61,11 +61,9 @@ export const buildContactColumns = () => [
     icons: lab,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
+        <span className="text-muted-foreground">-</span>
       ) : (
-        <div className="truncate px-2" title={value}>
-          <span className="text-sm font-medium text-foreground">{value}</span>
-        </div>
+        <div className="truncate" title={value}>{value}</div>
       ),
   },
   {
@@ -77,11 +75,11 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value || value.startsWith("no_email_") ? (
-        <span className="text-muted-foreground font-bold text-sm">–</span>
+        <span className="text-muted-foreground">–</span>
       ) : (
         <a
           href={`mailto:${value}`}
-          className="text-sm text-foreground hover:text-primary font-bold hover:underline transition-colors"
+          className="hover:text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
           {value}
@@ -97,11 +95,11 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground font-bold text-sm">–</span>
+        <span className="text-muted-foreground">–</span>
       ) : (
         <a
           href={`tel:${value}`}
-          className="text-sm text-foreground hover:text-primary hover:underline transition-colors font-mono"
+          className="tabular-nums hover:text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
           {value}
@@ -117,9 +115,9 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground text-sm">–</span>
+        <span className="text-muted-foreground">–</span>
       ) : (
-        <span className="text-sm text-foreground">
+        <span>
           {new Date(value).toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
@@ -136,7 +134,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       if (!value || value.length === 0)
-        return <span className="text-muted-foreground text-sm">–</span>
+        return <span className="text-muted-foreground">–</span>
       const tags = value
       const mainTag = tags[0]
       const hasMoreTags = tags.length > 1
@@ -180,7 +178,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       const type = value || row?.contactType
-      if (!type) return <span className="text-muted-foreground text-sm">–</span>
+      if (!type) return <span className="text-muted-foreground">–</span>
       const isLead = type === "lead"
       return (
         <span
@@ -302,7 +300,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <span className="text-muted-foreground">-</span>
       : <span className="text-sm font-medium text-foreground">{toTitleCase(v)}</span>,
   },
   {
@@ -313,7 +311,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <span className="text-muted-foreground">-</span>
       : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
   },
   { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
@@ -329,7 +327,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">–</span>
+      ? <span className="text-muted-foreground">–</span>
       : <div className="truncate px-2" title={v}><span className="text-sm font-medium text-foreground">{v}</span></div>,
   },
   {
@@ -340,7 +338,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => {
-      if (!v) return <span className="text-muted-foreground text-sm">-</span>
+      if (!v) return <span className="text-muted-foreground">-</span>
       const url = v.startsWith("http") ? v : `https://${v}`
       return (
         <a
@@ -365,7 +363,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (v, row) => {
       const addr = v || row?.address
-      if (!addr) return <span className="text-muted-foreground text-sm">-</span>
+      if (!addr) return <span className="text-muted-foreground">-</span>
       return (
         <span className="text-sm text-foreground max-w-xs truncate block" title={addr}>
           {addr}

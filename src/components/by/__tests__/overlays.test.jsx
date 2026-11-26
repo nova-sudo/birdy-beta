@@ -122,7 +122,7 @@ describe("tables scroll inside themselves", () => {
   it("keeps the header row in place and scrolls only the table's own container", () => {
     render(<TableScroll data-testid="scroll"><Table><TableHead><tr><Th>Client</Th></tr></TableHead></Table></TableScroll>)
     expect(screen.getByTestId("scroll")).toHaveClass("min-h-0", "overflow-auto")
-    expect(screen.getByRole("columnheader", { name: "Client" })).toHaveClass("sticky", "top-0", "bg-by-surface")
+    expect(screen.getByRole("columnheader", { name: "Client" })).toHaveClass("sticky", "top-0", "bg-by-canvas")
   })
 })
 
@@ -131,8 +131,8 @@ describe("ColumnsMenu", () => {
   const VIEWS = [{ name: "Default", ids: ["spend", "leads"] }, { name: "Ads", ids: ["spend", "leads", "ctr"] }]
   const openMenu = async (props) => {
     render(<ColumnsMenu columns={COLUMNS} value={["spend", "leads"]} onChange={() => {}} {...props} />)
-    await userEvent.click(screen.getByRole("button", { name: /Columns/ }))
-    return screen.findByRole("dialog", { name: "Show columns" })
+    await userEvent.click(screen.getByRole("button", { name: /^Views/ }))
+    return screen.findByRole("dialog", { name: "Views and columns" })
   }
 
   it("groups the columns under their headings and ticks what is shown", async () => {
@@ -151,10 +151,10 @@ describe("ColumnsMenu", () => {
     expect(onChange).toHaveBeenLastCalledWith(["won"])
   })
 
-  it("lists saved views first, marks the one on screen and applies another in one click", async () => {
+  it("lists the views first, marks the one on screen and applies another in one click", async () => {
     const onChange = vi.fn()
     await openMenu({ views: VIEWS, onChange })
-    expect(screen.getAllByRole("group")[0]).toHaveAccessibleName("Saved views")
+    expect(screen.getAllByRole("group")[0]).toHaveAccessibleName("Views")
     expect(screen.getByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByRole("button", { name: "Ads" })).toHaveAttribute("aria-pressed", "false")
     await userEvent.click(screen.getByRole("button", { name: "Ads" }))
@@ -163,11 +163,11 @@ describe("ColumnsMenu", () => {
 
   it("names the view on the button unless it is the default, and says Custom for anything else", () => {
     const { rerender } = render(<ColumnsMenu columns={COLUMNS} value={["spend", "leads"]} onChange={() => {}} views={VIEWS} />)
-    expect(screen.getByRole("button", { name: "Columns" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Views" })).toBeInTheDocument()
     rerender(<ColumnsMenu columns={COLUMNS} value={["spend", "leads", "ctr"]} onChange={() => {}} views={VIEWS} />)
-    expect(screen.getByRole("button", { name: /^Columns\s*·\s*Ads$/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Views\s*·\s*Ads$/ })).toBeInTheDocument()
     rerender(<ColumnsMenu columns={COLUMNS} value={["won"]} onChange={() => {}} views={VIEWS} />)
-    expect(screen.getByRole("button", { name: /^Columns\s*·\s*Custom$/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Views\s*·\s*Custom$/ })).toBeInTheDocument()
   })
 
   it("offers to save the current view only when saving is possible, and reports opening", async () => {
@@ -175,7 +175,15 @@ describe("ColumnsMenu", () => {
     const onOpenChange = vi.fn()
     await openMenu({ views: VIEWS, onSaveView, onOpenChange })
     expect(onOpenChange).toHaveBeenLastCalledWith(true)
-    await userEvent.click(screen.getByRole("button", { name: "Save current view" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save as new view" }))
     expect(onSaveView).toHaveBeenCalledOnce()
+  })
+
+  it("offers to update the current view when the page can, and heads the columns as the view's contents", async () => {
+    const onUpdateView = vi.fn()
+    await openMenu({ views: VIEWS, onUpdateView })
+    expect(screen.getByText("Columns in this view")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Update view" }))
+    expect(onUpdateView).toHaveBeenCalledOnce()
   })
 })

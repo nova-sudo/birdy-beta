@@ -77,6 +77,8 @@ import {
   Loader2,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState as TableEmptyState } from "@/components/by/card"
+import { TABLE_BODY_TEXT, TABLE_CARD, TABLE_PAD_X, TABLE_ROW_H_TALL, TABLE_ROW_RULE, TABLE_TH } from "@/lib/table-style"
 import { motion } from "framer-motion"
 import { Stagger, StaggerItem, EASE_OUT } from "@/components/motion"
 import Image from "next/image"
@@ -219,9 +221,9 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
   return (
     // Mounted after the table's stagger has already run (on expand), so it
     // animates itself in; left to the parent it stayed at opacity 0.
-    <StaggerItem as="tr" initial="hidden" animate="shown" className="border-b border-pd-row-border bg-pd-primary-tint/40 hover:bg-pd-primary-tint/70 transition-colors h-14">
+    <StaggerItem as="tr" initial="hidden" animate="shown" className="[&>td]:bg-pd-primary-tint/40 [&:hover>td]:bg-pd-primary-tint/70">
       {/* Name — indented */}
-      <td className="py-3 px-4 align-middle min-w-[180px]">
+      <td className={`${ALERT_TD} min-w-[180px]`}>
         <div className="flex items-start gap-2 pl-8">
           <div className="w-0.5 self-stretch rounded-full bg-pd-primary-pale shrink-0" />
           <div>
@@ -234,7 +236,7 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       </td>
 
       {/* Metric */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(row.condition?.metric)}</span>
           <span>{metricLabel(row.condition?.metric)}</span>
@@ -242,7 +244,7 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       </td>
 
       {/* Condition + actual */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(row)}</div>
         {row._client_value != null && (
           <div className="text-xs text-pd-danger tabular-nums mt-0.5">actual: {row._client_value?.toFixed(2)}</div>
@@ -250,26 +252,26 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       </td>
 
       {/* Progress */}
-      <td className="py-3 px-4 align-middle">
+      <td className={`${ALERT_TD}`}>
         <ClientProgressBar pct={row._client_progress} />
       </td>
 
       {/* Status */}
-      <td className="py-3 px-4 align-middle">
+      <td className={`${ALERT_TD}`}>
         <Badge variant="destructive" className="gap-1 text-xs">
           <BellRing className="h-3 w-3" /> Triggered
         </Badge>
       </td>
 
       {/* Targets */}
-      <td className="py-3 px-4 align-middle">
+      <td className={`${ALERT_TD}`}>
         <Badge className="text-[10.5px] px-2 py-0 gap-1">
           <User className="h-2.5 w-2.5" /> Per Client
         </Badge>
       </td>
 
       {/* Last updated */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="text-sm text-pd-subtle">{formatRelative(new Date(row.updated_at))}</div>
         {row.last_triggered_at && (
           <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
@@ -280,7 +282,7 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       </td>
 
       {/* Actions */}
-      <td className="py-3 px-4 align-middle">
+      <td className={`${ALERT_TD}`}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
@@ -324,11 +326,11 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
   return (
     <StaggerItem
       as="tr"
-      className="border-b border-pd-row-border bg-pd-surface hover:bg-pd-table-head transition-colors h-14 cursor-pointer"
+      className="cursor-pointer [&:hover>td]:bg-(--by-grey-75)"
       onClick={onToggle}
     >
       {/* Name */}
-      <td className="py-3 px-4 align-middle min-w-[180px] shadow-[inset_3px_0_0_var(--pd-danger)]">
+      <td className={`${ALERT_TD} min-w-[180px] shadow-[inset_3px_0_0_var(--pd-danger)]`}>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -357,7 +359,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       </td>
 
       {/* Metric */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD} whitespace-nowrap`} onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(parentAlert.condition?.metric)}</span>
           <span>{metricLabel(parentAlert.condition?.metric)}</span>
@@ -365,7 +367,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       </td>
 
       {/* Condition */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD} whitespace-nowrap`} onClick={e => e.stopPropagation()}>
         <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(parentAlert)}</div>
         {parentAlert.condition?.period && (
           <div className="text-xs text-muted-foreground mt-0.5">
@@ -376,19 +378,19 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       </td>
 
       {/* Progress — show worst client */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD}`} onClick={e => e.stopPropagation()}>
         <ClientProgressBar pct={Math.max(...children.map(c => c._client_progress ?? 0))} />
       </td>
 
       {/* Status */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD}`} onClick={e => e.stopPropagation()}>
         <Badge variant="destructive" className="gap-1 text-xs">
           <BellRing className="h-3 w-3" /> Triggered
         </Badge>
       </td>
 
       {/* Targets */}
-      <td className="py-3 px-4 align-middle min-w-[140px]" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD} min-w-[140px]`} onClick={e => e.stopPropagation()}>
         {parentAlert.scope === "creative_tests" ? <CreativeTargets alert={{ ...parentAlert, tracking_mode: "per_client" }} /> : (
         <div className="flex flex-col gap-0.5 max-w-[180px]">
           <Badge className="text-[10.5px] px-2 py-0 gap-1 w-fit">
@@ -405,7 +407,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       </td>
 
       {/* Last updated */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD} whitespace-nowrap`} onClick={e => e.stopPropagation()}>
         <div className="text-sm text-pd-subtle">{formatRelative(new Date(parentAlert.updated_at))}</div>
         {parentAlert.last_triggered_at && (
           <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
@@ -416,7 +418,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       </td>
 
       {/* Actions */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+      <td className={`${ALERT_TD}`} onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
@@ -460,8 +462,8 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
   const isEval    = evaluating === (alert._virtual_id ?? alert.id)
 
   return (
-    <StaggerItem as="tr" className={`border-b border-pd-row-border transition-colors hover:bg-pd-table-head h-14 ${isVirtual ? "bg-pd-primary-tint/40" : "bg-pd-surface"}`}>
-      <td className={`py-3 px-4 align-middle min-w-[180px] ${alert.status === "triggered" ? "shadow-[inset_3px_0_0_var(--pd-danger)]" : ""}`}>
+    <StaggerItem as="tr" className={isVirtual ? "[&>td]:bg-pd-primary-tint/40 [&:hover>td]:bg-pd-primary-tint/70" : "[&:hover>td]:bg-(--by-grey-75)"}>
+      <td className={`${ALERT_TD} min-w-[180px] ${alert.status === "triggered" ? "shadow-[inset_3px_0_0_var(--pd-danger)]" : ""}`}>
         <div>
           <div className="font-semibold text-pd-ink">{alert.name}</div>
           {alert.description && (
@@ -469,13 +471,13 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           )}
         </div>
       </td>
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(alert.condition?.metric)}</span>
           <span>{metricLabel(alert.condition?.metric)}</span>
         </div>
       </td>
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(alert)}</div>
         {alert.condition?.period && (
           <div className="text-xs text-muted-foreground mt-0.5">
@@ -484,9 +486,9 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           </div>
         )}
       </td>
-      <td className="py-3 px-4 align-middle"><ProgressToTrigger alert={alert} /></td>
-      <td className="py-3 px-4 align-middle min-w-[120px]">{statusBadge(alert.status, alert.snoozed_until)}</td>
-      <td className="py-3 px-4 align-middle min-w-[140px]">
+      <td className={`${ALERT_TD}`}><ProgressToTrigger alert={alert} /></td>
+      <td className={`${ALERT_TD} min-w-[120px]`}>{statusBadge(alert.status, alert.snoozed_until)}</td>
+      <td className={`${ALERT_TD} min-w-[140px]`}>
         {alert.scope === "creative_tests" ? <CreativeTargets alert={alert} /> : alert.target_group_ids?.length ? (
           <div className="flex flex-col gap-0.5 max-w-[180px]">
             <div className="flex items-center gap-1.5 mb-0.5">
@@ -515,7 +517,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           </div>
         )}
       </td>
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
+      <td className={`${ALERT_TD} whitespace-nowrap`}>
         <div className="text-sm text-pd-subtle">{formatRelative(new Date(alert.updated_at))}</div>
         {alert.last_triggered_at && (
           <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
@@ -524,7 +526,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           </div>
         )}
       </td>
-      <td className="py-3 px-4 align-middle">
+      <td className={`${ALERT_TD}`}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Alert actions"><Ellipsis className="h-4 w-4" /></Button>
@@ -567,14 +569,9 @@ const EMPTY_HINTS = {
 function EmptyState({ label }) {
   return (
     <tr>
-      <td colSpan={8} className="py-16">
-        <div className="mx-auto flex max-w-xs flex-col items-center text-center">
-          <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-pd-primary-tint text-pd-primary">
-            <Bell className="size-5" />
-          </span>
-          <p className="font-pd-display text-[15px] font-semibold text-pd-ink">No {label} alerts</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-pd-subtle">{EMPTY_HINTS[label]}</p>
-        </div>
+      <td colSpan={8} className="py-10">
+        {/* The same empty state every table shows. */}
+        <TableEmptyState icon={<Bell />} title={`No ${label} alerts`}>{EMPTY_HINTS[label]}</TableEmptyState>
       </td>
     </tr>
   )
@@ -582,16 +579,20 @@ function EmptyState({ label }) {
 
 // ── Table chrome shared by every tab ──────────────────────────────────────────
 
+// Rows carry a second line (the alert's description), so they take the taller
+// row height from lib/table-style; the hover sits on the cells, no fade.
+const ALERT_TD = `${TABLE_ROW_H_TALL} ${TABLE_PAD_X} ${TABLE_ROW_RULE} align-middle`
+
 const ALERT_COLUMNS = ["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"]
 
 function AlertTableShell({ children }) {
   return (
-    <div className="relative w-full min-h-0 overflow-auto rounded-xl border border-pd-border bg-pd-surface shadow-sm">
-      <table className="w-full caption-bottom text-[13.5px]">
+    <div className={`relative w-full min-h-0 overflow-auto ${TABLE_CARD}`}>
+      <table className={`w-full caption-bottom font-by-body ${TABLE_BODY_TEXT}`}>
         <thead className="sticky top-0 z-20">
-          <tr className="h-11 border-b border-pd-divider">
+          <tr>
             {ALERT_COLUMNS.map(h => (
-              <th key={h} className="h-11 bg-pd-table-head px-4 text-left align-middle text-[11.5px] font-bold uppercase tracking-[.04em] text-pd-faint">{h}</th>
+              <th key={h} className={TABLE_TH}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -607,15 +608,15 @@ function AlertTableSkeleton() {
     <AlertTableShell>
       <tbody>
         {Array.from({ length: 6 }, (_, i) => (
-          <tr key={i} className="h-14 border-b border-pd-row-border last:border-0">
-            <td className="px-4"><Skeleton className="h-3.5 w-36" /><Skeleton className="mt-2 h-2.5 w-24" /></td>
-            <td className="px-4"><Skeleton className="h-3.5 w-20" /></td>
-            <td className="px-4"><Skeleton className="h-3.5 w-16" /></td>
-            <td className="px-4"><Skeleton className="h-2 w-32 rounded-full" /></td>
-            <td className="px-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
-            <td className="px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
-            <td className="px-4"><Skeleton className="h-3 w-16" /></td>
-            <td className="px-4"><Skeleton className="size-8 rounded-full" /></td>
+          <tr key={i}>
+            <td className={ALERT_TD}><Skeleton className="h-3.5 w-36" /><Skeleton className="mt-2 h-2.5 w-24" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-3.5 w-20" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-3.5 w-16" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-2 w-32 rounded-full" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-5 w-16 rounded-full" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-5 w-20 rounded-full" /></td>
+            <td className={ALERT_TD}><Skeleton className="h-3 w-16" /></td>
+            <td className={ALERT_TD}><Skeleton className="size-8 rounded-full" /></td>
           </tr>
         ))}
       </tbody>

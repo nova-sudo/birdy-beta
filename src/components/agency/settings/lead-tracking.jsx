@@ -114,7 +114,7 @@ export function LeadTracking() {
                   <TableBody>
                     {rows.map((row) => (
                       <Tr key={row.id}>
-                        <Td className="max-w-64 truncate font-semibold" title={row.name}>{row.name}</Td>
+                        <Td primary className="max-w-64 truncate" title={row.name}>{row.name}</Td>
                         <Td><Pill tone={SOURCE_TONE[row.method]} dot={false}>{row.source}</Pill></Td>
                         <Td><Script state={row.script} /></Td>
                         <Td className={row.lastHit ? "text-by-text-2" : "text-by-muted"}>{row.lastHit || "—"}</Td>

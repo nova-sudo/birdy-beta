@@ -35,6 +35,8 @@ import { adCurrency, adFloorProgress, formatCpl, scoreTone, testCurrency } from 
 import { AccountLinesChart } from "./AccountLinesChart"
 import { VerdictBadge } from "./VerdictBadge"
 import { reportPause } from "./pauseOutcome"
+import { TABLE_ROW_H_TALL, TABLE_TD, TABLE_TH } from "@/lib/table-style"
+import { cn } from "@/lib/utils"
 
 const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
 const money = (v, cur) => `${currencySymbol(cur)}${Math.round(num(v) ?? 0).toLocaleString("en-US")}`
@@ -137,39 +139,40 @@ function AccountsTable({ test, currency, onAction }) {
     >
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-muted-foreground">
-            <th className="px-4 py-2 font-medium">Account</th>
-            <th className="px-2 py-2 font-medium">Status</th>
-            <th className="px-2 py-2 text-right font-medium">Spend</th>
-            <th className="px-2 py-2 text-right font-medium">Leads</th>
-            <th className="px-2 py-2 text-right font-medium">CPL</th>
-            <th className="px-2 py-2 text-right font-medium">{isImage ? "CTR" : "Hook"}</th>
-            <th className="px-4 py-2 font-medium">Progress</th>
-            <th className="px-4 py-2" aria-label="Actions" />
+          <tr>
+            <th className={cn(TABLE_TH)}>Account</th>
+            <th className={cn(TABLE_TH)}>Status</th>
+            <th className={cn(TABLE_TH, "text-right")}>Spend</th>
+            <th className={cn(TABLE_TH, "text-right")}>Leads</th>
+            <th className={cn(TABLE_TH, "text-right")}>CPL</th>
+            <th className={cn(TABLE_TH, "text-right")}>{isImage ? "CTR" : "Hook"}</th>
+            <th className={cn(TABLE_TH)}>Progress</th>
+            <th className={cn(TABLE_TH)} aria-label="Actions" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-divider">
+        <tbody>
           {ads.map((ad) => {
             const cur = adCurrency(ad, test, currency)
             const b = adBadge(ad)
             const fp = ad.score?.state === "scoring" ? adFloorProgress(ad, test, currency) : null
             return (
               <tr key={ad.id}>
-                <td className="px-4 py-2.5">
+                {/* Two lines (name, id): the taller row. */}
+                <td className={cn(TABLE_TD, TABLE_ROW_H_TALL)}>
                   <div className="font-medium">{ad.account_name ?? ad.ad_account_id}</div>
                   <div className="text-xs text-muted-foreground">{ad.ad_account_id}</div>
                 </td>
-                <td className="px-2 py-2.5">
+                <td className={cn(TABLE_TD)}>
                   <Badge tone={b.tone} size="sm">{b.label}</Badge>
                 </td>
-                <td className="px-2 py-2.5 text-right tabular-nums">{money(ad.score?.spend, cur)}</td>
-                <td className="px-2 py-2.5 text-right tabular-nums">{num(ad.score?.leads) ?? 0}</td>
-                <td className="px-2 py-2.5 text-right tabular-nums">{formatCpl(ad.score, cur)}</td>
-                <td className="px-2 py-2.5 text-right tabular-nums">
+                <td className={cn(TABLE_TD, "text-right tabular-nums")}>{money(ad.score?.spend, cur)}</td>
+                <td className={cn(TABLE_TD, "text-right tabular-nums")}>{num(ad.score?.leads) ?? 0}</td>
+                <td className={cn(TABLE_TD, "text-right tabular-nums")}>{formatCpl(ad.score, cur)}</td>
+                <td className={cn(TABLE_TD, "text-right tabular-nums")}>
                   {isImage ? pct(ad.score?.ctr) : pct(ad.score?.hook_rate)}
                 </td>
-                <td className="px-4 py-2.5 text-xs text-muted-foreground">{fp ? fp.label : ""}</td>
-                <td className="px-4 py-2.5 text-right">
+                <td className={cn(TABLE_TD, "text-xs text-muted-foreground")}>{fp ? fp.label : ""}</td>
+                <td className={cn(TABLE_TD, "text-right")}>
                   {ad.post_state === "failed" ? (
                     <Button variant="outline" size="sm" title={errorText(ad.post_error)} onClick={() => onAction(ad, "retry")}>
                       Retry

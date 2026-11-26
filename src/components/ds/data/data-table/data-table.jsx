@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table"
 
 import { cn } from "@/lib/utils"
+import { TABLE_BODY_TEXT, TABLE_HEAD_ROW, TABLE_HEAD_TEXT, TABLE_ROW_H } from "@/lib/table-style"
 import { Button } from "../../primitives/button"
 import { EmptyState } from "../../surfaces/empty-state"
 import { useInsideFrame } from "../../surfaces/frame"
@@ -26,12 +27,12 @@ const FACET_VARIANTS = ["select", "multiSelect"]
 const facetFilterFn = (row, columnId, values) => [].concat(values).includes(row.getValue(columnId))
 facetFilterFn.autoRemove = (values) => values == null || values === "" || values.length === 0
 
-const HEAD_CELL =
-  "h-9 px-3 text-left align-middle text-sm font-medium whitespace-nowrap text-muted-foreground first:pl-4 last:pr-4"
+// Measurements, type and hover come from lib/table-style, shared with every other table in the app.
+const HEAD_CELL = `${TABLE_HEAD_ROW} ${TABLE_HEAD_TEXT} px-[20px] text-left align-middle whitespace-nowrap`
 
 // Birdy keeps cells on one line (`whitespace-nowrap`); a wide table scrolls sideways instead.
-const BODY_CELL =
-  "bg-background px-3 py-2.5 align-middle text-sm whitespace-nowrap text-foreground transition-colors first:pl-4 last:pr-4 group-hover/row:bg-row-hover group-data-[state=selected]/row:bg-row-selected"
+// Hover changes every cell at the same instant (no fade), pinned cell included.
+const BODY_CELL = `bg-background px-[20px] align-middle ${TABLE_BODY_TEXT} whitespace-nowrap group-hover/row:bg-(--by-grey-75) group-data-[state=selected]/row:bg-row-selected`
 
 /**
  * The surface: rows sit on white with one outline, hairlines between. Borders draw inside the
@@ -50,7 +51,7 @@ const SURFACE_BODY = cn(
 
 // The cells round the surface at the table's own ends. A table wider than its frame scrolls those
 // ends out of view, so these pieces draw the corners and side outline on the visible edges
-// instead, only while the table overflows. The head row is h-9, so the surface starts 36px down; it
+// instead, only while the table overflows. The head row is 44px (lib/table-style), so the surface starts 44px down; it
 // ends above the horizontal scrollbar, whose height is measured.
 const EDGE_RADIUS = "calc(var(--radius-frame) + 1px)"
 const corner = (at) =>
@@ -59,7 +60,7 @@ const corner = (at) =>
 function SurfaceEdges({ bar }) {
   const piece = "pointer-events-none absolute z-20 size-[calc(var(--radius-frame)+1px)]"
   return (
-    <div aria-hidden data-slot="data-table-edges" className="pointer-events-none absolute inset-x-0 top-9" style={{ bottom: bar }}>
+    <div aria-hidden data-slot="data-table-edges" className="pointer-events-none absolute inset-x-0 top-[44px]" style={{ bottom: bar }}>
       <span className={cn(piece, "top-0 left-0")} style={{ backgroundImage: corner("100% 100%") }} />
       <span className={cn(piece, "top-0 right-0")} style={{ backgroundImage: corner("0 100%") }} />
       <span className={cn(piece, "bottom-0 left-0")} style={{ backgroundImage: corner("100% 0") }} />
@@ -131,7 +132,7 @@ const headerLabel = (column) =>
  * @param {React.ReactNode} [props.emptyFiltered] Shown when filters leave no rows; defaults to "No results" with a clear-filters action
  * @param {React.ReactNode|((table: import("@tanstack/react-table").Table) => React.ReactNode)} [props.toolbar] Extra toolbar controls
  * @param {boolean} [props.bare] Draws no frame of its own; implied inside a Frame or FrameSurface
- * @param {boolean} [props.dense] 52 rows instead of 60
+ * @param {boolean} [props.dense] no longer changes anything: every table uses the one row height in lib/table-style
  * @param {number} [props.pageSize=25]
  * @param {number[]} [props.pageSizeOptions] Choices in the rows-per-page select
  * @param {boolean} [props.paginate=true] false shows every row with no page footer, for a list the caller pages itself (a "Load more" cursor)
@@ -238,7 +239,8 @@ function DataTable({
   const pageIndex = state.pagination.pageIndex
   const pageCount = table.getPageCount()
   const [dragOver, setDragOver] = React.useState(null)
-  const rowHeight = dense ? "h-13" : "h-15"
+  // One row height for every table; `dense` is kept for callers but no longer changes it.
+  const rowHeight = TABLE_ROW_H
   const bodyLines = bare ? BARE_BODY : SURFACE_BODY
 
   // Data can shrink under the current page (refetch, narrower filter); pull back to the last page.

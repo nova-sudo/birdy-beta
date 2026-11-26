@@ -46,6 +46,22 @@ import {
 import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP, flaskIcon as Flask, ghlIcon, metaIcon } from "@/lib/icons"
 import MetricPicker from "@/components/ui/MetricPicker"
 import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState as TableEmptyState } from "@/components/by/card"
+import {
+  TABLE_BODY_TEXT,
+  TABLE_CARD,
+  TABLE_HEAD_BG,
+  TABLE_HEAD_ROW,
+  TABLE_HEAD_RULE,
+  TABLE_HEAD_TEXT,
+  TABLE_PAD_X,
+  TABLE_ROW_RULE,
+  TABLE_SUB_TEXT,
+} from "@/lib/table-style"
+
+// One metric per row, drawn as a table row: the shared single-line height,
+// padding and rule. The name grows a second line below md, so it is a minimum.
+const METRIC_ROW = `min-h-[48px] ${TABLE_PAD_X} ${TABLE_ROW_RULE}`
 import { toast } from "sonner"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { PageTabs, PageTabPanel } from "@/components/portfolio"
@@ -659,8 +675,9 @@ const MetricsHub = () => {
         </StaggerItem>
 
         <StaggerItem className="flex min-h-0 flex-col">
-        <PageTabPanel id="metrics-table" label="Metrics" className="min-h-0 overflow-auto rounded-xl border border-pd-border bg-pd-surface">
-          <div className="sticky top-0 z-10 flex items-center border-b border-pd-border bg-pd-table-head px-[22px] py-[13px] text-[11.5px] font-bold tracking-[0.03em] text-pd-faint">
+        <PageTabPanel id="metrics-table" label="Metrics" className={`min-h-0 overflow-auto ${TABLE_CARD}`}>
+          {/* A list drawn as a table: it takes the one table style from lib/table-style. */}
+          <div className={`sticky top-0 z-10 flex items-center ${TABLE_HEAD_ROW} ${TABLE_PAD_X} ${TABLE_HEAD_BG} ${TABLE_HEAD_RULE} ${TABLE_HEAD_TEXT}`}>
             <div className="flex-1">METRIC NAME</div>
             <div className="hidden flex-[1.4] md:block">NOTES</div>
             <div className="flex-[0_0_200px] text-center">SOURCE</div>
@@ -673,7 +690,7 @@ const MetricsHub = () => {
 
           {isLoading ? (
             Array.from({ length: 8 }).map((_, idx) => (
-              <div key={`skeleton-${idx}`} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px]">
+              <div key={`skeleton-${idx}`} className={`flex items-center ${METRIC_ROW}`}>
                 <div className="flex-1 pr-[12px]"><Skeleton className="h-4 w-40" /></div>
                 <div className="hidden flex-[1.4] pr-[12px] md:block"><Skeleton className="h-3 w-56" /></div>
                 <div className="flex flex-[0_0_200px] justify-center"><Skeleton className="h-6 w-28 rounded-full" /></div>
@@ -681,21 +698,17 @@ const MetricsHub = () => {
               </div>
             ))
           ) : filteredMetrics.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-pd-faint">
-              <div className="flex size-12 items-center justify-center rounded-full bg-pd-divider">
-                <InboxIcon className="size-6 text-pd-chevron" />
-              </div>
-              <p className="text-sm font-medium text-pd-muted">
-                {query
-                  ? `No metrics match "${searchQuery.trim()}"`
-                  : `No ${SOURCE_TABS.find((t) => t.key === activeTab)?.label.toLowerCase() ?? "metrics"} yet`}
-              </p>
-              <p className="text-xs">
-                {activeTab === "custom"
-                  ? "Create your first custom metric using the + button above."
-                  : "No metrics are available for this source yet."}
-              </p>
-            </div>
+            <TableEmptyState
+              icon={<InboxIcon />}
+              title={query
+                ? `No metrics match "${searchQuery.trim()}"`
+                : `No ${SOURCE_TABS.find((t) => t.key === activeTab)?.label.toLowerCase() ?? "metrics"} yet`}
+              className="py-10"
+            >
+              {activeTab === "custom"
+                ? "Create your first custom metric using the + button above."
+                : "No metrics are available for this source yet."}
+            </TableEmptyState>
           ) : (
             // Keyed on what's listed: rows that mount after the stagger has
             // run (another tab, page or search) would otherwise stay at
@@ -706,19 +719,19 @@ const MetricsHub = () => {
               const isHidden = hiddenMetrics.has(metric.id)
 
               return (
-                <StaggerItem key={metric.id} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px] last:border-b-0 hover:bg-pd-row-zebra">
+                <StaggerItem key={metric.id} className={`flex items-center ${METRIC_ROW} last:border-b-0 hover:bg-(--by-grey-75)`}>
                   <div className="min-w-0 flex-1 pr-[12px]">
-                    <div className={`truncate text-[13.5px] font-semibold ${isHidden ? "text-pd-faint line-through" : "text-pd-ink"}`}>
+                    <div className={`truncate text-sm font-semibold ${isHidden ? "text-pd-faint line-through" : "text-by-text"}`}>
                       {metric.name}
                     </div>
                     {/* Below md the NOTES column is gone, so the note rides
                         under the name rather than disappearing. */}
                     {metric.description && (
-                      <div className="truncate text-[12.5px] text-pd-subtle md:hidden">{metric.description}</div>
+                      <div className={`truncate md:hidden ${TABLE_SUB_TEXT}`}>{metric.description}</div>
                     )}
                   </div>
 
-                  <div className="hidden min-w-0 flex-[1.4] truncate pr-[12px] text-[12.5px] text-pd-subtle md:block">
+                  <div className={`hidden min-w-0 flex-[1.4] truncate pr-[12px] md:block ${TABLE_BODY_TEXT}`}>
                     {metric.description || "\u2013"}
                   </div>
 

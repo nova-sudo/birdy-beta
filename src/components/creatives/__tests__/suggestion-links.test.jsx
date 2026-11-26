@@ -45,7 +45,7 @@ vi.mock("@/lib/agents-api", async (orig) => ({ ...(await orig()), applyWorkItem:
 vi.mock("@/components/ds", async (orig) => ({ ...(await orig()), confirm: (...a) => fns.confirm(...a), toast: fns.toast }))
 vi.mock("@/lib/view-catalogues", () => ({ useRememberViewCatalogue: () => {} }))
 vi.mock("@/lib/usePageViews", () => ({ usePageViews: () => ({ views: [] }) }))
-vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Columns</button> }))
+vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Views</button> }))
 vi.mock("@/lib/creative-upload", () => ({ uploadCreativeMedia: vi.fn() }))
 
 import { CreativesTab } from "../CreativesTab"

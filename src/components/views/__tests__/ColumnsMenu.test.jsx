@@ -1,4 +1,4 @@
-// The table toolbar's Columns menu (handoff concept 5C).
+// The table toolbar's Views menu (handoff concept 5C, renamed from Columns).
 //
 // `views` is the usePageViews shape, passed here as plain spies — the hook has
 // its own tests, so these cover the menu's rules: the protected Default view,
@@ -56,7 +56,7 @@ async function open(props = {}) {
       {...(props.sources ? { sources: props.sources } : {})}
     />
   )
-  await user.click(screen.getByRole("button", { name: /columns/i }))
+  await user.click(screen.getByRole("button", { name: /^views/i }))
   return { user, onChange, views, onSaveDefault }
 }
 
@@ -122,15 +122,15 @@ describe("the protected Default view", () => {
     // brings them back next visit.
     const { user, onSaveDefault, views } = await open({ visibleColumns: ["spend", "roi"] })
 
-    await user.click(screen.getByRole("button", { name: /save to existing/i }))
+    await user.click(screen.getByRole("button", { name: /update view/i }))
 
     await waitFor(() => expect(onSaveDefault).toHaveBeenCalledWith(["spend", "roi"]))
     expect(views.updateView).not.toHaveBeenCalled()
   })
 
-  it("still offers Save New View", async () => {
+  it("still offers Save as new view", async () => {
     await open()
-    expect(screen.getByRole("button", { name: /save new view/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /save as new view/i })).toBeInTheDocument()
   })
 })
 
@@ -147,13 +147,13 @@ describe("saved views", () => {
     expect(views.applyView).toHaveBeenCalledWith("a")
   })
 
-  it("saves the current columns and source in place on Save to existing", async () => {
+  it("saves the current columns and source in place on Update view", async () => {
     const { user, views } = await open({
       views: makeViews({ views: [view("a", "Meta only")], activeViewId: "a" }),
       visibleColumns: ["spend", "roi"],
     })
 
-    await user.click(screen.getByRole("button", { name: /save to existing/i }))
+    await user.click(screen.getByRole("button", { name: /update view/i }))
 
     await waitFor(() => expect(views.updateView).toHaveBeenCalledWith("a", {
       state: { visibleColumns: ["spend", "roi"], source: "all" },
@@ -165,7 +165,7 @@ describe("saved views", () => {
       views: makeViews({ views: [view("a", "Meta only")], activeViewId: "a" }),
     })
 
-    await user.click(screen.getByRole("button", { name: /save to existing/i }))
+    await user.click(screen.getByRole("button", { name: /update view/i }))
 
     await waitFor(() => expect(onSaveDefault).not.toHaveBeenCalled())
   })
@@ -258,7 +258,7 @@ describe("saving a new view", () => {
   it("sends the current columns and source", async () => {
     const { user, views } = await open({ visibleColumns: ["spend", "ghl_won"] })
 
-    await user.click(screen.getByRole("button", { name: /save new view/i }))
+    await user.click(screen.getByRole("button", { name: /save as new view/i }))
     await user.type(screen.getByLabelText(/new view name/i), "My view")
     await user.click(screen.getByRole("button", { name: /^save$/i }))
 
@@ -270,7 +270,7 @@ describe("saving a new view", () => {
 
   it("will not save an empty name", async () => {
     const { user, views } = await open()
-    await user.click(screen.getByRole("button", { name: /save new view/i }))
+    await user.click(screen.getByRole("button", { name: /save as new view/i }))
     await user.click(screen.getByRole("button", { name: /^save$/i }))
     expect(views.createView).not.toHaveBeenCalled()
   })
@@ -279,7 +279,7 @@ describe("saving a new view", () => {
     const { user, views } = await open({ visibleColumns: ["ghl_won"] })
 
     await user.click(screen.getByRole("button", { name: "GHL" }))
-    await user.click(screen.getByRole("button", { name: /save new view/i }))
+    await user.click(screen.getByRole("button", { name: /save as new view/i }))
     await user.type(screen.getByLabelText(/new view name/i), "GHL only")
     await user.click(screen.getByRole("button", { name: /^save$/i }))
 
@@ -355,6 +355,32 @@ describe("select all", () => {
     await user.click(screen.getByRole("button", { name: /metric name/i }))
 
     expect(onChange).toHaveBeenCalledWith(["roi"])
+  })
+})
+
+describe("views come first", () => {
+  it("is labelled Views, not Columns", async () => {
+    render(
+      <ColumnsMenu columns={COLUMNS} visibleColumns={DEFAULTS}
+                   defaultColumns={DEFAULTS} views={makeViews()} />
+    )
+    expect(screen.getByRole("button", { name: /^views/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /columns/i })).not.toBeInTheDocument()
+  })
+
+  it("lists the views above the columns, which sit under their own heading", async () => {
+    await open({ views: makeViews({ views: [view("a", "Mine")] }) })
+    const dialog = screen.getByRole("dialog", { name: "Views and columns" })
+    const text = dialog.textContent
+    expect(text.indexOf("Views")).toBeLessThan(text.indexOf("Columns in this view"))
+    expect(text.indexOf("Mine")).toBeLessThan(text.indexOf("Columns in this view"))
+    expect(text.indexOf("Update view")).toBeLessThan(text.indexOf("Columns in this view"))
+  })
+
+  it("marks the current view and names it on the button", async () => {
+    await open({ views: makeViews({ views: [view("a", "Mine")], activeViewId: "a" }) })
+    expect(screen.getByRole("button", { name: "Mine" })).toHaveAttribute("aria-current", "true")
+    expect(screen.getByRole("button", { name: /^views\s*·\s*mine$/i })).toBeInTheDocument()
   })
 })
 
