@@ -7,12 +7,21 @@ import { OPS_SECTION } from "@/components/agency/sections";
 import { sectionTabHref, useSectionTabs } from "@/components/agency/tabs";
 import { SectionMore } from "@/components/agency/section-more";
 import { AskDock, PAGE, useSectionChat } from "@/components/agency/section-parts";
+import { ClientDashboard } from "@/components/agency/client-dashboard";
 
 /**
- * Agency Ops' Dashboard tab: the Clients table, the same one the Clients page shows, under
- * Agency Ops' header and tabs. The table keeps its own date range, as it does on the Clients page.
+ * Agency Ops' Dashboard tab. It follows the client picked in the rail's switcher: with none it is
+ * the Clients table, the same one the Clients page shows, under Agency Ops' header and tabs (the
+ * table keeps its own date range, as it does on the Clients page); with `?client=<id>` it is that
+ * client's own dashboard, opening on its lead pipeline, with its Ads and Calls beside it.
  */
 export function OpsClientsDashboard() {
+  const clientId = useSearchParams().get("client");
+  return clientId ? <ClientDashboard key={clientId} clientId={clientId} /> : <AgencyClients />;
+}
+
+/** The Clients table, every client of the agency, with their health tabs. */
+function AgencyClients() {
   const router = useRouter();
   const search = useSearchParams();
   const section = OPS_SECTION;

@@ -15,6 +15,7 @@ const route = { search: "", path: "/media-buyer/table" }
 const swr = { keys: [], data: {} }
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => route.path, useSearchParams: () => new URLSearchParams(route.search) }))
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 vi.mock("@/components/agency/use-suggestions", () => ({ useSuggestionCount: () => 0, useOpenSuggestions: () => [] }))
 vi.mock("swr", () => ({
   default: (key) => {

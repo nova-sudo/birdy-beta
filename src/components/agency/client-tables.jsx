@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, CircleDashed, Headset, Link2, ListFilter, Phone, Play, Users } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CircleDashed, GitBranch, Headset, Link2, ListFilter, Phone, Play, Users } from "lucide-react";
 import {
-  Button, Card, CountBadge, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, TabPill, Table, TableBody, TableHead, Td, Th, Tr,
+  Button, Card, CountBadge, DropdownTrigger, EmptyState, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Pill, RowArrow, SearchField, Table, TableBody, TableHead, Td, Th, Tr,
 } from "@/components/by";
+import { PageTabs } from "@/components/portfolio";
 import { TableCard, money, tableState, useColumns } from "./table-card";
 import { LeadModal } from "./lead/lead-modal";
 import {
@@ -19,6 +20,8 @@ const STAGE = {
   // Only ad-attributed leads have it: from an ad, never matched to the CRM.
   new: { label: "Not in CRM", tone: "neutral", icon: <CircleDashed /> },
 };
+// A CRM stage's pill takes its tone from how the lead's deal stands there.
+const DEAL_TONE = { won: "success", lost: "neutral", abandoned: "neutral" };
 const OUTCOME = { answered: { label: "Answered", tone: "success" }, none: { label: "No answer", tone: "neutral" } };
 
 
@@ -75,29 +78,64 @@ export function LeadFilters({ options, chosen, onChange }) {
 
 // ── Leads ───────────────────────────────────────────────────────────────────
 
+// A sheet: every lead a row, its stage and contact details first, then where it came from and what it is worth.
 const LEAD_COLUMNS = [
-  { id: "stage", label: "Stage" }, { id: "from", label: "Came from" }, { id: "added", label: "Added" }, { id: "calls", label: "Calls" }, { id: "value", label: "Value" },
-  // The contact details the old Leads hub listed, off until asked for.
-  { id: "email", label: "Email", hidden: true }, { id: "phone", label: "Phone", hidden: true }, { id: "tags", label: "Tags", hidden: true },
+  { id: "stage", label: "Stage" }, { id: "email", label: "Email" }, { id: "phone", label: "Phone" }, { id: "added", label: "Added" },
+  { id: "from", label: "Came from" }, { id: "calls", label: "Calls" }, { id: "value", label: "Value" }, { id: "tags", label: "Tags" },
 ];
 // Search reaches the contact details and tags too, whether or not their columns are shown.
-const LEAD_SEARCH = ["name", "campaign", "ad", "source", "client", "email", "phone", "tagText"];
+const LEAD_SEARCH = ["name", "campaign", "ad", "source", "client", "email", "phone", "tagText", "stageName"];
+const whole = (n) => Number(n || 0).toLocaleString("en-GB");
 
 /**
- * A client's leads: tabs by how far each got, search, and where each came from.
- * Marketing Guru's agency table reuses it for its Leads level, with its own controls around it.
+ * The menu beside the stage tabs that picks which of the client's CRM pipelines they show.
+ * @param {{id: string, name: string, total: number}[]} props.pipelines
+ */
+export function PipelinePicker({ pipelines, value, onChange }) {
+  const current = pipelines.find((p) => p.id === value) ?? pipelines[0];
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <DropdownTrigger className="rounded-full px-3.5" leading={<GitBranch aria-hidden="true" />} aria-label={`Pipeline: ${current.name}`}>
+          <span className="max-w-48 truncate font-semibold">{current.name}</span>
+        </DropdownTrigger>
+      </MenuTrigger>
+      <MenuContent align="start" className="max-h-80 w-64 overflow-y-auto">
+        <MenuLabel>Pipeline</MenuLabel>
+        {pipelines.map((p) => (
+          <MenuItem key={p.id} selected={p.id === current.id} onSelect={() => onChange(p.id)}>
+            <span className="min-w-0 flex-1 truncate" title={p.name}>{p.name}</span>
+            <span className="shrink-0 text-by-caption text-by-muted tabular-nums">{whole(p.total)}</span>
+          </MenuItem>
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+/**
+ * A client's leads as a sheet: tabs by stage, search, and where each came from.
+ * The Ads table reuses it for its Leads level, with its own controls around it.
+ *
+ * The stage tabs are the client's own CRM pipeline when `pipeline` is given: the server counts and
+ * narrows them, so the rows arrive already in the picked stage. Without it they are Birdy's four
+ * (In CRM, Called, Closed, Lost), counted from the rows loaded.
  *
  * @param {{rows: object[], total: number|null, loading: boolean, error: boolean, retry: () => void, capped?: string}} props.data
  * @param {boolean} [props.showClient] a Client column, for leads across the agency (rows carry `client`)
  * @param {boolean} [props.stageTabs] the stage tabs; off where the toolbar already has a level switch
+ * @param {{tabs: {value: string, label: string, count?: number}[], value: string, onValueChange: (v: string) => void, picker?: React.ReactNode}} [props.pipeline]
+ *   the CRM's stages as tabs (with "All" first), and the pipeline picker drawn beside them
  * @param {boolean} [props.calls] the Calls column; off when the rows don't say whether a lead was called
  * @param {boolean} [props.columnsMenu] the menu that hides columns; off where the toolbar has no room for it
+ * @param {(row: object) => void} [props.onOpenLead] opens a lead somewhere else (its own page); left out, it opens over the table
  * @param {React.ReactNode} [props.toolbarStart] drawn first in the toolbar
  * @param {React.ReactNode} [props.toolbarEnd] drawn beside the search, before the filters
  * @param {React.ReactNode} [props.toolbarBelow] a full-width line under the toolbar's controls
+ * @param {React.ReactNode} [props.footer] under the table in place of the capped note (a pager)
  * @param {{title: string, body: string}} [props.empty] what to say when there are no leads
  */
-export function LeadsTable({ data, currencySymbol = "£", showClient = false, stageTabs = true, calls = true, columnsMenu = true, toolbarStart, toolbarEnd, toolbarBelow, empty }) {
+export function LeadsTable({ data, currencySymbol = "£", showClient = false, stageTabs = true, pipeline, calls = true, columnsMenu = true, onOpenLead, toolbarStart, toolbarEnd, toolbarBelow, footer, empty }) {
   const [tab, setTab] = useState("all");
   // The lead open in the modal over the table: {contactId, name}, or null.
   const [opened, setOpened] = useState(null);
@@ -106,19 +144,28 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
   const [filters, setFilters] = useState({});
   const columns = useColumns(calls ? LEAD_COLUMNS : LEAD_COLUMNS.filter((c) => c.id !== "calls"));
   const fmt = money(currencySymbol);
+  // The CRM's stages are narrowed on the server; Birdy's own four here.
+  const localTabs = stageTabs && !pipeline;
 
   const options = useMemo(() => leadFilterOptions(data.rows), [data.rows]);
   // The tab counts follow the filters, so a tab never promises rows the filters then hide.
   const filtered = useMemo(() => filterLeads(data.rows, filters), [data.rows, filters]);
   const counts = useMemo(() => leadCounts(filtered), [filtered]);
   const rows = useMemo(
-    () => sortBy(searchBy(filtered.filter((r) => !stageTabs || tab === "all" || r.stage === tab).map((r) => ({ ...r, tagText: (r.tags ?? []).join(" ") })), query, LEAD_SEARCH), sort),
-    [filtered, stageTabs, tab, query, sort],
+    () => sortBy(searchBy(filtered.filter((r) => !localTabs || tab === "all" || r.stage === tab).map((r) => ({ ...r, tagText: (r.tags ?? []).join(" ") })), query, LEAD_SEARCH), sort),
+    [filtered, localTabs, tab, query, sort],
   );
   const header = (id, first) => ({ sort: sort?.id === id ? sort.dir : null, onSort: () => setSort((s) => toggleSort(s, id, first)) });
   const contactOf = (row) => (row.contactId === undefined ? row.id : row.contactId);
-  const open = (row) => contactOf(row) && setOpened({ contactId: String(contactOf(row)), name: row.name });
+  const open = (row) => {
+    if (!contactOf(row)) return;
+    if (onOpenLead) onOpenLead({ ...row, contactId: String(contactOf(row)) });
+    else setOpened({ contactId: String(contactOf(row)), name: row.name });
+  };
   const capped = data.capped || (data.total != null && data.total > data.rows.length ? `Showing the newest ${data.rows.length.toLocaleString("en-GB")} of ${data.total.toLocaleString("en-GB")} leads.` : "");
+  const tabs = pipeline
+    ? { items: pipeline.tabs, value: pipeline.value, onChange: pipeline.onValueChange }
+    : { items: [{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((st) => ({ value: st.key, label: st.label, count: counts[st.key] }))], value: tab, onChange: setTab };
 
   return (
     <>
@@ -126,13 +173,17 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
       toolbar={
         <>
           {toolbarStart}
+          {pipeline?.picker}
           {stageTabs && (
-            <TabPill
-              aria-label="Leads by stage"
-              value={tab}
-              onValueChange={setTab}
-              items={[{ value: "all", label: "All", count: counts.all }, ...LEAD_STAGES.map((s) => ({ value: s.key, label: s.label, count: counts[s.key] }))]}
-            />
+            // At phone width, or with many stages, the tabs scroll sideways inside the card.
+            <div className="max-w-full min-w-0 overflow-x-auto">
+              <PageTabs
+                label="Leads by stage"
+                tabs={tabs.items.map((t) => ({ key: t.value, label: t.label, badge: t.count }))}
+                value={tabs.value}
+                onChange={tabs.onChange}
+              />
+            </div>
           )}
           <div className="ml-auto flex max-w-full flex-wrap items-center gap-2.5">
             <SearchField placeholder="Search leads" value={query} onChange={(e) => setQuery(e.target.value)} className={toolbarStart ? "w-44" : "w-52"} />
@@ -150,13 +201,13 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
           <tr>
             <Th {...header("name", "asc")} className="min-w-44">Name</Th>
             {showClient && <Th {...header("client", "asc")}>Client</Th>}
-            {columns.shows("stage") && <Th>Stage</Th>}
-            {columns.shows("from") && <Th>Came from</Th>}
-            {columns.shows("added") && <Th {...header("added")}>Added</Th>}
-            {columns.shows("calls") && <Th numeric {...header("calls")}>Calls</Th>}
-            {columns.shows("value") && <Th numeric {...header("value")}>Value</Th>}
+            {columns.shows("stage") && <Th {...(pipeline ? header("stageName", "asc") : {})}>Stage</Th>}
             {columns.shows("email") && <Th {...header("email", "asc")}>Email</Th>}
             {columns.shows("phone") && <Th>Phone</Th>}
+            {columns.shows("added") && <Th {...header("added")}>Added</Th>}
+            {columns.shows("from") && <Th>Came from</Th>}
+            {columns.shows("calls") && <Th numeric {...header("calls")}>Calls</Th>}
+            {columns.shows("value") && <Th numeric {...header("value")}>Value</Th>}
             {columns.shows("tags") && <Th>Tags</Th>}
             <Th aria-label="Open" className="w-9" />
           </tr>
@@ -178,12 +229,22 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
                 {showClient && <Td className={`max-w-48 truncate ${row.client ? "text-by-text-2" : "text-by-muted"}`} title={row.client}>{row.client || "—"}</Td>}
                 {columns.shows("stage") && (
                   <Td>
-                    <span className="flex items-center gap-2">
-                      <Pill tone={stage.tone} dot={!stage.icon} className="[&_svg]:size-3">{stage.icon}{stage.label}</Pill>
-                      {row.stageNote && <span className="truncate text-by-body-sm text-by-muted">{row.stageNote}</span>}
-                    </span>
+                    {pipeline ? (
+                      // The CRM's own stage name, as the pipeline tabs above call it.
+                      row.stageName
+                        ? <Pill tone={DEAL_TONE[row.dealStatus] ?? "accent"} className="max-w-56 truncate" title={row.pipelineName ? `${row.pipelineName} · ${row.stageName}` : row.stageName}>{row.stageName}</Pill>
+                        : <span className="text-by-muted">No stage</span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Pill tone={stage.tone} dot={!stage.icon} className="[&_svg]:size-3">{stage.icon}{stage.label}</Pill>
+                        {row.stageNote && <span className="truncate text-by-body-sm text-by-muted">{row.stageNote}</span>}
+                      </span>
+                    )}
                   </Td>
                 )}
+                {columns.shows("email") && <Td className={`max-w-56 truncate ${row.email ? "" : "text-by-muted"}`} title={row.email}>{row.email || "—"}</Td>}
+                {columns.shows("phone") && <Td className={`whitespace-nowrap tabular-nums ${row.phone ? "" : "text-by-muted"}`}>{row.phone || "—"}</Td>}
+                {columns.shows("added") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.added)}</Td>}
                 {columns.shows("from") && (
                   <Td className="max-w-80">
                     {row.campaign || row.ad ? (
@@ -195,11 +256,8 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
                     ) : <span className="text-by-muted">{row.source || "—"}</span>}
                   </Td>
                 )}
-                {columns.shows("added") && <Td className="whitespace-nowrap tabular-nums">{whenLabel(row.added)}</Td>}
                 {columns.shows("calls") && <Td numeric className={row.calls ? "" : "text-by-muted"}>{row.calls || "None"}</Td>}
                 {columns.shows("value") && <Td numeric className={row.value ? "" : "text-by-muted"}>{row.value ? fmt(row.value) : "—"}</Td>}
-                {columns.shows("email") && <Td className={`max-w-56 truncate ${row.email ? "" : "text-by-muted"}`} title={row.email}>{row.email || "—"}</Td>}
-                {columns.shows("phone") && <Td className={`whitespace-nowrap tabular-nums ${row.phone ? "" : "text-by-muted"}`}>{row.phone || "—"}</Td>}
                 {columns.shows("tags") && (
                   <Td className="max-w-64">
                     {row.tags?.length ? (
@@ -216,11 +274,35 @@ export function LeadsTable({ data, currencySymbol = "£", showClient = false, st
           })}
         </TableBody>
       </Table>
-      {capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{capped}</p>}
+      {footer ?? (capped && <p className="border-t border-by-line-soft px-4.5 py-2.5 text-by-caption text-by-muted">{capped}</p>)}
     </TableCard>
     {/* Outside the card: a table that reloads under it never closes the lead. */}
-    <LeadModal contactId={opened?.contactId ?? null} name={opened?.name} onClose={() => setOpened(null)} />
+    {!onOpenLead && <LeadModal contactId={opened?.contactId ?? null} name={opened?.name} onClose={() => setOpened(null)} />}
     </>
+  );
+}
+
+/**
+ * The line under a paged lead list: which leads are shown, and the way to the next and previous page.
+ * @param {{page: number, pages: number, limit: number, total: number|null, shown: number, onPage: (page: number) => void}} props
+ */
+export function LeadPager({ page, pages, limit, total, shown, onPage }) {
+  if (total == null || total === 0) return null;
+  const from = (page - 1) * limit + 1;
+  const to = (page - 1) * limit + shown;
+  return (
+    <div className="flex shrink-0 items-center gap-2.5 border-t border-by-line-soft px-4.5 py-2">
+      <p className="mr-auto text-by-caption text-by-muted tabular-nums">
+        {pages > 1 ? `Showing ${whole(from)} to ${whole(to)} of ${whole(total)} leads` : `${whole(total)} ${total === 1 ? "lead" : "leads"}`}
+      </p>
+      {pages > 1 && (
+        <>
+          <Button kind="ghost" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Previous page"><ChevronLeft aria-hidden="true" />Previous</Button>
+          <span className="text-by-caption text-by-muted tabular-nums">Page {page} of {pages}</span>
+          <Button kind="ghost" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)} aria-label="Next page">Next<ChevronRight aria-hidden="true" /></Button>
+        </>
+      )}
+    </div>
   );
 }
 
