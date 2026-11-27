@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { SWRConfig } from "swr"
-import { ReportsSection } from "../ReportsSection"
 import { bodyFor, initialForm } from "../ReportPanel"
 import { contentSummary, lastRunShort, timeLabel, triggerLabel } from "../report-format"
 
@@ -43,54 +42,11 @@ function mockApi(path, init = {}) {
   return Promise.resolve(res({}, 404))
 }
 
-const renderSection = () =>
-  render(
-    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      <ReportsSection />
-    </SWRConfig>,
-  )
-
 beforeEach(() => {
   reports = [BRIEF, ALERT_REPORT]
   calls = []
   vi.mocked(apiRequest).mockReset()
   vi.mocked(apiRequest).mockImplementation(mockApi)
-})
-
-describe("Hub reports section", () => {
-  it("lists each report with its trigger, channel and last run", async () => {
-    renderSection()
-    expect(await screen.findByText("Daily brief")).toBeInTheDocument()
-    expect(screen.getByText("Default")).toBeInTheDocument()
-    expect(screen.getByText("Daily · 9:00 AM")).toBeInTheDocument()
-    expect(screen.getByText("“CPL above £40” fires")).toBeInTheDocument()
-    expect(screen.getByText(/Birdy isn't in that channel/)).toBeInTheDocument()
-    expect(screen.getByText("ops")).toBeInTheDocument()
-    expect(screen.getByText("marketing")).toBeInTheDocument()
-  })
-
-  it("turns a report off from its card", async () => {
-    renderSection()
-    fireEvent.click(await screen.findByRole("switch", { name: "Turn off CPL follow-up" }))
-    await waitFor(() => expect(calls).toContainEqual({ path: "/api/slack-reports/r2", method: "PATCH", body: { enabled: false } }))
-  })
-
-  it("asks for Slack before anything else when it isn't connected", async () => {
-    vi.mocked(apiRequest).mockImplementation((path) =>
-      path === "/api/integrations/slack/status" ? Promise.resolve(res({ installed: false })) : mockApi(path))
-    renderSection()
-    expect(await screen.findByText("Connect Slack to get reports")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Connect Slack" })).toHaveAttribute("href", "/settings?tab=integrations")
-  })
-
-  it("opens the form for a new report", async () => {
-    renderSection()
-    await screen.findByText("Daily brief")
-    fireEvent.click(screen.getAllByRole("button", { name: /New report/ })[0])
-    const sheet = await screen.findByRole("dialog")
-    expect(within(sheet).getByRole("heading", { name: "New report" })).toBeInTheDocument()
-    expect(within(sheet).getByRole("button", { name: "Create report" })).toBeInTheDocument()
-  })
 })
 
 describe("report form body", () => {

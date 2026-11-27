@@ -53,24 +53,14 @@ describe("AppSidebar", () => {
     render(<AppSidebar />)
     const nav = screen.getByRole("navigation", { name: "Main" })
     const links = Array.from(nav.querySelectorAll("a"))
-    expect(links).toHaveLength(9)
+    expect(links).toHaveLength(8)
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_ITEMS.map((i) => i.href))
   })
 
-  it("renders BirdyHub after a divider at the bottom", () => {
+  it("has no BirdyHub link", () => {
     render(<AppSidebar />)
     const nav = screen.getByRole("navigation", { name: "Main" })
-    const links = Array.from(nav.querySelectorAll("a"))
-    const last = links[links.length - 1]
-    expect(last.textContent).toContain("BirdyHub")
-    expect(last.getAttribute("href")).toBe("/hub")
-    expect(links.some((a) => a.textContent.trim() === "Dashboards")).toBe(false)
-    expect(nav.querySelector('[data-slot="nav-divider"]')).not.toBeNull()
-  })
-
-  it("BirdyHub is active on /hub/dashboards/abc", () => {
-    const hub = NAV_ITEMS.find((i) => i.key === "hub")
-    expect(isActive(hub, "/hub/dashboards/abc")).toBe(true)
+    expect(Array.from(nav.querySelectorAll("a")).some((a) => a.getAttribute("href") === "/hub")).toBe(false)
   })
 
   it("marks the item whose path contains the current route as current", () => {

@@ -293,9 +293,6 @@ export function SlackReportPage({ reportId }) {
         <Button kind="secondary" onClick={() => setTesting(true)}><Send aria-hidden="true" />Send a test</Button>
         {!v.isDefault && <Button kind="ghost" className="ml-auto text-by-danger" onClick={() => setDeleting(true)}><Trash2 aria-hidden="true" />Delete</Button>}
       </div>
-      <p className="px-0.5 text-by-body-sm text-by-muted">
-        To change what it says, design it with Birdy in <Link href="/hub" className="font-semibold text-by-text-2 underline decoration-by-line-strong underline-offset-3 hover:text-by-accent">BirdyHub › Reports</Link>.
-      </p>
 
       <SlackReportDialog open={editing} onOpenChange={setEditing} report={report} api={api} alerts={data.alerts} slack={data.slack} accountTz={data.accountTz} onSaved={() => setNote({ tone: "success", text: "Report saved." })} />
       <ConfirmDialog open={testing} onOpenChange={setTesting} title="Send a test now?" confirm="Send test" busy={sending} onConfirm={sendTest}>
