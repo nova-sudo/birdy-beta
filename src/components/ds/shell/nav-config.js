@@ -6,11 +6,9 @@ import {
   Phone,
   ChartNoAxesColumnIncreasing,
   Bell,
-  LayoutGrid,
   Settings,
 } from "lucide-react"
 
-import { useAgentWorkCount } from "@/lib/agents-api"
 
 /**
  * Sidebar destinations, in display order. A plain array so a new entry is one line.
@@ -36,7 +34,6 @@ export const NAV_ITEMS = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
   { key: "settings", label: "Settings", href: "/settings", icon: Settings },
   // Agents and dashboards live together. The badge counts open agent work items (hidden at 0 or with no live agent).
-  { key: "hub", label: "BirdyHub", href: "/hub", icon: LayoutGrid, section: "bottom", badge: () => useAgentWorkCount() },
 ]
 
 /** Whether `item` is the current page: its own `match`, else the href or any path under it. */

@@ -1,8 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { MessageSquarePlus, Maximize2, X } from "lucide-react"
-import Link from "next/link"
+import { MessageSquarePlus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import ChatConversation from "@/components/chat/ChatConversation"
@@ -122,11 +121,6 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
                 title="New conversation"
               >
                 <MessageSquarePlus className="size-4" />
-              </Button>
-              <Button asChild variant="ghost" size="icon-sm" aria-label="Open Ask Birdy" title="Open Ask Birdy">
-                <Link href="/ask-birdy" onClick={() => onOpenChange(false)}>
-                  <Maximize2 className="size-4" />
-                </Link>
               </Button>
               <Button
                 variant="ghost"

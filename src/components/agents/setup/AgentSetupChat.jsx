@@ -250,7 +250,7 @@ export function AgentSetupChat({ agentId = null }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 font-sans">
       <PageHeader
-        backButton={{ label: "BirdyHub", href: "/hub" }}
+        backButton={{ label: "Agency Ops", href: "/dashboard" }}
         title="Set up your new agent"
         actions={agent && agent.status !== "active" ? <StartOverButton agent={agent} /> : undefined}
       />

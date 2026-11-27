@@ -17,7 +17,6 @@ import { NAV_ITEMS } from "./nav-config"
 
 // Not a rail item (the sidebar's Ask Birdy tab opens the chat modal), but the
 // full-page assistant is still a place worth jumping to.
-const ASK_BIRDY_PAGE = { key: "ask-birdy", label: "Ask Birdy", href: "/ask-birdy", icon: Sparkles }
 
 /**
  * ⌘K palette: jump to a page, or send what was typed to Birdy (what the old
@@ -68,7 +67,7 @@ function CommandSearch({ open, onOpenChange, items = NAV_ITEMS }) {
           </CommandGroup>
         )}
         <CommandGroup heading="Pages">
-          {[...items, ASK_BIRDY_PAGE].map((item) => (
+          {items.map((item) => (
             <CommandItem key={item.key} value={item.label} onSelect={() => go(item.href)}>
               <item.icon />
               {item.label}

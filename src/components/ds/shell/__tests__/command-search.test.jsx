@@ -19,17 +19,9 @@ beforeEach(() => {
 })
 
 describe("CommandSearch", () => {
-  it("lists every rail page plus Ask Birdy", () => {
+  it("lists every rail page, and no Ask Birdy page", () => {
     render(<CommandSearch open onOpenChange={() => {}} />)
     for (const item of NAV_ITEMS) expect(screen.getByText(item.label)).toBeInTheDocument()
-    expect(screen.getByText("Ask Birdy")).toBeInTheDocument()
-  })
-
-  it("jumps to /ask-birdy and closes", () => {
-    const onOpenChange = vi.fn()
-    render(<CommandSearch open onOpenChange={onOpenChange} />)
-    fireEvent.click(screen.getByText("Ask Birdy"))
-    expect(push).toHaveBeenCalledWith("/ask-birdy")
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(screen.queryByText("Ask Birdy")).toBeNull()
   })
 })

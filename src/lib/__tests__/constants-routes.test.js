@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest"
 import { PROTECTED_ROUTES, PROTECTED_ROUTE_PREFIXES, isProtectedPath } from "../constants"
 
 describe("PROTECTED_ROUTES", () => {
-  it("guards the hub and the dashboards list under it (exact-match consumers)", () => {
-    expect(PROTECTED_ROUTES).toContain("/hub")
-    expect(PROTECTED_ROUTES).toContain("/hub/dashboards")
+  it("no longer lists BirdyHub or its dashboards, which are gone", () => {
+    expect(PROTECTED_ROUTES).not.toContain("/hub")
+    expect(PROTECTED_ROUTES).not.toContain("/hub/dashboards")
   })
 
   it("guards the agent setup wizard (its ?step= is not part of the pathname)", () => {
@@ -23,7 +23,6 @@ describe("PROTECTED_ROUTES", () => {
     expect(PROTECTED_ROUTE_PREFIXES).toContain("/hub/agents/custom/")
     expect(isProtectedPath("/hub/agents/custom/ag1")).toBe(true)
     expect(isProtectedPath("/hub/agents/custom/ag1/setup")).toBe(true)
-    expect(isProtectedPath("/hub")).toBe(true)
     expect(isProtectedPath("/login")).toBe(false)
     expect(isProtectedPath("/hub/agentsX")).toBe(false)
   })

@@ -18,11 +18,13 @@ const nextConfig = {
       },
     ];
   },
-  // Dashboards moved under BirdyHub.
+  // BirdyHub, its Dashboards and Ask Birdy are gone; old links land on Agency Ops.
   async redirects() {
     return [
-      { source: "/dashboards", destination: "/hub/dashboards", permanent: true },
-      { source: "/dashboards/:id", destination: "/hub/dashboards/:id", permanent: true },
+      { source: "/hub", destination: "/dashboard", permanent: false },
+      { source: "/hub/dashboards/:path*", destination: "/dashboard", permanent: false },
+      { source: "/dashboards/:path*", destination: "/dashboard", permanent: false },
+      { source: "/ask-birdy", destination: "/dashboard", permanent: false },
     ];
   },
   // The OAuth consent page must never be framed: a framed "Allow" could be
