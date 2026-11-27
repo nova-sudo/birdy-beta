@@ -28,6 +28,7 @@ const aboutCalls = (s) => CALLS.test(`${s?.platform ?? ""} ${s?.ruleKind ?? ""}`
  * @property {boolean} ownsHistory whether the suggestions history (what was done to ad accounts) is this section's
  * @property {"media_buyer"|"sales_coach"|null} subAgents whose sub-agents Context lists (`parent` on /api/agents/sub), or null for none
  * @property {boolean} lessons whether Context lists the agent's lessons (GET /api/team/{agent}/lessons) to add, edit and delete
+ * @property {"birdy"|"media_buyer"|"sales_coach"} reportOwner whose Slack reports its Reports page lists and creates
  */
 
 /** @type {Record<string, SectionConfig>} */
@@ -46,6 +47,7 @@ export const SECTION_CONFIG = {
     // Birdy has no sub-agents of its own: they belong to the main agents.
     subAgents: null,
     lessons: false,
+    reportOwner: "birdy",
   },
   buyer: {
     key: "buyer",
@@ -61,11 +63,12 @@ export const SECTION_CONFIG = {
     subAgents: "media_buyer",
     // Marketing Guru's lessons, kept on Context.
     lessons: true,
+    reportOwner: "media_buyer",
   },
   coach: {
     key: "coach",
     kit: kit("coach"),
-    paths: { chat: "/sales-coach/chat", birdseye: "/sales-coach", dashboard: "/sales-coach/table", suggestions: "/sales-coach/suggestions", context: "/sales-coach/context" },
+    paths: { chat: "/sales-coach/chat", birdseye: "/sales-coach", dashboard: "/sales-coach/table", suggestions: "/sales-coach/suggestions", context: "/sales-coach/context", reports: "/sales-coach/reports" },
     // "call_center" is the old Sales Hub's page: call-centre stats, recordings and call analysis only.
     chat: { page: "call_center", agent: "sales_coach", session: "coach", starters: "call_center" },
     hello: "Ask about your call centres, calls and recordings.",
@@ -75,6 +78,7 @@ export const SECTION_CONFIG = {
     ownsHistory: false,
     subAgents: "sales_coach",
     lessons: true,
+    reportOwner: "sales_coach",
   },
 };
 

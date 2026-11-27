@@ -21,7 +21,7 @@ function Group({ label, children, hint }) {
 /**
  * Create or change one Slack report: its name, what starts it, the window its numbers cover and
  * the channel. What it says (its blocks) is kept as it is: a new report starts from the standard
- * brief, and the content is designed with Birdy in BirdyHub › Reports.
+ * brief, and the content is designed by asking the agent in chat.
  *
  * @param {object|null} props.report null for a new report
  * @param {{create: Function, update: Function}} props.api from useSlackReports

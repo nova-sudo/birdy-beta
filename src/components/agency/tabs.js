@@ -26,9 +26,9 @@ export const OPS_TABS = SECTION_TABS;
 
 /**
  * The pages under the "More" menu at the end of the tab pill, in the reference's order. A section
- * lists only the ones it has an address for (sections.js `paths`): Reports for Birdy (the
- * account's Slack reports) and Marketing Guru (its agent's reports), Projections for Marketing Guru only
- * (budget pacing), so the menu never leads to a page with nothing real on it.
+ * lists only the ones it has an address for (sections.js `paths`): Reports for every section (its
+ * own Slack reports; Marketing Guru's also lists its agent's morning and weekly reports), Projections
+ * for Marketing Guru only (budget pacing), so the menu never leads to a page with nothing real on it.
  */
 export const MORE_PAGES = [
   { value: "reports", label: "Reports" },

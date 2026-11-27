@@ -1,11 +1,12 @@
 // What the agent pages' Reports say about each report, from the server's own
 // records only.
 //
-// Birdy: the account's Slack reports (GET /api/slack-reports): the daily or
-// weekly brief and any report added since. Each has a trigger, a channel, an
+// Birdy (and Sales Coach): the agent's Slack reports (GET /api/slack-reports?owner=):
+// Birdy's daily or weekly brief and any report added since. Each has a trigger, a channel, an
 // on/off switch and its last run; the server keeps no list of past runs.
 //
-// Marketing Guru: the Birdy Media Buying Agent's own reports. It runs every day at
+// Marketing Guru: its Slack reports (as Birdy's, with owner "media_buyer") and
+// the Birdy Media Buying Agent's own reports. It runs every day at
 // its scheduled time (agent.scope.schedule), checks one batch of clients on
 // that batch's weekdays and only the alerts on other days, and posts to its
 // Slack channel. On the weekly report's weekday the same run also builds the
@@ -96,45 +97,53 @@ export function batchWords(batches) {
 export const agentRunning = (agent) => agent?.status === "active";
 
 /**
- * The agent's reports as the Reports list shows them: the morning report, and the weekly one when it is on.
+ * The agent's reports as the Reports list shows them: the morning report, then the weekly one, on
+ * or off. `running` says whether the agent itself is running its schedule; `enabled` whether the
+ * report is switched on (the morning report always is: it is the agent's daily run); `on` is both.
  * @param {object} agent the Media Buying Agent (GET /api/agents/{id})
  * @param {object|null} latest its newest run (GET /runs/latest), if any
  */
 export function buyerReports(agent, latest, now = new Date()) {
   const s = agentSchedule(agent);
-  const on = agentRunning(agent);
+  const running = agentRunning(agent);
   const at = `${clockWords(s.time)} ${zoneCity(s.tz)}`;
   const goesTo = s.channel ? `${s.channel} in Slack` : "Birdy only (no Slack channel set)";
-  const nextDaily = on ? nextRun({ time: s.time, tz: s.tz }, now) : null;
+  const nextDaily = running ? nextRun({ time: s.time, tz: s.tz }, now) : null;
   const morning = {
     key: "morning",
+    kind: "summary",
     name: "Morning report",
     what: "Every client against its CPL zones, and the changes that need you",
     when: `Every day · ${at}`,
     detail: batchWords(s.batches),
     goesTo,
     channel: s.channel ? "Slack" : "Birdy",
-    on,
+    slackChannel: s.channel,
+    running,
+    enabled: true,
+    on: running,
     next: nextDaily ? whenWords(nextDaily, now, s.tz) : null,
     last: latest?.local_date ? dayLabel(latest.local_date) : null,
   };
-  const reports = [morning];
-  if (s.weekly.enabled) {
-    const nextWeekly = on ? nextRun({ time: s.time, tz: s.tz, weekdays: [s.weekly.weekday] }, now) : null;
-    reports.push({
-      key: "weekly",
-      name: "Weekly report",
-      what: "Last Monday to Sunday against the week before, client by client",
-      when: `${WEEKDAYS[s.weekly.weekday] ?? "Monday"}s · with the morning report`,
-      detail: s.weekly.autoPost ? "Posted to Slack by itself" : "Waits in the morning report for you to post it",
-      goesTo,
-      channel: s.channel ? "Slack" : "Birdy",
-      on,
-      next: nextWeekly ? whenWords(nextWeekly, now, s.tz) : null,
-      last: null,
-    });
-  }
-  return reports;
+  const weeklyOn = running && s.weekly.enabled;
+  const nextWeekly = weeklyOn ? nextRun({ time: s.time, tz: s.tz, weekdays: [s.weekly.weekday] }, now) : null;
+  const weekly = {
+    key: "weekly",
+    kind: "weekly",
+    name: "Weekly report",
+    what: "Last Monday to Sunday against the week before, client by client",
+    when: `${WEEKDAYS[s.weekly.weekday] ?? "Monday"}s · with the morning report`,
+    detail: s.weekly.autoPost ? "Posted to Slack by itself" : "Waits in the morning report for you to post it",
+    goesTo,
+    channel: s.channel ? "Slack" : "Birdy",
+    slackChannel: s.channel,
+    running,
+    enabled: s.weekly.enabled,
+    on: weeklyOn,
+    next: nextWeekly ? whenWords(nextWeekly, now, s.tz) : null,
+    last: null,
+  };
+  return [morning, weekly];
 }
 
 /** Monday-first weekday of a "YYYY-MM-DD" day. */

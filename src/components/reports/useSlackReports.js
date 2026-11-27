@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import useSWR from "swr"
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
@@ -29,14 +29,21 @@ async function send(path, method, body) {
   return res.json()
 }
 
+/** Who a report belongs to. A report saved before reports had owners is Birdy's. */
+export const ownerOf = (report) => report?.owner || "birdy"
+
 /**
- * The account's Slack reports (Hub → Reports) and every write the hub makes.
- * Writes update the cached list from the server's answer, so a card changes
- * the moment the save lands.
+ * One agent's Slack reports and every write its Reports page makes. With `owner` the list is that
+ * agent's only (GET ?owner=, and filtered here too, so an older server that ignores the filter
+ * never shows another agent's reports), and a new report is created with that owner.
+ * Writes update the cached list from the server's answer, so a row changes the moment the save lands.
+ *
+ * @param {"birdy"|"media_buyer"|"sales_coach"} [owner] every report when left out
  */
-export function useSlackReports() {
-  const { data, error, isLoading, mutate } = useSWR(queryKeys.slackReports(), fetcher)
-  const reports = data?.reports ?? []
+export function useSlackReports(owner) {
+  const { data, error, isLoading, mutate } = useSWR(queryKeys.slackReports(owner), fetcher)
+  const all = data?.reports
+  const reports = useMemo(() => (all ?? []).filter((r) => !owner || ownerOf(r) === owner), [all, owner])
 
   const replace = useCallback(
     (report) => mutate((cur) => ({ ...cur, reports: (cur?.reports ?? []).map((r) => (r.id === report.id ? report : r)) }), { revalidate: false }),
@@ -45,11 +52,11 @@ export function useSlackReports() {
 
   const create = useCallback(
     async (body) => {
-      const { report } = await send("/api/slack-reports", "POST", body)
+      const { report } = await send("/api/slack-reports", "POST", owner ? { ...body, owner } : body)
       await mutate((cur) => ({ ...cur, reports: [...(cur?.reports ?? []), report] }), { revalidate: false })
       return report
     },
-    [mutate],
+    [mutate, owner],
   )
 
   const update = useCallback(

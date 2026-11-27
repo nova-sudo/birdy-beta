@@ -28,8 +28,9 @@ export const queryKeys = {
 
   alerts: () => "/api/alerts",
 
-  // Hub → Reports: the account's Slack reports, and what the report form needs.
-  slackReports: () => "/api/slack-reports",
+  // Reports: the account's Slack reports (one agent's with `owner`: "birdy", "media_buyer", "sales_coach"),
+  // and what the report form needs.
+  slackReports: (owner) => (owner ? `/api/slack-reports?owner=${encodeURIComponent(owner)}` : "/api/slack-reports"),
   slackStatus: () => "/api/integrations/slack/status",
   slackChannels: () => "/api/integrations/slack/channels",
 
