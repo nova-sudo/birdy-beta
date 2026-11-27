@@ -63,11 +63,13 @@ describe("the Media Buying Agent's reports, as Marketing Guru's Reports shows th
     expect(weekly.detail).toMatch(/Waits/)
   })
 
-  it("leaves the weekly report out when it is off, and has no next run while the agent is off", () => {
+  it("lists the weekly report switched off when it is off, and has no next run while the agent is off", () => {
     const off = { ...AGENT, status: "paused", settings: { ...AGENT.settings, weekly: { enabled: false } } }
-    const list = buyerReports(off, null, NOW)
-    expect(list).toHaveLength(1)
-    expect(list[0]).toMatchObject({ on: false, next: null, last: null })
+    const [morning, weekly] = buyerReports(off, null, NOW)
+    expect(morning).toMatchObject({ on: false, running: false, enabled: true, next: null, last: null })
+    expect(weekly).toMatchObject({ on: false, enabled: false, next: null })
+    const [, pausedWeekly] = buyerReports({ ...AGENT, settings: { ...AGENT.settings, weekly: { enabled: false } } }, null, NOW)
+    expect(pausedWeekly).toMatchObject({ running: true, enabled: false, on: false, next: null })
   })
 
   it("uses the runner's defaults when the agent has no schedule or channel of its own", () => {

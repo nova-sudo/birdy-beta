@@ -353,6 +353,15 @@ export function previewSlackTemplate(id, kind, blocks) {
   return send(`${queryKeys.stockSlackTemplate(id, kind)}/preview`, "POST", blocks === undefined ? {} : { blocks })
 }
 
+/**
+ * Posts one of the agent's reports ("summary" for the morning report, or "weekly") to its Slack channel now,
+ * marked as a test. @returns {Promise<{ok: boolean, channel_id: string, channel_name: string}>} 409 or 400 with
+ * a plain `detail` when Slack isn't connected, there is no channel, or the kind is wrong.
+ */
+export function testAgentReport(id, kind) {
+  return send(`${queryKeys.stockSlackTemplate(id, kind)}/test`, "POST")
+}
+
 // ─── Revalidation ────────────────────────────────────────────────────────────
 
 /**
@@ -400,5 +409,7 @@ export function useStockActions(id) {
     saveSlackTemplate: run(saveSlackTemplate),
     resetSlackTemplate: run(resetSlackTemplate),
     previewSlackTemplate: (...args) => previewSlackTemplate(id, ...args),
+    // A test post changes nothing the app shows, so there is nothing to re-read.
+    testAgentReport: (...args) => testAgentReport(id, ...args),
   }
 }

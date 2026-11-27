@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ReportsTab } from "@/components/agency/reports-tab";
 
-// One of the Media Buying Agent's reports: "morning" or "weekly".
+// One of Marketing Guru's reports: its agent's "morning" or "weekly", or one of its Slack reports.
 export default async function MediaBuyerReportPage({ params }) {
   const { report } = await params;
   return (

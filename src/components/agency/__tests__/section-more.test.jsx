@@ -30,7 +30,8 @@ describe("the More menu", () => {
     unmount()
     render(<SectionMore section={COACH_SECTION} tab="birdseye" />)
     await userEvent.click(screen.getByRole("button", { name: "More" }))
-    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Context"])
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Reports", "Context"])
+    expect(screen.getAllByRole("menuitem")[0]).toHaveAttribute("href", "/sales-coach/reports")
   })
 
   it("wears the open page's name and the chip while one of its pages is open", async () => {
