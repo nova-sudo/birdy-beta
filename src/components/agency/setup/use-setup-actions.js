@@ -38,12 +38,15 @@ export function useSetupActions(refresh, { go = (url) => window.location.assign(
     refresh("onboarding");
   }, [refresh]);
 
-  /** Leave for GoHighLevel, Meta or Slack. The return path is parked first, so the callback comes back here. */
-  const startOAuth = useCallback(async (id) => {
+  /**
+   * Leave for GoHighLevel, Meta or Slack. The return path is parked first, so the callback comes back here.
+   * `{ real: true }` asks for a real Slack workspace on a sandbox account (it gets a test one otherwise).
+   */
+  const startOAuth = useCallback(async (id, { real = false } = {}) => {
     mark(id, "connecting");
     try {
       setOAuthHandoff(SETUP_PATH);
-      const res = await apiRequest(OAUTH_ENDPOINTS[id]);
+      const res = await apiRequest(real ? `${OAUTH_ENDPOINTS[id]}?real=true` : OAUTH_ENDPOINTS[id]);
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.auth_url) throw new Error(detailOf(body, "The connection couldn’t start. Try again."));
       go(body.auth_url);

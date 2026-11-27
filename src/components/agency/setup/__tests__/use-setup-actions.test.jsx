@@ -26,6 +26,14 @@ describe("useSetupActions", () => {
     expect(result.current.pending[id]).toBe("connecting")
   })
 
+  it("asks for a real Slack workspace when told to (a sandbox account)", async () => {
+    replies["GET /api/connect/slack?real=true"] = [200, { auth_url: "https://slack.com/oauth" }]
+    const go = vi.fn()
+    const { result } = renderHook(() => useSetupActions(vi.fn(), { go }))
+    await act(() => result.current.startOAuth("slack", { real: true }))
+    expect(go).toHaveBeenCalledWith("https://slack.com/oauth")
+  })
+
   it("stays put and says why when there is no login to go to", async () => {
     replies["GET /api/connect/slack"] = [200, {}]
     const go = vi.fn()
