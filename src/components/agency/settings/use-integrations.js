@@ -216,11 +216,12 @@ export function useIntegrations() {
     }
   }, []);
 
-  const connectSlack = useCallback(async () => {
+  /** `real` asks for a real workspace on a sandbox account, which gets a test one otherwise. */
+  const connectSlack = useCallback(async (real = false) => {
     try {
       setBusy(true);
       setError(null);
-      const res = await apiRequest("/api/connect/slack");
+      const res = await apiRequest(real === true ? "/api/connect/slack?real=true" : "/api/connect/slack");
       if (!res.ok) throw new Error((await detail(res)) || `${res.status} ${res.statusText}`);
       const { auth_url } = await res.json();
       if (auth_url) window.location.href = auth_url;

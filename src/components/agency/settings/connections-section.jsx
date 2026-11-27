@@ -140,12 +140,17 @@ export function ConnectionsSection({ integrations }) {
           markClass="bg-by-accent-soft text-by-accent"
           what="Talk to Birdy from Slack, and get its reports and AI suggestions"
           state={slackState}
-          meta={slack.installed ? [["Workspace", slack.team_name || slack.team_id || "—"]] : []}
+          meta={slack.installed ? [["Workspace", `${slack.team_name || slack.team_id || "—"}${slack.test_workspace ? " (test)" : ""}`]] : []}
           site={{ href: "https://slack.com", label: "Open Slack" }}
-          actions={!slack.installed && <ConnectButton checking={checking} busy={busy} onClick={connectSlack} />}
+          actions={!slack.installed && (slack.sandbox_account ? (
+            <>
+              <ConnectButton checking={checking} busy={busy} onClick={() => connectSlack()}>Use test workspace</ConnectButton>
+              <Button kind="secondary" size="sm" disabled={busy || checking} onClick={() => connectSlack(true)}>Connect real Slack</Button>
+            </>
+          ) : <ConnectButton checking={checking} busy={busy} onClick={() => connectSlack()} />)}
           remove={slack.installed && <RemoveConnection label={INTEGRATION_LABEL.slack} removing={removing === "slack"} onConfirm={() => remove("slack")} />}
         >
-          {slack.installed && <SlackChannel slack={slack} onSaved={updateSlack} onReconnect={connectSlack} />}
+          {slack.installed && <SlackChannel slack={slack} onSaved={updateSlack} onReconnect={() => connectSlack(!slack.test_workspace && slack.sandbox_account)} />}
         </ConnectionCard>
       </div>
 

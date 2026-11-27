@@ -15,6 +15,7 @@ const REPORT = ["Yes, every morning at 9:00", "Not now"];
 export function SlackStep({ ctx }) {
   const { facts, steps, actions, agentName, refresh } = ctx;
   const slack = facts.slack || {};
+  const sandbox = Boolean(slack.sandbox_account);
   const saved = facts.onboarding?.data?.slack || null;
   const state = cardState(steps.slack, actions.pending.slack);
   const picking = steps.slack === "setup";
@@ -54,7 +55,14 @@ export function SlackStep({ ctx }) {
             state={state}
             problem={actions.pending.slack === "error" ? actions.errors.slack : "Slack stopped accepting Birdy. Connect it again."}
             onConnect={() => actions.startOAuth("slack")}
+            connectLabel={sandbox ? "Use test workspace" : undefined}
           >
+            {sandbox && state === "todo" && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-by-line-soft pt-3">
+                <span className="min-w-0 flex-1 text-by-body-sm text-by-muted">Sandbox account: the test workspace posts nowhere. Connect a real one to see Birdy in Slack.</span>
+                <Button kind="secondary" size="sm" onClick={() => actions.startOAuth("slack", { real: true })}>Connect real Slack</Button>
+              </div>
+            )}
             {picking && <ChannelPicker actions={actions} refresh={refresh} />}
           </ConnectCard>
         </div>

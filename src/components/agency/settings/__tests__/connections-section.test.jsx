@@ -29,6 +29,7 @@ function serve(overrides = {}) {
     "/api/integrations/slack/status": { installed: false },
     "/api/connect/facebook": { auth_url: "https://facebook.example/oauth" },
     "/api/connect/slack": { auth_url: "https://slack.example/oauth" },
+    "/api/connect/slack?real=true": { auth_url: "https://slack.com/oauth" },
     "/api/hotprospector/connect": { groups_count: 4 },
     ...overrides,
   };
@@ -66,6 +67,22 @@ describe("Connections", () => {
     await user.click(await screen.findByRole("button", { name: /Reconnect/ }));
     await waitFor(() => expect(window.location.href).toBe("https://facebook.example/oauth"));
     expect(calls()).toContain("GET /api/connect/facebook");
+  });
+
+  it("offers a sandbox account the test workspace or a real one", async () => {
+    serve({ "/api/integrations/slack/status": { installed: false, sandbox_account: true } });
+    const user = userEvent.setup();
+    render(<Harness />);
+    expect(await screen.findByRole("button", { name: "Use test workspace" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Connect real Slack" }));
+    await waitFor(() => expect(window.location.href).toBe("https://slack.com/oauth"));
+    expect(calls()).toContain("GET /api/connect/slack?real=true");
+  });
+
+  it("marks a sandbox account's test workspace", async () => {
+    serve({ "/api/integrations/slack/status": { installed: true, sandbox_account: true, test_workspace: true, team_name: "Tester Sandbox Workspace" } });
+    render(<Harness />);
+    expect(await screen.findByText("Tester Sandbox Workspace (test)")).toBeInTheDocument();
   });
 
   it("leaves for Slack's consent screen on Connect", async () => {
