@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientDetailHref, clientHref, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, sectionBase } from "../nav"
+import { DESTINATIONS, activeRailId, clientDetailHref, clientHref, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, sectionBase } from "../nav"
 
 describe("activeRailId", () => {
   it.each([
@@ -18,9 +18,9 @@ describe("activeRailId", () => {
     ["/billing", "settings"],
     ["/credits", "settings"],
     ["/metrics", "settings"],
-    ["/hub", "other"],
-    ["/hub/dashboards/7", "other"],
-    ["/ask-birdy", "other"],
+    // BirdyHub and Ask Birdy have no tile any more.
+    ["/hub", null],
+    ["/ask-birdy", null],
     // The Leads hub is retired; its address only redirects, and a lead page belongs to no tile.
     ["/contacts/c1", null],
     ["/alerts", "settings"],
@@ -34,10 +34,6 @@ describe("activeRailId", () => {
 describe("destinations", () => {
   it("opens the nearest existing page for each rail item", () => {
     expect(DESTINATIONS).toEqual({ ops: "/dashboard", buyer: "/media-buyer", coach: "/sales-coach", clients: "/clients", settings: "/settings" })
-  })
-
-  it("lists the pages that have no tile of their own", () => {
-    expect(OTHER_PAGES.map((p) => [p.label, p.href])).toEqual([["BirdyHub", "/hub"], ["Ask Birdy", "/ask-birdy"]])
   })
 })
 

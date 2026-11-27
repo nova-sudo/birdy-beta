@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ClientSwitcher, MenuItem, Rail, RailMenuTile, SetupRing } from "@/components/by";
+import { ClientSwitcher, Rail, SetupRing } from "@/components/by";
 import { useCredits } from "@/hooks/useCredits";
 import { useAgentWorkCount } from "@/lib/agents-api";
 import { isActive } from "@/lib/client-status";
@@ -15,7 +15,7 @@ import { lockedSections, nextSection, setupPercent, teamDone, useTeamSetup } fro
 import { useSetup } from "@/lib/use-setup";
 import { AccountMenu } from "./account-menu";
 import { ClientActionsProvider, useClientActions } from "./client-actions";
-import { DESTINATIONS, OTHER_PAGES, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, railHref, sectionBase } from "./nav";
+import { DESTINATIONS, activeRailId, clientHrefFrom, clientIdFromLocation, clientIdFromPath, isRebuilt, railHref, sectionBase } from "./nav";
 
 // Hand-set health -> the switcher's dot. An inactive client gets no colour.
 const HEALTH_DOT = { Critical: "danger", Warning: "warning", Healthy: "success" };
@@ -83,16 +83,6 @@ export function AppShell({ children }) {
               onRetry={refresh}
             />
           </Suspense>
-        }
-        extra={
-          <RailMenuTile label="Other pages" active={activeId === "other"}>
-            {OTHER_PAGES.map(({ label, href, icon: Icon }) => (
-              <MenuItem key={href} selected={pathname === href || pathname.startsWith(`${href}/`)} onSelect={() => router.push(href)}>
-                <Icon aria-hidden="true" />
-                {label}
-              </MenuItem>
-            ))}
-          </RailMenuTile>
         }
         account={<AccountMenu />}
         setup={showSetup ? (

@@ -1,8 +1,7 @@
-import { LayoutGrid, Sparkles } from "lucide-react";
 
 // Where the rail's items go while the redesign is in progress. Each section
 // opens the nearest page that exists today; as a section's own screens are
-// rebuilt its entry here changes, and "Other pages" shrinks.
+// rebuilt its entry here changes.
 
 /** Rail item id -> the page it opens. */
 export const DESTINATIONS = {
@@ -36,17 +35,11 @@ export function railHref(id, search = "") {
   return query ? `${base}?${query}` : base;
 }
 
-/** Pages with no tile of their own, listed under the dashed "Other pages" tile. */
-export const OTHER_PAGES = [
-  { label: "BirdyHub", href: "/hub", icon: LayoutGrid },
-  { label: "Ask Birdy", href: "/ask-birdy", icon: Sparkles },
-];
-
 const under = (pathname, base) => pathname === base || pathname.startsWith(`${base}/`);
 
 /**
  * Which rail item the current page belongs to: a section id, "settings",
- * "other", or null when the page belongs to none of them.
+ * or null when the page belongs to none of them.
  */
 export function activeRailId(pathname) {
   if (under(pathname, "/dashboard")) return "ops";
@@ -55,7 +48,6 @@ export function activeRailId(pathname) {
   if (under(pathname, "/sales-coach") || under(pathname, "/Sales-Hub")) return "coach";
   if (under(pathname, "/clients")) return "clients";
   if (under(pathname, "/settings") || under(pathname, "/metrics") || under(pathname, "/billing") || under(pathname, "/credits") || under(pathname, "/alerts")) return "settings";
-  if (OTHER_PAGES.some((page) => under(pathname, page.href))) return "other";
   return null;
 }
 
