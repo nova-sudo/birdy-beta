@@ -116,11 +116,11 @@ describe("Birdy › Reports", () => {
     expect(await screen.findByText("Test sent to #leadership.")).toBeInTheDocument()
   })
 
-  it("builds the preview only when asked", async () => {
+  it("builds the preview only when asked, for the report's owner", async () => {
     wrap(<SlackReportPage reportId="r1" />)
     await userEvent.click(await screen.findByRole("button", { name: "Show a preview" }))
     expect(await screen.findByTestId("slack-preview")).toHaveTextContent("2 blocks")
-    expect(calls.find((c) => c.path === "/api/report-designer/preview").body).toEqual({ template: BRIEF.template })
+    expect(calls.find((c) => c.path === "/api/report-designer/preview").body).toEqual({ template: BRIEF.template, owner: "birdy" })
   })
 
   it("saves a change through the report form", async () => {

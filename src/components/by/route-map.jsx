@@ -2,10 +2,10 @@
 
 import { useLayoutEffect, useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Bot, Check, CircleAlert, Info, Megaphone, Minus, Phone, X } from "lucide-react";
+import { ArrowUpRight, Bot, Check, CircleAlert, Hash, Info, Megaphone, Minus, Phone, X } from "lucide-react";
 import {
-  agentChatHref, askedByName, findStep, liveIndex, liveWire, limitMessage, normalizeRoute, routeMeta, routeStatusLabel,
-  routeStatusLine, stepMeta, stepReason, stepStatusLabel, workingLine } from "@/lib/agent-route";
+  agentChatHref, askedByName, findStep, liveIndex, limitMessage, normalizeRoute, routeMeta, routeStatusLabel,
+  routeStatusLine, routeStops, stepMeta, stepReason, stepStatusLabel, workingLine } from "@/lib/agent-route";
 import { BirdyAvatar } from "./avatar";
 import { buttonVariants } from "./button";
 import { cn } from "./cn";
@@ -19,7 +19,7 @@ const ROLE = {
   coach: { tile: "bg-by-coach-bg text-by-coach", solid: "bg-by-coach text-by-on-accent", tint: "bg-by-coach-bg" },
   neutral: { tile: "bg-by-sunken text-by-text-2", solid: "bg-by-text-2 text-by-on-accent", tint: "bg-by-sunken" },
 };
-const ICON = { megaphone: Megaphone, phone: Phone, bot: Bot };
+const ICON = { megaphone: Megaphone, phone: Phone, bot: Bot, slack: Hash };
 const TILE = { 22: "size-[22px] rounded-[7px] [&>svg]:size-3", 32: "size-8 rounded-by-md [&>svg]:size-4" };
 
 // A row needs this much room per agent and per line, or the map stacks.
@@ -114,6 +114,7 @@ function Node({ step, selected, live, onSelect, stacked }) {
           {`, ${stepStatusLabel(step.status)}`}
           {info.kind === "sub" && info.parentName ? `, sub-agent of ${info.parentName}` : ""}
           {info.kind === "helper" && info.parentName ? `, one-off helper of ${info.parentName}` : ""}
+          {info.kind === "slack" && info.parentName ? `, ${info.parentName}’s work in Slack` : ""}
         </span>
       </span>
     </button>
@@ -181,12 +182,14 @@ function useAutoLayout(ref, count, forced) {
 export function RouteMap({ route: rawRoute, selected = null, onSelect, layout = "auto", className, children, ...props }) {
   const route = useMemo(() => normalizeRoute(rawRoute), [rawRoute]);
   const ref = useRef(null);
-  const mode = useAutoLayout(ref, route?.steps.length ?? 0, layout === "auto" ? null : layout);
+  const stops = routeStops(route);
+  const mode = useAutoLayout(ref, stops.length, layout === "auto" ? null : layout);
   if (!route) return null;
 
   const stacked = mode === "stacked";
-  const live = liveIndex(route);
-  const wire = liveWire(route);
+  // The box at work: the agent, or its Slack stop while it works in Slack. The line into it moves.
+  const agent = route.steps[liveIndex(route)];
+  const live = agent ? stops.indexOf(agent.slack?.status === "working" ? agent.slack : agent) : -1;
   const limit = limitMessage(route.limit_hit);
 
   return (
@@ -202,8 +205,8 @@ export function RouteMap({ route: rawRoute, selected = null, onSelect, layout = 
         aria-label="Agents in this reply"
         className={stacked ? "flex flex-col items-stretch gap-1" : "flex items-center"}
       >
-        {route.steps.map((step, i) => [
-          i > 0 && <Wire key={`w-${step.id}`} stacked={stacked} live={i - 1 === wire} faint={step.status === "skipped"} />,
+        {stops.map((step, i) => [
+          i > 0 && <Wire key={`w-${step.id}`} stacked={stacked} live={i === live} faint={step.status === "skipped"} />,
           <Node key={step.id} step={step} stacked={stacked} selected={selected === step.id} live={i === live} onSelect={onSelect} />,
         ])}
       </div>
@@ -255,11 +258,12 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
   const { info } = step;
   const asker = askedByName(route, step);
   const meta = stepMeta(step);
-  const title = `${info.name}’s part`;
+  const slack = info.kind === "slack";
+  const title = slack ? `${info.parentName ?? "Birdy"} in Slack` : `${info.name}’s part`;
   const answerLabel = step.status === "failed" ? `${info.name} couldn’t finish` : `${info.name} answered`;
   // A skipped or failed step says why instead of a bare "no answer".
   const reason = stepReason(route, step);
-  const answer = step.answer ?? (step.status === "working" ? "Still working on it." : reason ? null : step.summary || null);
+  const answer = slack ? null : step.answer ?? (step.status === "working" ? "Still working on it." : reason ? null : step.summary || null);
 
   return (
     <section
@@ -289,7 +293,7 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
       {step.question && <Quote label={asker ? `${asker} asked` : "You asked"}>{step.question}</Quote>}
 
       <div>
-        <h4 className="mb-1 text-by-label font-semibold uppercase tracking-[0.06em] text-by-muted">Tools used</h4>
+        <h4 className="mb-1 text-by-label font-semibold uppercase tracking-[0.06em] text-by-muted">{slack ? "Slack steps" : "Tools used"}</h4>
         {step.tools.length ? (
           <ul className="flex flex-col">
             {step.tools.map((tool, i) => (
@@ -319,7 +323,7 @@ export function AgentPart({ route: rawRoute, stepId, onClose, variant = "panel",
           </Link>
         )}
         <Link href={chatHref ?? agentChatHref(info)} className={cn(buttonVariants({ kind: info.kind === "sub" && info.context ? "ghost" : "soft", size: "sm" }))}>
-          Open {(info.kind === "sub" || info.kind === "helper") && info.parentName ? `${info.parentName}’s` : `${info.name}’s`} chat
+          Open {(info.kind === "sub" || info.kind === "helper" || slack) && info.parentName ? `${info.parentName}’s` : `${info.name}’s`} chat
           <ArrowUpRight aria-hidden="true" />
         </Link>
         {meta && <span className="ml-auto text-by-caption text-by-muted tabular-nums">{stepStatusLabel(step.status)} · {meta}</span>}

@@ -4,7 +4,9 @@
 //
 // The server sends `route: null` when no other agent was involved. Otherwise:
 //   { status, seconds, credits, limit_hit, steps: [{ id, agent, name, kind, status,
-//     summary, question, asked_by, tools: [{ name, label, detail }], answer, credits, seconds }] }
+//     summary, question, asked_by, tools: [{ name, label, detail, kind? }], doing, doing_kind, answer, credits, seconds }] }
+// A tool that works in Slack (reports, channels, previews) has `kind: "slack"`, and while one runs the step's
+// `doing_kind` is "slack". The map draws that work as a Slack stop after the agent (`step.slack`).
 // A one-off helper a main agent started for one job (never saved) has kind "helper" and an
 // agent key "sub:helper-<id>": it is drawn like a sub-agent of that main agent, with no Context row.
 
@@ -22,6 +24,19 @@ const ROUTE_STATUS = ["working", "done", "failed"];
 const STEP_STATUS = ["working", "done", "failed", "skipped"];
 const KINDS = ["orchestrator", "main", "sub", "helper"];
 const LIMITS = ["asks", "depth", "repeat"];
+
+/** The Slack stop's face: a neutral tile with a "#". */
+export const SLACK_INFO = { key: "slack", name: "Slack", role: "neutral", icon: "slack", kind: "slack", parent: null };
+
+// The Slack tools by name, for routes saved before the server marked them with `kind: "slack"`.
+const SLACK_TOOLS = new Set([
+  "list_slack_reports", "list_report_metrics", "list_report_clients", "create_slack_report", "update_slack_report",
+  "delete_slack_report", "send_test_slack_report", "preview_report", "list_slack_channels", "send_test_agent_report",
+  "get_agent_slack_template", "set_agent_slack_template", "reset_agent_slack_template", "set_agent_slack_channel",
+]);
+
+/** Whether a tool call worked in Slack. */
+export const isSlackTool = (tool) => tool?.kind === "slack" || SLACK_TOOLS.has(tool?.name);
 
 const isSub = (key) => typeof key === "string" && key.startsWith("sub:");
 const num = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : 0);
@@ -101,8 +116,12 @@ export function normalizeRoute(raw) {
       asked_by: strOrNull(s.asked_by),
       tools: (Array.isArray(s.tools) ? s.tools : [])
         .filter((t) => t && (t.label || t.name))
-        .map((t) => ({ name: str(t.name), label: str(t.label) || str(t.name), detail: strOrNull(t.detail) })),
+        .map((t) => {
+          const tool = { name: str(t.name), label: str(t.label) || str(t.name), detail: strOrNull(t.detail) };
+          return isSlackTool(t) ? { ...tool, kind: "slack" } : tool;
+        }),
       doing: strOrNull(s.doing),
+      doing_kind: s.doing_kind === "slack" && strOrNull(s.doing) ? "slack" : null,
       answer: strOrNull(s.answer),
       credits: num(s.credits),
       seconds: num(s.seconds),
@@ -112,13 +131,71 @@ export function normalizeRoute(raw) {
     const helper = s.kind === "helper";
     return { ...s, info: agentInfo(s.agent, { name: s.name, helper, parent: s.kind === "sub" || helper ? parentOf(base, i) : null }) };
   });
-  return {
+  const route = {
     status,
     seconds: num(raw.seconds),
     credits: num(raw.credits),
     limit_hit: LIMITS.includes(raw.limit_hit) ? raw.limit_hit : null,
     steps,
   };
+  const live = liveIndex(route);
+  route.steps = steps.map((s, i) => ({ ...s, slack: slackStop(s, i === live) }));
+  return route;
+}
+
+/**
+ * The Slack stop after a step: live while the step is in a Slack tool, done once it has used some.
+ * Null when the step never touched Slack. Drawn like a step of its own, with id "<step id>:slack".
+ */
+function slackStop(step, live) {
+  const inSlack = live && step.doing_kind === "slack";
+  const tools = step.tools.filter((t) => t.kind === "slack");
+  if (!inSlack && !tools.length) return null;
+  return {
+    id: `${step.id}:slack`,
+    agent: "slack",
+    name: "Slack",
+    kind: "slack",
+    status: inSlack ? "working" : "done",
+    summary: slackSummary(tools),
+    question: null,
+    asked_by: null,
+    tools,
+    doing: inSlack ? step.doing : null,
+    doing_kind: inSlack ? "slack" : null,
+    answer: null,
+    credits: 0,
+    seconds: 0,
+    of: step.id,
+    info: { ...SLACK_INFO, chat: step.info.chat ?? AGENTS.birdy.chat, parentName: step.info.name },
+  };
+}
+
+// A tool label starts with what the agent was doing ("Building the preview"); done, it reads in the past.
+const PAST = {
+  building: "Built", checking: "Checked", creating: "Created", changing: "Changed", deleting: "Deleted", sending: "Sent",
+  listing: "Listed", loading: "Loaded", reading: "Read", setting: "Set", saving: "Saved", updating: "Updated",
+  testing: "Tested", posting: "Posted", finding: "Found", looking: "Looked", resetting: "Reset", getting: "Got",
+};
+
+/** "Building the preview" -> "Built the preview". A label that isn't an "-ing" verb stays as it is. */
+export function pastTense(label) {
+  const text = str(label);
+  const [first, ...rest] = text.split(" ");
+  const past = PAST[first?.toLowerCase()];
+  return past ? [past, ...rest].join(" ") : text;
+}
+
+/** What a finished Slack stop says: each Slack step once, in the past tense. */
+export function slackSummary(tools) {
+  return [...new Set((tools ?? []).map((t) => pastTense(t.label)).filter(Boolean))].join(" · ");
+}
+
+/** "Building the preview" stays a verb; "Slack reports" becomes "looking at reports". */
+function slackDoing(doing) {
+  const text = str(doing);
+  if (/^[A-Za-z]+ing\b/.test(text)) return lowerFirst(text);
+  return `looking at ${lowerFirst(text.replace(/^slack\s+/i, "")) || "your Slack"}`;
 }
 
 /** "8s", "34s", "1m 12s", "2m". */
@@ -181,6 +258,7 @@ export function routeStatusLine(route) {
   if (route.status === "working") {
     const live = steps[liveIndex(route)];
     if (!live) return "Agents are on it";
+    if (live.doing_kind === "slack") return `${live.info.name} is ${slackDoing(live.doing)} in Slack`;
     if (live.doing) return `${live.info.name} is looking at ${lowerFirst(live.doing)}`;
     return live.summary ? `${live.info.name}: ${lowerFirst(live.summary)}` : `${live.info.name} is thinking`;
   }
@@ -197,6 +275,9 @@ export function routeStatusLine(route) {
  * @param {{doing: string|null, summary: string, tools: object[]}} step a normalised step
  */
 export function workingLine(step) {
+  // The Slack stop after this agent says what it is doing there; the agent keeps its own words.
+  if (step.doing_kind === "slack" && step.kind === "slack") return `${step.doing}…`;
+  if (step.doing_kind === "slack") return step.summary || "Working in Slack";
   if (step.doing) return `Looking at ${lowerFirst(step.doing)}…`;
   if (step.summary) return step.summary;
   return step.tools.length ? "Thinking it through…" : "Starting…";
@@ -259,5 +340,14 @@ export function stepReason(route, step) {
 
 /** The step with this id, or null. */
 export function findStep(route, id) {
-  return route?.steps.find((s) => s.id === id) ?? null;
+  for (const s of route?.steps ?? []) {
+    if (s.id === id) return s;
+    if (s.slack?.id === id) return s.slack;
+  }
+  return null;
+}
+
+/** The boxes the map draws, in order: each step, and its Slack stop after it when it has one. */
+export function routeStops(route) {
+  return (route?.steps ?? []).flatMap((s) => (s.slack ? [s, s.slack] : [s]));
 }

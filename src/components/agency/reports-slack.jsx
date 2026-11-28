@@ -4,16 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { Eye, MessageSquareText, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { MessageSquareText, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { BirdyAvatar, Button, Card, Dialog, DialogBody, DialogContent, DialogFooter, EmptyState, Notice, Skeleton, Switch, buttonVariants } from "@/components/by";
-import SlackMessagePreview from "@/components/report-designer/SlackMessagePreview";
 import { errorLabel } from "@/components/reports/report-format";
 import { useSlackReports } from "@/components/reports/useSlackReports";
 import { CardSection, Crumbs, Fact, Facts, PageTitle } from "@/components/agency/section-page";
 import { ReportList, ReportRow } from "@/components/agency/report-row";
 import { SlackReportDialog } from "@/components/agency/slack-report-dialog";
+import { Preview, reportPreview } from "@/components/agency/report-preview";
 import { slackReportView } from "@/lib/agency-reports";
-import { apiRequest } from "@/lib/api";
 import { fetcher } from "@/lib/fetcher";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -32,6 +31,9 @@ export const reportScope = (section) => ({
   base: section.paths.reports,
   name: section.key === "ops" ? "Birdy" : section.kit.name,
 });
+
+// The preview lives in its own file so the chat can show it without the Reports screens.
+export { Preview };
 
 const reportHref = (scope, id) => `${scope.base}/${encodeURIComponent(id)}`;
 
@@ -216,49 +218,6 @@ export function ConfirmDialog({ open, onOpenChange, title, children, confirm, ki
   );
 }
 
-/** A Slack report's preview, with today's real numbers, rendered by the server. */
-async function reportPreview(template) {
-  const res = await apiRequest("/api/report-designer/preview", { method: "POST", body: JSON.stringify({ template }) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  return [{ blocks: json.blocks ?? [], sample: Boolean(json.sample) }];
-}
-
-/**
- * The message as Slack will show it, built only when asked.
- * @param {() => Promise<{blocks: object[], sample: boolean, label?: string}[]>} props.load one or more messages, in order
- * @param {string} [props.sampleNote] what to say when the figures are samples
- */
-export function Preview({ load, sampleNote = "Some figures are samples: there isn’t enough data yet to fill them." }) {
-  const [state, setState] = useState({ status: "idle", messages: null });
-  const run = async () => {
-    setState((s) => ({ ...s, status: "loading" }));
-    try {
-      setState({ status: "done", messages: await load() });
-    } catch {
-      setState({ status: "error", messages: null });
-    }
-  };
-  if (state.status === "idle") {
-    return <Button kind="secondary" size="sm" onClick={run}><Eye aria-hidden="true" />Show a preview</Button>;
-  }
-  if (state.status === "error") {
-    return <Notice tone="danger" action={<Button size="sm" onClick={run}>Retry</Button>}>Couldn’t build the preview.</Notice>;
-  }
-  const messages = state.messages ?? [{ blocks: null }];
-  return (
-    <div className="flex flex-col gap-3">
-      {messages.map((m, i) => (
-        <div key={i} className="flex flex-col gap-1.5">
-          {m.label && <p className="text-by-body-sm font-medium text-by-text-2">{m.label}</p>}
-          <SlackMessagePreview blocks={m.blocks} loading={state.status === "loading"} />
-        </div>
-      ))}
-      {messages.some((m) => m.sample) && <p className="text-by-caption text-by-muted">{sampleNote}</p>}
-    </div>
-  );
-}
-
 /**
  * One Slack report: its schedule, what it says, its last run, and Change, Send test and Delete.
  * @param {ReportScope} [props.scope] Birdy's when left out
@@ -350,7 +309,7 @@ export function SlackReportPage({ reportId, scope = OPS_REPORTS }) {
         </CardSection>
         <CardSection title="What it says">
           <p className="mb-3 text-by-body text-by-text-2">{v.contents && v.contents !== v.what ? `${v.what}: ${v.contents}.` : v.what}</p>
-          <Preview load={() => reportPreview(report.template)} />
+          <Preview load={() => reportPreview(report.template, scope.owner)} />
         </CardSection>
       </Card>
 
