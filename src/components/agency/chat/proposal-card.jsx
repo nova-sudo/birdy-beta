@@ -147,7 +147,11 @@ const afterSends = (label) => String(label ?? "").replace(/^(Every|Each|When|Onc
 
 /** A refusal from creating the report: the server's own reason when it gave one about the report. */
 function reportErrorMessage(err) {
-  if (err?.detail && ![402, 404, 412].includes(err?.status)) return err.detail;
+  if (err?.detail && ![402, 404, 412].includes(err?.status)) {
+    // A refusal on approval comes as {code, message}.
+    const text = typeof err.detail === "string" ? err.detail : err.detail?.message;
+    if (text) return text;
+  }
   return proposalErrorMessage(err);
 }
 
@@ -188,7 +192,7 @@ export function ReportProposalCard({ proposal, onUpdate }) {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-by-body-sm text-by-text-2">
           <Check aria-hidden="true" className="size-[15px] shrink-0 text-by-success" />
           <span className="min-w-0 flex-1">Created. {schedule ? `Sends ${afterSends(schedule)} to ${channel.line}.` : `Sends to ${channel.line}.`}</span>
-          <Link href={reportPageHref(ownerKey, proposal.report?.id)} className="inline-flex items-center gap-1 font-semibold text-by-accent hover:underline">
+          <Link href={reportPageHref(ownerKey, proposal.report?.id ?? proposal.applied?.report_id)} className="inline-flex items-center gap-1 font-semibold text-by-accent hover:underline">
             Open in {owner.name} reports<ArrowUpRight aria-hidden="true" className="size-3.5" />
           </Link>
         </div>
