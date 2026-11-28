@@ -157,6 +157,8 @@ function DataTable({ b }) {
   }, [data, sort])
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const shown = sorted.slice(page * pageSize, page * pageSize + pageSize)
+  // A column of numbers lines its heading up with them.
+  const numericCol = (header || []).map((_, i) => (data || []).length > 0 && data.every((r) => r?.[i]?.type === "raw_number"))
   return (
     <div className="overflow-hidden rounded-lg border border-white/12">
       {b.caption && <div className="border-b border-white/10 px-3 py-2 text-[12.5px] font-semibold text-white">{b.caption}</div>}
@@ -165,7 +167,7 @@ function DataTable({ b }) {
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.04]">
               {(header || []).map((h, i) => (
-                <th key={i} className="whitespace-nowrap px-3 py-1.5 font-semibold text-white/80">
+                <th key={i} className={`whitespace-nowrap px-3 py-1.5 font-semibold text-white/80 ${numericCol[i] ? "text-right" : ""}`}>
                   <button type="button" className="inline-flex cursor-pointer items-center gap-1 hover:text-white"
                     onClick={() => setSort((s) => ({ col: i, dir: s?.col === i ? -s.dir : -1 }))}>
                     {cellText(h)} <ArrowDownUp className="size-3 opacity-50" aria-hidden="true" />
@@ -178,7 +180,7 @@ function DataTable({ b }) {
             {shown.map((r, i) => (
               <tr key={i} className="border-b border-white/[0.06] last:border-0">
                 {r.map((c, j) => (
-                  <td key={j} className={`px-3 py-1.5 text-white/85 ${c?.type === "raw_number" ? "text-right tabular-nums" : ""}`}><Cell c={c} /></td>
+                  <td key={j} className={`whitespace-nowrap px-3 py-1.5 text-white/85 ${c?.type === "raw_number" ? "text-right tabular-nums" : ""}`}><Cell c={c} /></td>
                 ))}
               </tr>
             ))}
