@@ -56,7 +56,7 @@ describe("a report proposed in chat (1A)", () => {
     release()
     expect(await screen.findByText("3 blocks")).toBeInTheDocument()
     expect(screen.getByText("Today’s real numbers. Your Slack shows it like this.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Approve and create" })).toBeEnabled()
+    await waitFor(() => expect(screen.getByRole("button", { name: "Approve and create" })).toBeEnabled())
     const [path, init] = vi.mocked(apiRequest).mock.calls[0]
     expect(path).toBe("/api/report-designer/preview")
     expect(JSON.parse(init.body)).toEqual({ template: TEMPLATE, owner: "sales_coach" })
@@ -74,7 +74,7 @@ describe("a report proposed in chat (1A)", () => {
     render(<ReplyProposals proposals={[REPORT()]} />)
     expect(await screen.findByText("Couldn’t build the preview.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Approve and create" })).toBeEnabled()
+    await waitFor(() => expect(screen.getByRole("button", { name: "Approve and create" })).toBeEnabled())
   })
 
   it("approving creates it and keeps the report on the reply", async () => {
